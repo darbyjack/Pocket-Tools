@@ -2,7 +2,6 @@ import type { CollectionDefinition, DataClient } from "./data.ts";
 import type { SettingDefinition, SettingsClient } from "./settings.ts";
 import type { TimerClient } from "./timers.ts";
 import type { PageNode } from "./ui.ts";
-import type { SerializableValue } from "./values.ts";
 
 export const SDK_VERSION = 1 as const;
 
@@ -23,21 +22,7 @@ export interface MiniAppContext {
 
 export type ScreenRenderer = (context: MiniAppContext) => PageNode;
 
-export type ActionHandler = (
-  context: MiniAppContext,
-) => SerializableValue | void | Promise<SerializableValue | void>;
-
-export interface MiniAppTestContext {
-  readonly render: (screen: string) => PageNode;
-  readonly invoke: (action: string) => Promise<SerializableValue | void>;
-  readonly setSetting: (name: string, value: SerializableValue) => void;
-  readonly advanceTime: (seconds: number) => void;
-}
-
-export interface MiniAppEmbeddedTest {
-  readonly name: string;
-  readonly run: (context: MiniAppTestContext) => void | Promise<void>;
-}
+export type ActionHandler = (context: MiniAppContext) => void;
 
 export interface MiniAppDefinition {
   readonly manifest: MiniAppManifest;
@@ -45,7 +30,6 @@ export interface MiniAppDefinition {
   readonly collections?: Readonly<Record<string, CollectionDefinition>>;
   readonly screens: Readonly<Record<string, ScreenRenderer>>;
   readonly actions?: Readonly<Record<string, ActionHandler>>;
-  readonly tests?: readonly MiniAppEmbeddedTest[];
 }
 
 export function defineMiniApp<const TDefinition extends MiniAppDefinition>(
