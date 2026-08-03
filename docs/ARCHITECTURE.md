@@ -4,116 +4,81 @@
 
 Pocket Tools is an Android-first host for personal utilities authored as single JavaScript modules. The host owns native UI, persistence, lifecycle behavior, and failure containment. A mini app owns its declarative definition and business logic.
 
-The first product milestone is a working Android slice that can load and run Bathroom Pay through the public SDK. The SDK must not grow beyond that slice until it works end to end.
+The current product is one complete Bathroom Pay Android slice. New SDK surface must be justified by the next working product layer.
 
-## Long-term boundaries
+## Implemented boundaries
 
 ```text
-React Native host
-  ├─ mini-app library and editor
-  ├─ installer
-  ├─ native UI renderer
-  ├─ SQLite-backed host services
-  │    ├─ settings
-  │    ├─ isolated collections
+Expo / React Native host
+  ├─ Bathroom Pay settings UI
+  ├─ declarative native UI renderer
+  ├─ Expo SQLite host state
+  │    ├─ per-mini-app settings
+  │    ├─ isolated collection records
   │    └─ durable timers
-  └─ QuickJS-NG runtime manager
-       └─ isolated runtime per active mini app
+  └─ local Expo native module
+       └─ fresh bounded QuickJS-NG runtime per invocation
 ```
 
 A mini app never receives a React Native component, native module, SQLite handle, filesystem path, process environment, authentication token, or another mini app's state.
-
-These boundaries are intended to remain stable. Temporary execution paths that bypass QuickJS or privileged built-in versions of Bathroom Pay are not acceptable because they would need to be replaced later.
 
 ## Script format
 
 A mini app is one ES module. It imports the virtual `@pocket-tools/sdk` module and default-exports the result of `defineMiniApp(...)`.
 
-```js
-import { defineMiniApp, ui } from "@pocket-tools/sdk";
-
-export default defineMiniApp({
-  manifest: {
-    id: "example-tool",
-    name: "Example Tool",
-    sdkVersion: 1,
-  },
-  screens: {
-    home() {
-      return ui.page({ title: "Example Tool", children: [] });
-    },
-  },
-});
-```
-
-The QuickJS module loader resolves only host-provided virtual modules. External packages, dynamic imports, network-loaded code, and filesystem imports are rejected.
+The QuickJS module loader resolves only that host-provided module. External packages, dynamic imports, remote code, and filesystem imports are rejected.
 
 ## Canonical contract
 
-`packages/sdk-contract` is the source of truth for the currently implemented mini-app surface:
+`packages/sdk-contract` is the source of truth for the implemented mini-app surface:
 
-- Manifest and the current SDK identifier
-- Bathroom Pay settings and collection primitives
+- Manifest and current SDK identifier
+- Bathroom Pay setting and collection definitions
 - Start/get/stop timers
-- The UI nodes used by the first Bathroom Pay slice
+- Current declarative UI nodes
 - Screens and actions
 - Serializable bridge values
 - Definition validation and structured errors
 
-An API is not added until a working mini app needs it.
+The runtime module contains the matching executable SDK surface required inside QuickJS. Contract changes must update the TypeScript contract, runtime module, example, documentation, and tests together.
 
-## First implementation slice
+## Runtime request model
 
-The next pull request must implement one narrow but complete path:
+React Native does not expose native functions directly to an untrusted runtime. It sends QuickJS a serializable snapshot containing:
 
-1. Launch the Android host.
-2. Load the bundled Bathroom Pay script through QuickJS-NG.
-3. Validate the script against the public contract.
-4. Render the home screen with native components.
-5. Read settings.
-6. Start, recover, and stop the durable timer.
-7. Persist and list completed trips.
-8. Show today's totals.
+- Current host time
+- Current settings
+- Collection records
+- Active timer snapshots
+- Requested mode, screen, or action
 
-That work may be internally modular, but it must land as one functioning vertical slice. Standalone shells, renderers, storage frameworks, or runtime abstractions that do not produce the working path are not separate milestones.
-
-## Execution lifecycle
-
-1. The user pastes source into the editor.
-2. The installer rejects unsupported imports.
-3. QuickJS evaluates the script without ambient native access.
-4. The host validates the exported definition and SDK identifier.
-5. The script is previewed against temporary state.
-6. The host installs the validated source and initializes its current schema.
-7. At runtime, the host creates a bounded QuickJS context only when a screen or action needs execution.
-
-A failed install leaves existing installed state untouched. This is transactional integrity, not backward-compatibility support.
+QuickJS returns a validated page and/or a list of requested operations. The host validates and applies writes transactionally.
 
 ## Rendering model
 
-Scripts return declarative UI trees. The host validates each tree and maps supported nodes to owned React Native components. Scripts cannot retain component references or mutate rendered nodes.
+Scripts return declarative UI trees. The host validates node types and tree limits before mapping them to owned React Native components.
+
+Timers and `liveTimer` metrics update in React Native from durable timestamps. The script is not re-executed every second.
 
 ## Persistence model
 
-The host scopes settings, collection records, and timers by mini-app ID. Scripts use host-managed service calls and never construct SQL. Preview state is isolated from installed state.
+Expo SQLite stores settings, records, and active timers under the calling mini-app ID. Scripts cannot provide or override this namespace and never construct SQL.
 
-The project does not provide script schema migrations or compatibility layers. During pre-release development, obsolete schema paths are removed and development data may be reset.
+The pre-release project does not provide schema migrations or compatibility paths. Obsolete development schemas are removed directly and development app data may be reset.
 
-## Timer model
+## Failure model
 
-Timers are durable host records based on timestamps. A running timer does not keep the host process or QuickJS runtime alive. Visible timers update in React Native while the screen is open; authoritative elapsed time is calculated by the host.
-
-## Change policy
-
-Pocket Tools supports one current SDK contract during development. Scripts targeting another SDK identifier are rejected. Breaking changes replace the obsolete API directly, with documentation, examples, and tests updated in the same pull request.
+Each runtime invocation has independent memory, stack, source, input, UI, and execution-time bounds. Script failures return structured errors to React Native. The runtime is disposed after the request, so a failed script does not poison later requests or terminate the host process.
 
 ## Repository shape
 
 ```text
-packages/sdk-contract/  current public contract and validator
-examples/               complete scripts that exercise the contract
-docs/                   current architecture and product requirements
-apps/mobile/            Android host, added by the first end-to-end implementation slice
+apps/mobile/                    Expo Android host and current renderer
+modules/pocket-quickjs/         Android QuickJS-NG Expo native module
+packages/sdk-contract/          current public authoring contract
+examples/                       canonical mini-app scripts
+scripts/                        source synchronization checks
+docs/                           current architecture and requirements
 ```
 
-Additional packages are created only when real code needs a separate concern.
+Additional packages are created only when working code needs a separate concern.
