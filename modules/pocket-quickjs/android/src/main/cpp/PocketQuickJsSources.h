@@ -538,7 +538,10 @@ inline constexpr char kRunner[] = R"POCKET_JS(
     if (typeof action !== "function") {
       fail("UNKNOWN_ACTION", `Unknown action: ${String(request.action)}`);
     }
-    const actionResult = action(context);
+    if (request.actionInput !== undefined) {
+      assertSerializable(request.actionInput, "actionInput");
+    }
+    const actionResult = action(context, request.actionInput);
     if (actionResult !== undefined && typeof actionResult?.then === "function") {
       fail("ASYNC_NOT_SUPPORTED", "Mini-app actions must complete synchronously.");
     }
@@ -550,7 +553,10 @@ inline constexpr char kRunner[] = R"POCKET_JS(
     if (typeof screen !== "function") {
       fail("UNKNOWN_SCREEN", `Unknown screen: ${String(request.screen)}`);
     }
-    const page = screen(context);
+    if (request.screenInput !== undefined) {
+      assertSerializable(request.screenInput, "screenInput");
+    }
+    const page = screen(context, request.screenInput);
     if (page !== undefined && typeof page?.then === "function") {
       fail("ASYNC_NOT_SUPPORTED", "Mini-app screens must render synchronously.");
     }
