@@ -8,6 +8,11 @@ import type {
   StoredRecord,
   TimerSnapshot,
 } from "../model";
+import {
+  assertRecordId,
+  assertRecordInput,
+  assertSettingValue,
+} from "../runtime/sdk-validation";
 
 const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 
@@ -68,6 +73,7 @@ export async function ensureSettingDefaults(
   const database = await databasePromise;
   await database.withTransactionAsync(async () => {
     for (const [name, definition] of Object.entries(inspection.settings)) {
+      assertSettingValue(definition, definition.default, `settings.${name}.default`);
       await database.runAsync(
         `INSERT OR IGNORE INTO settings (app_id, name, value_json)
          VALUES (?, ?, ?)`,
@@ -80,16 +86,20 @@ export async function ensureSettingDefaults(
 }
 
 export async function setSetting(
-  appId: string,
+  inspection: MiniAppInspection,
   name: string,
   value: SerializableValue,
 ): Promise<void> {
+  const definition = inspection.settings[name];
+  if (definition === undefined) throw new Error(`VALIDATION_FAILED: settings.${name}: Unknown setting.`);
+  assertSettingValue(definition, value, `settings.${name}`);
+
   const database = await databasePromise;
   await database.runAsync(
     `INSERT INTO settings (app_id, name, value_json)
      VALUES (?, ?, ?)
      ON CONFLICT(app_id, name) DO UPDATE SET value_json = excluded.value_json`,
-    appId,
+    inspection.manifest.id,
     name,
     JSON.stringify(value),
   );
@@ -98,7 +108,7 @@ export async function setSetting(
 export async function loadRuntimeSnapshot(
   inspection: MiniAppInspection,
   mode: RuntimeSnapshot["mode"],
-  options: { readonly action?: string } = {},
+  options: { readonly action?: string; readonly screen?: string } = {},
 ): Promise<RuntimeSnapshot> {
   const database = await databasePromise;
   const appId = inspection.manifest.id;
@@ -110,11 +120,15 @@ export async function loadRuntimeSnapshot(
   );
   const settings: Record<string, SerializableValue> = {};
   for (const row of settingRows) {
-    settings[row.name] = JSON.parse(row.value_json) as SerializableValue;
+    const definition = inspection.settings[row.name];
+    if (definition === undefined) continue;
+    const value = JSON.parse(row.value_json) as SerializableValue;
+    assertSettingValue(definition, value, `settings.${row.name}`);
+    settings[row.name] = value;
   }
 
   const records: Record<string, StoredRecord[]> = {};
-  for (const collectionName of Object.keys(inspection.collections)) {
+  for (const [collectionName, definition] of Object.entries(inspection.collections)) {
     const rows = await database.getAllAsync<RecordRow>(
       `SELECT id, data_json, created_at, updated_at
        FROM records
@@ -123,12 +137,16 @@ export async function loadRuntimeSnapshot(
       appId,
       collectionName,
     );
-    records[collectionName] = rows.map((row) => ({
-      ...(JSON.parse(row.data_json) as Record<string, SerializableValue>),
-      id: row.id,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }));
+    records[collectionName] = rows.map((row) => {
+      const data = JSON.parse(row.data_json) as Record<string, SerializableValue>;
+      assertRecordInput(definition, data, `records.${collectionName}.${row.id}`);
+      return {
+        ...data,
+        id: row.id,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
+    });
   }
 
   const timerRows = await database.getAllAsync<TimerRow>(
@@ -149,7 +167,7 @@ export async function loadRuntimeSnapshot(
 
   return {
     mode,
-    ...(mode === "render" ? { screen: "home" } : {}),
+    ...(mode === "render" ? { screen: options.screen ?? "home" } : {}),
     ...(options.action === undefined ? {} : { action: options.action }),
     now: now.toISOString(),
     settings,
@@ -164,15 +182,13 @@ export async function applyRuntimeOperations(
 ): Promise<void> {
   const database = await databasePromise;
   const appId = inspection.manifest.id;
-  const knownCollections = new Set(Object.keys(inspection.collections));
 
   await database.withTransactionAsync(async () => {
-    for (const operation of operations) {
+    for (const [index, operation] of operations.entries()) {
       switch (operation.type) {
         case "insert": {
-          if (!knownCollections.has(operation.collection)) {
-            throw new Error(`Unknown collection: ${operation.collection}`);
-          }
+          const definition = requireCollection(inspection, operation.collection, index);
+          assertRecordInput(definition, operation.record, `operations[${index}].record`);
           const timestamp = new Date().toISOString();
           await database.runAsync(
             `INSERT INTO records (
@@ -186,7 +202,48 @@ export async function applyRuntimeOperations(
           );
           break;
         }
-        case "timer-start": {
+        case "update": {
+          const definition = requireCollection(inspection, operation.collection, index);
+          assertRecordId(operation.id, `operations[${index}].id`);
+          assertRecordInput(definition, operation.changes, `operations[${index}].changes`, true);
+          const existing = await database.getFirstAsync<{ readonly data_json: string }>(
+            `SELECT data_json FROM records
+             WHERE id = ? AND app_id = ? AND collection_name = ?`,
+            operation.id,
+            appId,
+            operation.collection,
+          );
+          if (existing === null) throw new Error(`RECORD_NOT_FOUND: ${operation.collection}.${operation.id}`);
+          const merged = {
+            ...(JSON.parse(existing.data_json) as Record<string, SerializableValue>),
+            ...operation.changes,
+          };
+          assertRecordInput(definition, merged, `operations[${index}].record`);
+          const result = await database.runAsync(
+            `UPDATE records SET data_json = ?, updated_at = ?
+             WHERE id = ? AND app_id = ? AND collection_name = ?`,
+            JSON.stringify(merged),
+            new Date().toISOString(),
+            operation.id,
+            appId,
+            operation.collection,
+          );
+          if (result.changes !== 1) throw new Error(`RECORD_NOT_FOUND: ${operation.collection}.${operation.id}`);
+          break;
+        }
+        case "remove": {
+          requireCollection(inspection, operation.collection, index);
+          assertRecordId(operation.id, `operations[${index}].id`);
+          const result = await database.runAsync(
+            "DELETE FROM records WHERE id = ? AND app_id = ? AND collection_name = ?",
+            operation.id,
+            appId,
+            operation.collection,
+          );
+          if (result.changes !== 1) throw new Error(`RECORD_NOT_FOUND: ${operation.collection}.${operation.id}`);
+          break;
+        }
+        case "timer-start":
           await database.runAsync(
             `INSERT INTO timers (app_id, timer_id, started_at)
              VALUES (?, ?, ?)`,
@@ -195,19 +252,30 @@ export async function applyRuntimeOperations(
             operation.startedAt,
           );
           break;
-        }
         case "timer-stop": {
           const result = await database.runAsync(
             "DELETE FROM timers WHERE app_id = ? AND timer_id = ?",
             appId,
             operation.timerId,
           );
-          if (result.changes !== 1) {
-            throw new Error(`Timer is not active: ${operation.timerId}`);
-          }
+          if (result.changes !== 1) throw new Error(`TIMER_NOT_FOUND: ${operation.timerId}`);
           break;
         }
+        default:
+          throw new Error(`INVALID_OPERATION: operations[${index}] has an unsupported type.`);
       }
     }
   });
+}
+
+function requireCollection(
+  inspection: MiniAppInspection,
+  name: string,
+  operationIndex: number,
+) {
+  const definition = inspection.collections[name];
+  if (definition === undefined) {
+    throw new Error(`UNKNOWN_COLLECTION: operations[${operationIndex}].collection: ${name}`);
+  }
+  return definition;
 }
