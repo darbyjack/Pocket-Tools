@@ -15,9 +15,18 @@ function validDefinition() {
       sdkVersion: 1,
     },
     settings: {
-      title: setting.text({ label: "Title", default: "Example", maxLength: 80 }),
+      title: setting.text({
+        label: "Title",
+        default: "Example",
+        maxLength: 80,
+      }),
       enabled: setting.boolean({ label: "Enabled", default: true }),
-      count: setting.number({ label: "Count", default: 1, min: 0, max: 10 }),
+      count: setting.number({
+        label: "Count",
+        default: 1,
+        min: 0,
+        max: 10,
+      }),
       budget: setting.money({ label: "Budget", default: 25, min: 0 }),
       mode: setting.select({
         label: "Mode",
@@ -38,10 +47,14 @@ function validDefinition() {
     },
     screens: {
       home: () => ui.page({ title: "Example Tool", children: [] }),
-      details: () => ui.page({ title: "Details", children: [] }),
+      details: (_context, input) =>
+        ui.page({
+          title: String(input ?? "Details"),
+          children: [],
+        }),
     },
     actions: {
-      save() {},
+      save(_context, _input) {},
     },
   });
 }
@@ -77,8 +90,17 @@ test("validates setting defaults, bounds, visibility, and select options", () =>
   const definition = {
     ...validDefinition(),
     settings: {
-      badText: setting.text({ label: "Text", default: "too long", maxLength: 2 }),
-      badNumber: setting.number({ label: "Number", default: 20, min: 0, max: 10 }),
+      badText: setting.text({
+        label: "Text",
+        default: "too long",
+        maxLength: 2,
+      }),
+      badNumber: setting.number({
+        label: "Number",
+        default: 20,
+        min: 0,
+        max: 10,
+      }),
       badSelect: setting.select({
         label: "Select",
         default: "missing",
@@ -98,6 +120,26 @@ test("validates setting defaults, bounds, visibility, and select options", () =>
   assert.ok(paths.includes("settings.dependent.visibleWhen.setting"));
 });
 
+test("rejects removed setting properties rather than freezing placeholders", () => {
+  const definition = {
+    ...validDefinition(),
+    settings: {
+      count: {
+        type: "number",
+        label: "Count",
+        default: 1,
+        step: 0.5,
+      },
+    },
+  } as unknown as ReturnType<typeof validDefinition>;
+
+  assert.ok(
+    validateMiniAppDefinition(definition).some(
+      (issue) => issue.path === "settings.count.step",
+    ),
+  );
+});
+
 test("validates collection fields, optional metadata, and reserved names", () => {
   const definition = {
     ...validDefinition(),
@@ -106,7 +148,12 @@ test("validates collection fields, optional metadata, and reserved names", () =>
       invalid: {
         fields: {
           id: { type: "text" },
-          title: { type: "text", optional: "yes", minLength: 10, maxLength: 2 },
+          title: {
+            type: "text",
+            optional: "yes",
+            minLength: 10,
+            maxLength: 2,
+          },
           mystery: { type: "unknown" },
         },
       },
