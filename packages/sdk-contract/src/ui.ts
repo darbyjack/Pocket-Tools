@@ -16,6 +16,10 @@ export interface MetricNode extends UiNodeBase<"metric"> {
   readonly label: string;
   readonly value: string | number;
   readonly format?: "plain" | "money" | "duration" | "number";
+  readonly liveTimer?: {
+    readonly timerId: string;
+    readonly ratePerHour: number;
+  };
 }
 
 export interface TimerNode extends UiNodeBase<"timer"> {

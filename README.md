@@ -2,17 +2,27 @@
 
 Pocket Tools is an Android-first host for small, scriptable personal utilities. A mini app is one JavaScript module that uses a small host-owned SDK and renders through native components.
 
-The first reference utility is **Bathroom Pay**, which tracks bathroom-trip time and calculates its gross pay equivalent without adding Bathroom Pay-specific behavior to the host.
+Bathroom Pay is the first reference script. Its business logic lives only in `examples/bathroom-pay.miniapp.js`; the host does not contain Bathroom Pay-specific runtime, storage, rendering, or hook code.
 
 ## Development rules
 
-Read [AGENTS.md](AGENTS.md) before changing the project. The current SDK contains only the settings, storage, timer, and UI primitives required by the first Bathroom Pay slice. New APIs are added only when the next working end-to-end slice needs them.
+Read [AGENTS.md](AGENTS.md) before changing the project. The SDK contains only the settings, storage, timer, and UI primitives required by the current working slice. New APIs are added only when the next end-to-end layer needs them.
 
 ## Current phase
 
-This pull request establishes the repository and the smallest public contract needed to express the first Bathroom Pay slice. It does not add compatibility layers, migrations, permissions, or unused UI components.
+The Android application connects the first complete generic mini-app path:
 
-The next implementation step must make this contract work end to end on Android before the SDK grows further.
+```text
+examples/*.miniapp.js
+  → generated bundled-script data catalog
+  → generic useMiniApp(source) host path
+  → isolated QuickJS-NG runtime
+  → serialized UI and operation results
+  → React Native renderer
+  → Expo SQLite settings, records, and timers
+```
+
+The bundled catalog is temporary seed data for development. Adding another `examples/*.miniapp.js` file requires no host-code changes; the synchronizer discovers it automatically. Script installation and the copy-and-paste editor are later product layers.
 
 The canonical delivery map is [Wayfinder: Deliver the Pocket Tools Android MVP](https://github.com/darbyjack/Pocket-Tools/issues/1).
 
@@ -20,16 +30,22 @@ The canonical delivery map is [Wayfinder: Deliver the Pocket Tools Android MVP](
 
 - Node.js 24.16 or newer
 - pnpm 11.17.0 through Corepack
+- Android Studio and an Android SDK supported by Expo SDK 57
+- Android NDK 26 or newer for QuickJS-NG
 
 ```bash
 corepack enable
 pnpm install
 pnpm check
+pnpm android
 ```
+
+`pnpm android` synchronizes every `examples/*.miniapp.js` script into the generated data catalog and runs the Android development build. Expo Go cannot run Pocket Tools because the app contains a custom native QuickJS module.
 
 Individual checks:
 
 ```bash
+pnpm sync:mini-apps:check
 pnpm format:check
 pnpm lint
 pnpm typecheck
@@ -57,15 +73,13 @@ export default defineMiniApp({
 });
 ```
 
-The host rejects external imports, ambient native access, unsupported SDK identifiers, invalid bridge values, and invalid UI trees.
+The host rejects unsupported imports, ambient native access, unsupported SDK identifiers, invalid bridge values, and invalid UI output.
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [First Android mini-app slice](docs/ANDROID_SLICE.md)
 - [Security model](docs/SECURITY_MODEL.md)
 - [SDK v1 overview](docs/SDK_OVERVIEW.md)
 - [Bathroom Pay requirements](docs/BATHROOM_PAY_REQUIREMENTS.md)
-
-## Repository roadmap
-
-Implementation is tracked through the child tickets of the wayfinder map. Work is delivered through focused branches and pull requests, one frontier ticket at a time. The next frontier is the first complete Android Bathroom Pay slice, not another standalone infrastructure layer.
+- [Mobile build instructions](apps/mobile/README.md)
