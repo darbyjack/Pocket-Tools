@@ -1,3 +1,5 @@
+import { isSerializableValue } from "@pocket-tools/sdk-contract";
+
 import type { MiniAppInspection, PageNode, SettingDefinition } from "../model.ts";
 
 const MAXIMUM_UI_NODES = 512;
@@ -102,18 +104,20 @@ function visitNode(
       validateSettingBinding(node, path, state, ["select"]);
       return node;
     case "button": {
-      exactKeys(node, ["type", "label", "action"], path);
+      exactKeys(node, ["type", "label", "action", "input"], path);
       requireString(node.label, `${path}.label`, 1, 120);
       const action = requireIdentifier(node.action, `${path}.action`);
+      validateInteractionInput(node.input, `${path}.input`);
       if (state.inspection !== undefined && !state.inspection.actions.includes(action)) {
         fail(`${path}.action`, `Unknown declared action: ${action}.`);
       }
       return node;
     }
     case "navigation": {
-      exactKeys(node, ["type", "label", "screen"], path);
+      exactKeys(node, ["type", "label", "screen", "input"], path);
       requireString(node.label, `${path}.label`, 1, 120);
       const screen = requireIdentifier(node.screen, `${path}.screen`);
+      validateInteractionInput(node.input, `${path}.input`);
       if (state.inspection !== undefined && !state.inspection.screens.includes(screen)) {
         fail(`${path}.screen`, `Unknown declared screen: ${screen}.`);
       }
@@ -181,6 +185,12 @@ function validateSettingBinding(
   if (definition === undefined) fail(`${path}.setting`, `Unknown declared setting: ${settingName}.`);
   if (!allowedTypes.includes(definition.type)) {
     fail(`${path}.setting`, `Setting ${settingName} has incompatible type ${definition.type}.`);
+  }
+}
+
+function validateInteractionInput(value: unknown, path: string): void {
+  if (value !== undefined && !isSerializableValue(value)) {
+    fail(path, "Interaction input must be a finite serializable value.");
   }
 }
 
