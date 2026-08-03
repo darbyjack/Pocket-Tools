@@ -1,10 +1,4 @@
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import type { InstalledMiniApp } from "../storage/database";
 import { MiniAppRuntimePanel } from "./MiniAppRuntimePanel";
@@ -38,9 +32,7 @@ export function InstalledMiniAppRunner({
           <ToolbarAction label="Edit" onPress={onEdit} />
           <ToolbarAction label="Duplicate" onPress={onDuplicate} />
           <ToolbarAction label="Export" onPress={onExport} />
-          {canRollback ? (
-            <ToolbarAction label="Roll back" onPress={onRollback} />
-          ) : null}
+          {canRollback ? <ToolbarAction label="Roll back" onPress={onRollback} /> : null}
         </View>
       </View>
 

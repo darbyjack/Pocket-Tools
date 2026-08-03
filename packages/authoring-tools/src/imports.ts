@@ -1,4 +1,4 @@
-import * as ts from "typescript";
+import * as ts from "typescript-compiler-api";
 
 const SDK_MODULE = "@pocket-tools/sdk";
 
@@ -40,10 +40,7 @@ export function findImportViolation(source: string): ImportViolation | null {
       }
     }
 
-    if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword
-    ) {
+    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
       const argument = node.arguments[0];
       violation = createViolation(
         sourceFile,

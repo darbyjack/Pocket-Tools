@@ -5,7 +5,8 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": true,
+    "types": ["node"]
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.json", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }

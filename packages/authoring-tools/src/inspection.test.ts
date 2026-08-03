@@ -2,17 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import {
-  AuthoringValidationError,
-  inspectMiniAppSource,
-} from "./inspection.ts";
+import { AuthoringValidationError, inspectMiniAppSource } from "./inspection.ts";
 import { AuthoringRuntimeError } from "./quickjs.ts";
 import { AuthoringTypecheckError } from "./typecheck.ts";
 
-const TEMPLATE_URL = new URL(
-  "../../../docs/fixtures/agent-template.miniapp.js",
-  import.meta.url,
-);
+const TEMPLATE_URL = new URL("../../../docs/fixtures/agent-template.miniapp.js", import.meta.url);
 
 test("inspects the canonical agent template through the embedded SDK runner", async () => {
   const source = await readFile(TEMPLATE_URL, "utf8");

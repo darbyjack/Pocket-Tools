@@ -1,4 +1,4 @@
-import { PREVIEW_STORAGE_PREFIX } from "../storage/namespaces";
+import { DIAGNOSTIC_APP_ID_PREFIX, PREVIEW_STORAGE_PREFIX } from "../storage/namespaces.ts";
 
 export type InstallWorkflowMode = "create" | "duplicate" | "edit";
 
@@ -7,6 +7,11 @@ export function assertCandidateIdentity(
   installedId: string | null,
   candidateId: string,
 ): void {
+  if (candidateId.startsWith(DIAGNOSTIC_APP_ID_PREFIX)) {
+    throw new Error(
+      `INSTALLATION_FAILED: manifest.id values beginning with ${DIAGNOSTIC_APP_ID_PREFIX} are reserved for host diagnostics.`,
+    );
+  }
   if (mode === "edit" && installedId !== null && installedId !== candidateId) {
     throw new Error(
       `INSTALLATION_FAILED: An update cannot change manifest.id from ${installedId} to ${candidateId}. Use Duplicate to create a new app.`,
@@ -27,10 +32,7 @@ export function isCurrentSourceApproved(
   return inspectedSource === currentSource && previewedSource === currentSource;
 }
 
-export function createPreviewStorageId(
-  timestamp = Date.now(),
-  random = Math.random(),
-): string {
+export function createPreviewStorageId(timestamp = Date.now(), random = Math.random()): string {
   const randomPart = Math.floor(random * 0x1_0000_0000)
     .toString(36)
     .padStart(7, "0");

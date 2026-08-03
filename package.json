@@ -3,22 +3,19 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.17.0",
-  "engines": {
-    "node": ">=24.16.0"
-  },
   "scripts": {
     "android": "pnpm sync:mini-apps && pnpm --dir apps/mobile android",
     "check": "pnpm sync:mini-apps:check && pnpm sdk:declarations:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "inspect:mini-app": "pnpm --dir packages/authoring-tools mini-app inspect",
+    "lint": "oxlint .",
     "mini-app": "pnpm --dir packages/authoring-tools mini-app",
     "sdk:declarations": "node --experimental-strip-types packages/authoring-tools/src/declarations.ts write",
     "sdk:declarations:check": "node --experimental-strip-types packages/authoring-tools/src/declarations.ts check",
     "sync:mini-apps": "node scripts/sync-bundled-mini-apps.mjs",
     "sync:mini-apps:check": "node scripts/sync-bundled-mini-apps.mjs --check",
-    "test": "node --experimental-strip-types --test packages/sdk-contract/src/*.test.ts packages/authoring-tools/src/*.test.ts apps/mobile/src/installer/*.test.ts apps/mobile/src/runtime/*.test.ts modules/pocket-quickjs/src/*.test.ts",
+    "test": "node --experimental-strip-types --test packages/sdk-contract/src/*.test.ts packages/authoring-tools/src/*.test.ts apps/mobile/src/installer/*.test.ts apps/mobile/src/runtime/*.test.ts apps/mobile/src/storage/*.test.ts modules/pocket-quickjs/src/*.test.ts",
     "typecheck": "tsc --noEmit && pnpm --dir apps/mobile typecheck && pnpm --dir modules/pocket-quickjs typecheck",
     "validate:mini-app": "pnpm --dir packages/authoring-tools mini-app validate"
   },
@@ -27,5 +24,9 @@
     "oxfmt": "0.61.0",
     "oxlint": "1.76.0",
     "typescript": "7.0.2"
-  }
+  },
+  "engines": {
+    "node": ">=24.16.0"
+  },
+  "packageManager": "pnpm@11.17.0"
 }

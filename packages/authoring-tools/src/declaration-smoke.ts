@@ -4,6 +4,7 @@ import {
   field,
   setting,
   ui,
+  type SerializableValue,
 } from "../../sdk-contract/dist/index.js";
 
 export const declarationSmokeMiniApp = defineMiniApp({
@@ -44,14 +45,14 @@ export const declarationSmokeMiniApp = defineMiniApp({
       context.data.collection("entries").insert({
         label: String(context.settings.get("label")),
         enabled: Boolean(context.settings.get("enabled")),
-        amount:
-          input !== null &&
-          typeof input === "object" &&
-          !Array.isArray(input) &&
-          input.source === "smoke"
-            ? 1
-            : null,
+        amount: isSerializableObject(input) && input.source === "smoke" ? 1 : null,
       });
     },
   },
 });
+
+function isSerializableObject(
+  value: SerializableValue | undefined,
+): value is Readonly<Record<string, SerializableValue>> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}

@@ -30,11 +30,7 @@ export function validateMiniAppDefinition(
   validateManifest(root.manifest, issues);
 
   const settings = validateNamedObject(root.settings, "settings", issues);
-  const collections = validateNamedObject(
-    root.collections,
-    "collections",
-    issues,
-  );
+  const collections = validateNamedObject(root.collections, "collections", issues);
   const screens = validateNamedObject(root.screens, "screens", issues, true);
   const actions = validateNamedObject(root.actions, "actions", issues);
 
@@ -46,20 +42,12 @@ export function validateMiniAppDefinition(
   }
   for (const [name, renderer] of Object.entries(screens)) {
     if (typeof renderer !== "function") {
-      addIssue(
-        issues,
-        `screens.${name}`,
-        "Must be a synchronous screen function.",
-      );
+      addIssue(issues, `screens.${name}`, "Must be a synchronous screen function.");
     }
   }
   for (const [name, action] of Object.entries(actions)) {
     if (typeof action !== "function") {
-      addIssue(
-        issues,
-        `actions.${name}`,
-        "Must be a synchronous action function.",
-      );
+      addIssue(issues, `actions.${name}`, "Must be a synchronous action function.");
     }
   }
 
@@ -76,28 +64,13 @@ export function validateMiniAppDefinition(
 function validateManifest(value: unknown, issues: ValidationIssue[]): void {
   const manifest = asObject(value, "manifest", issues);
   if (manifest === null) return;
-  exactKeys(
-    manifest,
-    ["id", "name", "description", "icon", "sdkVersion"],
-    "manifest",
-    issues,
-  );
+  exactKeys(manifest, ["id", "name", "description", "icon", "sdkVersion"], "manifest", issues);
 
   if (typeof manifest.id !== "string" || !appIdPattern.test(manifest.id)) {
-    addIssue(
-      issues,
-      "manifest.id",
-      "Must use lowercase kebab-case and begin with a letter.",
-    );
+    addIssue(issues, "manifest.id", "Must use lowercase kebab-case and begin with a letter.");
   }
   validateString(manifest.name, "manifest.name", 1, 80, issues);
-  validateOptionalString(
-    manifest.description,
-    "manifest.description",
-    0,
-    500,
-    issues,
-  );
+  validateOptionalString(manifest.description, "manifest.description", 0, 500, issues);
   validateOptionalString(manifest.icon, "manifest.icon", 1, 80, issues);
   if (manifest.sdkVersion !== SDK_VERSION) {
     addIssue(
@@ -142,12 +115,7 @@ function validateSetting(
 
   const common = ["type", "label", "description", "default", "visibleWhen"];
   if (type === "text") {
-    exactKeys(
-      setting,
-      [...common, "minLength", "maxLength"],
-      path,
-      issues,
-    );
+    exactKeys(setting, [...common, "minLength", "maxLength"], path, issues);
   } else if (type === "boolean") {
     exactKeys(setting, common, path, issues);
   } else if (type === "number" || type === "money") {
@@ -160,49 +128,19 @@ function validateSetting(
   }
 
   validateString(setting.label, `${path}.label`, 1, 120, issues);
-  validateOptionalString(
-    setting.description,
-    `${path}.description`,
-    0,
-    500,
-    issues,
-  );
-  validateVisibility(
-    setting.visibleWhen,
-    `${path}.visibleWhen`,
-    allSettings,
-    issues,
-  );
+  validateOptionalString(setting.description, `${path}.description`, 0, 500, issues);
+  validateVisibility(setting.visibleWhen, `${path}.visibleWhen`, allSettings, issues);
 
   if (type === "text") {
-    validateIntegerBound(
-      setting.minLength,
-      `${path}.minLength`,
-      0,
-      10_000,
-      issues,
-    );
-    validateIntegerBound(
-      setting.maxLength,
-      `${path}.maxLength`,
-      1,
-      10_000,
-      issues,
-    );
+    validateIntegerBound(setting.minLength, `${path}.minLength`, 0, 10_000, issues);
+    validateIntegerBound(setting.maxLength, `${path}.maxLength`, 1, 10_000, issues);
     if (typeof setting.default !== "string") {
       addIssue(issues, `${path}.default`, "Must be a string.");
     } else {
       const minimum = numberOr(setting.minLength, 0);
       const maximum = numberOr(setting.maxLength, 10_000);
-      if (
-        setting.default.length < minimum ||
-        setting.default.length > maximum
-      ) {
-        addIssue(
-          issues,
-          `${path}.default`,
-          "Must satisfy the declared text length bounds.",
-        );
+      if (setting.default.length < minimum || setting.default.length > maximum) {
+        addIssue(issues, `${path}.default`, "Must satisfy the declared text length bounds.");
       }
     }
     validateOrderedBounds(setting.minLength, setting.maxLength, path, issues);
@@ -227,22 +165,14 @@ function validateSetting(
       ((typeof setting.min === "number" && setting.default < setting.min) ||
         (typeof setting.max === "number" && setting.default > setting.max))
     ) {
-      addIssue(
-        issues,
-        `${path}.default`,
-        "Must satisfy the declared numeric bounds.",
-      );
+      addIssue(issues, `${path}.default`, "Must satisfy the declared numeric bounds.");
     }
     return;
   }
 
   const options = Array.isArray(setting.options) ? setting.options : null;
   if (options === null || options.length === 0 || options.length > 100) {
-    addIssue(
-      issues,
-      `${path}.options`,
-      "Must contain between 1 and 100 options.",
-    );
+    addIssue(issues, `${path}.options`, "Must contain between 1 and 100 options.");
     return;
   }
 
@@ -255,11 +185,7 @@ function validateSetting(
     exactKeys(option, ["label", "value"], optionPath, issues);
     validateString(option.label, `${optionPath}.label`, 1, 120, issues);
     if (!isSelectValue(option.value)) {
-      addIssue(
-        issues,
-        `${optionPath}.value`,
-        "Must be a string, number, or boolean.",
-      );
+      addIssue(issues, `${optionPath}.value`, "Must be a string, number, or boolean.");
       continue;
     }
     if (typeof option.value === "number" && !Number.isFinite(option.value)) {
@@ -268,24 +194,13 @@ function validateSetting(
     }
     const key = `${typeof option.value}:${String(option.value)}`;
     if (seen.has(key)) {
-      addIssue(
-        issues,
-        `${optionPath}.value`,
-        "Option values must be unique.",
-      );
+      addIssue(issues, `${optionPath}.value`, "Option values must be unique.");
     }
     seen.add(key);
     optionValues.push(option.value);
   }
-  if (
-    !isSelectValue(setting.default) ||
-    !optionValues.some((value) => value === setting.default)
-  ) {
-    addIssue(
-      issues,
-      `${path}.default`,
-      "Must exactly match one declared option value.",
-    );
+  if (!isSelectValue(setting.default) || !optionValues.some((value) => value === setting.default)) {
+    addIssue(issues, `${path}.default`, "Must exactly match one declared option value.");
   }
 }
 
@@ -299,39 +214,20 @@ function validateVisibility(
   const rule = asObject(value, path, issues);
   if (rule === null) return;
   exactKeys(rule, ["setting", "equals"], path, issues);
-  if (
-    typeof rule.setting !== "string" ||
-    !objectKeyPattern.test(rule.setting)
-  ) {
-    addIssue(
-      issues,
-      `${path}.setting`,
-      "Must name a lower camelCase setting.",
-    );
+  if (typeof rule.setting !== "string" || !objectKeyPattern.test(rule.setting)) {
+    addIssue(issues, `${path}.setting`, "Must name a lower camelCase setting.");
   } else if (!(rule.setting in settings)) {
-    addIssue(
-      issues,
-      `${path}.setting`,
-      "Must reference a declared setting.",
-    );
+    addIssue(issues, `${path}.setting`, "Must reference a declared setting.");
   }
   if (
     !isSelectValue(rule.equals) ||
     (typeof rule.equals === "number" && !Number.isFinite(rule.equals))
   ) {
-    addIssue(
-      issues,
-      `${path}.equals`,
-      "Must be a finite string, number, or boolean value.",
-    );
+    addIssue(issues, `${path}.equals`, "Must be a finite string, number, or boolean value.");
   }
 }
 
-function validateCollection(
-  name: string,
-  value: unknown,
-  issues: ValidationIssue[],
-): void {
+function validateCollection(name: string, value: unknown, issues: ValidationIssue[]): void {
   const path = `collections.${name}`;
   const collection = asObject(value, path, issues);
   if (collection === null) return;
@@ -347,47 +243,20 @@ function validateCollection(
       addIssue(issues, fieldPath, "Use a lower camelCase identifier.");
     }
     if (reservedRecordFields.has(fieldName)) {
-      addIssue(
-        issues,
-        fieldPath,
-        "This record metadata name is reserved for the host.",
-      );
+      addIssue(issues, fieldPath, "This record metadata name is reserved for the host.");
     }
     validateField(fieldValue, fieldPath, issues);
   }
 }
 
-function validateField(
-  value: unknown,
-  path: string,
-  issues: ValidationIssue[],
-): void {
-  const field = asObject(value, path, issues) as
-    | (PlainObject & Partial<FieldDefinition>)
-    | null;
+function validateField(value: unknown, path: string, issues: ValidationIssue[]): void {
+  const field = asObject(value, path, issues) as (PlainObject & Partial<FieldDefinition>) | null;
   if (field === null) return;
   const type = field.type;
   if (type === "text") {
-    exactKeys(
-      field,
-      ["type", "optional", "minLength", "maxLength"],
-      path,
-      issues,
-    );
-    validateIntegerBound(
-      field.minLength,
-      `${path}.minLength`,
-      0,
-      100_000,
-      issues,
-    );
-    validateIntegerBound(
-      field.maxLength,
-      `${path}.maxLength`,
-      1,
-      100_000,
-      issues,
-    );
+    exactKeys(field, ["type", "optional", "minLength", "maxLength"], path, issues);
+    validateIntegerBound(field.minLength, `${path}.minLength`, 0, 100_000, issues);
+    validateIntegerBound(field.maxLength, `${path}.maxLength`, 1, 100_000, issues);
     validateOrderedBounds(field.minLength, field.maxLength, path, issues);
   } else if (type === "boolean" || type === "datetime") {
     exactKeys(field, ["type", "optional"], path, issues);
@@ -405,11 +274,7 @@ function validateField(
   }
 }
 
-function asObject(
-  value: unknown,
-  path: string,
-  issues: ValidationIssue[],
-): PlainObject | null {
+function asObject(value: unknown, path: string, issues: ValidationIssue[]): PlainObject | null {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     addIssue(issues, path, "Must be a plain object.");
     return null;
@@ -443,16 +308,8 @@ function validateString(
   maximum: number,
   issues: ValidationIssue[],
 ): void {
-  if (
-    typeof value !== "string" ||
-    value.length < minimum ||
-    value.length > maximum
-  ) {
-    addIssue(
-      issues,
-      path,
-      `Must be a string from ${minimum} to ${maximum} characters.`,
-    );
+  if (typeof value !== "string" || value.length < minimum || value.length > maximum) {
+    addIssue(issues, path, `Must be a string from ${minimum} to ${maximum} characters.`);
   }
 }
 
@@ -468,21 +325,13 @@ function validateOptionalString(
   }
 }
 
-function validateFinite(
-  value: unknown,
-  path: string,
-  issues: ValidationIssue[],
-): void {
+function validateFinite(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     addIssue(issues, path, "Must be a finite number.");
   }
 }
 
-function validateOptionalFinite(
-  value: unknown,
-  path: string,
-  issues: ValidationIssue[],
-): void {
+function validateOptionalFinite(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (value !== undefined) validateFinite(value, path, issues);
 }
 
@@ -495,15 +344,9 @@ function validateIntegerBound(
 ): void {
   if (
     value !== undefined &&
-    (!Number.isInteger(value) ||
-      (value as number) < minimum ||
-      (value as number) > maximum)
+    (!Number.isInteger(value) || (value as number) < minimum || (value as number) > maximum)
   ) {
-    addIssue(
-      issues,
-      path,
-      `Must be an integer from ${minimum} to ${maximum}.`,
-    );
+    addIssue(issues, path, `Must be an integer from ${minimum} to ${maximum}.`);
   }
 }
 
@@ -513,44 +356,26 @@ function validateOrderedBounds(
   path: string,
   issues: ValidationIssue[],
 ): void {
-  if (
-    typeof minimum === "number" &&
-    typeof maximum === "number" &&
-    minimum > maximum
-  ) {
+  if (typeof minimum === "number" && typeof maximum === "number" && minimum > maximum) {
     addIssue(issues, path, "Minimum cannot exceed maximum.");
   }
 }
 
 function numberOr(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value)
-    ? value
-    : fallback;
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function isSelectValue(value: unknown): value is SelectValue {
-  return (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  );
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
 }
 
-function addIssue(
-  issues: ValidationIssue[],
-  path: string,
-  message: string,
-): void {
+function addIssue(issues: ValidationIssue[], path: string, message: string): void {
   issues.push({ path, message });
 }
 
-export function assertValidMiniAppDefinition(
-  definition: MiniAppDefinition,
-): void {
+export function assertValidMiniAppDefinition(definition: MiniAppDefinition): void {
   const issues = validateMiniAppDefinition(definition);
   if (issues.length === 0) return;
-  const details = issues
-    .map((issue) => `${issue.path}: ${issue.message}`)
-    .join("\n");
+  const details = issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n");
   throw new Error(`Mini app definition is invalid:\n${details}`);
 }

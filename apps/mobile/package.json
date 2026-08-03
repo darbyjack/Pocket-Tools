@@ -2,6 +2,7 @@
   "name": "@pocket-tools/mobile",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "index.ts",
   "scripts": {
     "android": "expo run:android",
@@ -20,8 +21,8 @@
     "react-native": "0.86.2"
   },
   "devDependencies": {
+    "@types/node": "26.1.2",
     "@types/react": "~19.2.2",
     "typescript": "7.0.2"
-  },
-  "type": "module"
+  }
 }

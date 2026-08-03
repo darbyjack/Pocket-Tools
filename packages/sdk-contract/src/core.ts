@@ -26,10 +26,7 @@ export type ScreenRenderer = (
   input: SerializableValue | undefined,
 ) => PageNode;
 
-export type ActionHandler = (
-  context: MiniAppContext,
-  input: SerializableValue | undefined,
-) => void;
+export type ActionHandler = (context: MiniAppContext, input: SerializableValue | undefined) => void;
 
 export interface MiniAppDefinition {
   readonly manifest: MiniAppManifest;

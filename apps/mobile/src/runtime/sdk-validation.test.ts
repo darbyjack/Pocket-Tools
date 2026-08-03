@@ -3,11 +3,7 @@ import test from "node:test";
 
 import { collection, field, setting } from "@pocket-tools/sdk-contract";
 
-import {
-  assertRecordId,
-  assertRecordInput,
-  assertSettingValue,
-} from "./sdk-validation.ts";
+import { assertRecordId, assertRecordInput, assertSettingValue } from "./sdk-validation.ts";
 
 const entryCollection = collection({
   title: field.text({ maxLength: 40 }),
@@ -18,13 +14,25 @@ const entryCollection = collection({
 
 test("validates every frozen setting value type", () => {
   assert.doesNotThrow(() =>
-    assertSettingValue(setting.text({ label: "Title", default: "A", maxLength: 10 }), "Hello", "settings.title"),
+    assertSettingValue(
+      setting.text({ label: "Title", default: "A", maxLength: 10 }),
+      "Hello",
+      "settings.title",
+    ),
   );
   assert.doesNotThrow(() =>
-    assertSettingValue(setting.boolean({ label: "Enabled", default: true }), false, "settings.enabled"),
+    assertSettingValue(
+      setting.boolean({ label: "Enabled", default: true }),
+      false,
+      "settings.enabled",
+    ),
   );
   assert.doesNotThrow(() =>
-    assertSettingValue(setting.number({ label: "Count", default: 1, min: 0, max: 5 }), 3, "settings.count"),
+    assertSettingValue(
+      setting.number({ label: "Count", default: 1, min: 0, max: 5 }),
+      3,
+      "settings.count",
+    ),
   );
   assert.doesNotThrow(() =>
     assertSettingValue(
@@ -83,20 +91,12 @@ test("rejects missing, unknown, host-owned, and invalid record fields", () => {
   );
   assert.throws(
     () =>
-      assertRecordInput(
-        entryCollection,
-        { id: "owned", title: "Task", complete: false },
-        "record",
-      ),
+      assertRecordInput(entryCollection, { id: "owned", title: "Task", complete: false }, "record"),
     /record.id: Record metadata is host-owned/,
   );
   assert.throws(
     () =>
-      assertRecordInput(
-        entryCollection,
-        { title: "Task", complete: false, amount: -1 },
-        "record",
-      ),
+      assertRecordInput(entryCollection, { title: "Task", complete: false, amount: -1 }, "record"),
     /record.amount: Value is below the minimum/,
   );
 });

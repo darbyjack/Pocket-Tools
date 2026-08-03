@@ -40,18 +40,9 @@ export default defineMiniApp({
 
   screens: {
     home(context) {
-      const billAmount = Math.max(
-        0,
-        finiteNumber(context.settings.get("billAmount")),
-      );
-      const tipPercent = Math.max(
-        0,
-        finiteNumber(context.settings.get("tipPercent")),
-      );
-      const partySize = Math.max(
-        1,
-        Math.round(finiteNumber(context.settings.get("partySize"))),
-      );
+      const billAmount = Math.max(0, finiteNumber(context.settings.get("billAmount")));
+      const tipPercent = Math.max(0, finiteNumber(context.settings.get("tipPercent")));
+      const partySize = Math.max(1, Math.round(finiteNumber(context.settings.get("partySize"))));
       const tipAmount = billAmount * (tipPercent / 100);
       const totalAmount = billAmount + tipAmount;
       const perPerson = totalAmount / partySize;

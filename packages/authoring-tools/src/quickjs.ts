@@ -5,10 +5,7 @@ import {
 } from "quickjs-emscripten-core";
 
 import { findImportViolation } from "./imports.ts";
-import {
-  readEmbeddedRuntimeSources,
-  RuntimeSourceError,
-} from "./runtime-sources.ts";
+import { readEmbeddedRuntimeSources, RuntimeSourceError } from "./runtime-sources.ts";
 
 const SDK_MODULE = "@pocket-tools/sdk";
 const MINI_APP_MODULE = "pocket-mini-app.mjs";
@@ -68,23 +65,23 @@ export async function executeInspection(source: string): Promise<unknown> {
   return executeEmbeddedRuntime(source, request);
 }
 
-async function executeEmbeddedRuntime(source: string, request: InspectionRequest): Promise<unknown> {
-  const initialization = await Promise.all([
-    readEmbeddedRuntimeSources(),
-    quickJsModule,
-  ]).catch((caught: unknown) => {
-    if (caught instanceof RuntimeSourceError) {
-      throw new AuthoringRuntimeError(caught.code, caught.message);
-    }
-    throw caught;
-  });
+async function executeEmbeddedRuntime(
+  source: string,
+  request: InspectionRequest,
+): Promise<unknown> {
+  const initialization = await Promise.all([readEmbeddedRuntimeSources(), quickJsModule]).catch(
+    (caught: unknown) => {
+      if (caught instanceof RuntimeSourceError) {
+        throw new AuthoringRuntimeError(caught.code, caught.message);
+      }
+      throw caught;
+    },
+  );
   const [{ sdk, runner }, quickJs] = initialization;
   const runtime = quickJs.newRuntime();
   runtime.setMemoryLimit(MEMORY_LIMIT_BYTES);
   runtime.setMaxStackSize(STACK_LIMIT_BYTES);
-  runtime.setInterruptHandler(
-    shouldInterruptAfterDeadline(Date.now() + TIMEOUT_MILLISECONDS),
-  );
+  runtime.setInterruptHandler(shouldInterruptAfterDeadline(Date.now() + TIMEOUT_MILLISECONDS));
   runtime.setModuleLoader((moduleName) => {
     if (moduleName === SDK_MODULE) return sdk;
     if (moduleName === MINI_APP_MODULE) return source;
@@ -175,11 +172,7 @@ function normalizeRuntimeError(caught: unknown): AuthoringRuntimeError {
     const message = typeof caught.message === "string" ? caught.message : String(caught);
     const stack = typeof caught.stack === "string" ? caught.stack : undefined;
     const explicitCode = typeof caught.code === "string" ? caught.code : undefined;
-    return new AuthoringRuntimeError(
-      explicitCode ?? inferCode(message),
-      message,
-      stack,
-    );
+    return new AuthoringRuntimeError(explicitCode ?? inferCode(message), message, stack);
   }
 
   const message = caught instanceof Error ? caught.message : String(caught);

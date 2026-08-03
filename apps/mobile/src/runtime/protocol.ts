@@ -1,7 +1,4 @@
-import {
-  isSerializableValue,
-  validateMiniAppDefinition,
-} from "@pocket-tools/sdk-contract";
+import { isSerializableValue, validateMiniAppDefinition } from "@pocket-tools/sdk-contract";
 
 import type {
   MetricNode,
@@ -72,9 +69,7 @@ export function parseRuntimeResponse(json: string): RuntimeSuccess {
       });
     }
     throw new MiniAppRuntimeError(parsed.error.code, parsed.error.message, {
-      ...(parsed.error.stack === undefined
-        ? {}
-        : { scriptStack: parsed.error.stack }),
+      ...(parsed.error.stack === undefined ? {} : { scriptStack: parsed.error.stack }),
       logs,
       logsTruncated: parsed.logsTruncated,
     });
@@ -89,9 +84,7 @@ export function parseRuntimeResponse(json: string): RuntimeSuccess {
 
   const operations = parseOperations(parsed.value.operations);
   const inspection =
-    parsed.value.inspection === undefined
-      ? undefined
-      : parseInspection(parsed.value.inspection);
+    parsed.value.inspection === undefined ? undefined : parseInspection(parsed.value.inspection);
   if (parsed.value.page !== undefined) {
     try {
       validatePageNode(parsed.value.page);
@@ -119,11 +112,7 @@ export function parseRuntimeResponse(json: string): RuntimeSuccess {
 function parseInspection(value: unknown): MiniAppInspection {
   if (!isRecord(value)) throw invalidNative("The runtime inspection must be a plain object.");
   exactKeys(value, ["manifest", "settings", "collections", "screens", "actions"], "inspection");
-  if (
-    !isRecord(value.manifest) ||
-    !isRecord(value.settings) ||
-    !isRecord(value.collections)
-  ) {
+  if (!isRecord(value.manifest) || !isRecord(value.settings) || !isRecord(value.collections)) {
     throw invalidNative("The runtime inspection contains invalid definitions.");
   }
   const screens = parseIdentifierList(value.screens, "inspection.screens");
@@ -135,7 +124,7 @@ function parseInspection(value: unknown): MiniAppInspection {
     collections: value.collections,
     screens: Object.fromEntries(screens.map((name) => [name, () => dummyPage])),
     actions: Object.fromEntries(actions.map((name) => [name, () => undefined])),
-  } as Parameters<typeof validateMiniAppDefinition>[0];
+  } as unknown as Parameters<typeof validateMiniAppDefinition>[0];
   const issues = validateMiniAppDefinition(definition);
   if (issues.length > 0) {
     throw new MiniAppRuntimeError(
@@ -213,7 +202,8 @@ function parseOperations(value: unknown): readonly RuntimeOperation[] {
 }
 
 function parseLogs(value: unknown): readonly RuntimeLogEntry[] {
-  if (!Array.isArray(value)) throw invalidNative("The native sandbox returned an invalid log payload.");
+  if (!Array.isArray(value))
+    throw invalidNative("The native sandbox returned an invalid log payload.");
   return value.map((entry) => {
     if (
       !isRecord(entry) ||
@@ -227,7 +217,11 @@ function parseLogs(value: unknown): readonly RuntimeLogEntry[] {
   });
 }
 
-function exactKeys(object: Record<string, unknown>, allowed: readonly string[], path: string): void {
+function exactKeys(
+  object: Record<string, unknown>,
+  allowed: readonly string[],
+  path: string,
+): void {
   const allowedKeys = new Set(allowed);
   for (const key of Object.keys(object)) {
     if (!allowedKeys.has(key)) throw invalidNative(`${path}.${key} is not supported.`);
@@ -272,10 +266,7 @@ export function metricValue(
   nowMilliseconds: number,
 ): string | number {
   if (node.liveTimer === undefined) return node.value;
-  const elapsedSeconds = timerElapsedSeconds(
-    timers[node.liveTimer.timerId],
-    nowMilliseconds,
-  );
+  const elapsedSeconds = timerElapsedSeconds(timers[node.liveTimer.timerId], nowMilliseconds);
   return Number(node.value) + (elapsedSeconds / 3_600) * node.liveTimer.ratePerHour;
 }
 

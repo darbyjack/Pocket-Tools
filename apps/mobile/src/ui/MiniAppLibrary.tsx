@@ -1,10 +1,4 @@
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import type { InstalledMiniApp } from "../storage/database";
 
@@ -12,6 +6,7 @@ export interface MiniAppLibraryProps {
   readonly apps: readonly InstalledMiniApp[];
   readonly onCreate: () => void;
   readonly onDelete: (app: InstalledMiniApp) => void;
+  readonly onDiagnostics: () => void;
   readonly onDuplicate: (app: InstalledMiniApp) => void;
   readonly onEdit: (app: InstalledMiniApp) => void;
   readonly onExport: (app: InstalledMiniApp) => void;
@@ -22,6 +17,7 @@ export function MiniAppLibrary({
   apps,
   onCreate,
   onDelete,
+  onDiagnostics,
   onDuplicate,
   onEdit,
   onExport,
@@ -34,31 +30,32 @@ export function MiniAppLibrary({
           <Text style={styles.eyebrow}>Pocket Tools</Text>
           <Text style={styles.title}>Mini-app library</Text>
           <Text style={styles.subtitle}>
-            Every installed script is offline and receives only isolated settings,
-            records, and durable timers.
+            Every installed script is offline and receives only isolated settings, records, and
+            durable timers.
           </Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onCreate}
-          style={styles.primaryButton}
-        >
-          <Text style={styles.primaryButtonText}>Add script</Text>
-        </Pressable>
+        <View style={styles.headingActions}>
+          <Pressable accessibilityRole="button" onPress={onCreate} style={styles.primaryButton}>
+            <Text style={styles.primaryButtonText}>Add script</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onDiagnostics}
+            style={styles.secondaryButton}
+          >
+            <Text style={styles.secondaryButtonText}>Host diagnostics</Text>
+          </Pressable>
+        </View>
       </View>
 
       {apps.length === 0 ? (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>No mini apps installed</Text>
           <Text style={styles.emptyText}>
-            Paste an agent-generated SDK v1 script to validate, preview, and install
-            it without rebuilding Pocket Tools.
+            Paste an agent-generated SDK v1 script to validate, preview, and install it without
+            rebuilding Pocket Tools.
           </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onCreate}
-            style={styles.primaryButton}
-          >
+          <Pressable accessibilityRole="button" onPress={onCreate} style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>Paste your first script</Text>
           </Pressable>
         </View>
@@ -105,17 +102,8 @@ function Action({
   readonly onPress: () => void;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={styles.actionButton}
-    >
-      <Text
-        style={[
-          styles.actionButtonText,
-          destructive ? styles.destructiveText : null,
-        ]}
-      >
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.actionButton}>
+      <Text style={[styles.actionButtonText, destructive ? styles.destructiveText : null]}>
         {label}
       </Text>
     </Pressable>
@@ -134,6 +122,11 @@ const styles = StyleSheet.create({
   },
   headingCopy: {
     gap: 5,
+  },
+  headingActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 9,
   },
   eyebrow: {
     color: "#475467",
@@ -163,6 +156,21 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#ffffff",
     fontSize: 15,
+    fontWeight: "700",
+  },
+  secondaryButton: {
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderColor: "#d0d5dd",
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: 16,
+  },
+  secondaryButtonText: {
+    color: "#344054",
+    fontSize: 14,
     fontWeight: "700",
   },
   emptyCard: {

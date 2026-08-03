@@ -1,10 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type {
   PageNode,
@@ -13,16 +8,8 @@ import type {
   TimerSnapshot,
   UiNode,
 } from "../model";
-import {
-  formatDateTime,
-  formatDisplayValue,
-  formatDuration,
-} from "../runtime/display-format";
-import {
-  metricValue,
-  settingIsVisible,
-  timerElapsedSeconds,
-} from "../runtime/protocol";
+import { formatDateTime, formatDisplayValue, formatDuration } from "../runtime/display-format";
+import { metricValue, settingIsVisible, timerElapsedSeconds } from "../runtime/protocol";
 import { SettingControl } from "./SettingControl";
 
 interface MiniAppRendererProps {
@@ -30,18 +17,9 @@ interface MiniAppRendererProps {
   readonly settings: Readonly<Record<string, SettingDefinition>>;
   readonly settingValues: Readonly<Record<string, SerializableValue>>;
   readonly timers: Readonly<Record<string, TimerSnapshot>>;
-  readonly onAction: (
-    action: string,
-    input?: SerializableValue,
-  ) => Promise<void>;
-  readonly onNavigate: (
-    screen: string,
-    input?: SerializableValue,
-  ) => Promise<void>;
-  readonly onSettingChange: (
-    name: string,
-    value: SerializableValue,
-  ) => Promise<void>;
+  readonly onAction: (action: string, input?: SerializableValue) => Promise<void>;
+  readonly onNavigate: (screen: string, input?: SerializableValue) => Promise<void>;
+  readonly onSettingChange: (name: string, value: SerializableValue) => Promise<void>;
 }
 
 export function MiniAppRenderer({
@@ -92,18 +70,9 @@ interface NodeViewProps {
   readonly settingValues: Readonly<Record<string, SerializableValue>>;
   readonly timers: Readonly<Record<string, TimerSnapshot>>;
   readonly nowMilliseconds: number;
-  readonly onAction: (
-    action: string,
-    input?: SerializableValue,
-  ) => Promise<void>;
-  readonly onNavigate: (
-    screen: string,
-    input?: SerializableValue,
-  ) => Promise<void>;
-  readonly onSettingChange: (
-    name: string,
-    value: SerializableValue,
-  ) => Promise<void>;
+  readonly onAction: (action: string, input?: SerializableValue) => Promise<void>;
+  readonly onNavigate: (screen: string, input?: SerializableValue) => Promise<void>;
+  readonly onSettingChange: (name: string, value: SerializableValue) => Promise<void>;
 }
 
 function NodeView(props: NodeViewProps) {
@@ -137,9 +106,7 @@ function NodeView(props: NodeViewProps) {
     case "section":
       return (
         <View style={styles.card}>
-          {node.title === undefined ? null : (
-            <Text style={styles.cardTitle}>{node.title}</Text>
-          )}
+          {node.title === undefined ? null : <Text style={styles.cardTitle}>{node.title}</Text>}
           {renderChildren(node.children)}
         </View>
       );
@@ -169,9 +136,7 @@ function NodeView(props: NodeViewProps) {
       return (
         <View style={styles.metric}>
           <Text style={styles.metricLabel}>{node.label}</Text>
-          <Text style={styles.metricValue}>
-            {formatDisplayValue(value, node.format)}
-          </Text>
+          <Text style={styles.metricValue}>{formatDisplayValue(value, node.format)}</Text>
         </View>
       );
     }
@@ -180,9 +145,7 @@ function NodeView(props: NodeViewProps) {
       const elapsed = timerElapsedSeconds(timer, nowMilliseconds);
       return (
         <Text style={styles.timer}>
-          {timer === undefined
-            ? (node.emptyValue ?? formatDuration(0))
-            : formatDuration(elapsed)}
+          {timer === undefined ? (node.emptyValue ?? formatDuration(0)) : formatDuration(elapsed)}
         </Text>
       );
     }
@@ -191,10 +154,7 @@ function NodeView(props: NodeViewProps) {
     case "toggle":
     case "select": {
       const definition = settings[node.setting];
-      if (
-        definition === undefined ||
-        !settingIsVisible(definition, settingValues)
-      ) {
+      if (definition === undefined || !settingIsVisible(definition, settingValues)) {
         return null;
       }
       return (
@@ -249,18 +209,12 @@ function NodeView(props: NodeViewProps) {
     case "list":
       return (
         <View style={styles.card}>
-          {node.title === undefined ? null : (
-            <Text style={styles.cardTitle}>{node.title}</Text>
-          )}
+          {node.title === undefined ? null : <Text style={styles.cardTitle}>{node.title}</Text>}
           {node.items.length === 0 && node.emptyState !== undefined ? (
             <NodeView {...props} node={node.emptyState} />
           ) : (
             node.items.map((item, index) => (
-              <NodeView
-                {...props}
-                key={`${item.title}-${index}`}
-                node={item}
-              />
+              <NodeView {...props} key={`${item.title}-${index}`} node={item} />
             ))
           )}
         </View>

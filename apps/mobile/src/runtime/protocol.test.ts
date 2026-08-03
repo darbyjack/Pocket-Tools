@@ -125,7 +125,7 @@ test("preserves structured sandbox errors and captured logs", () => {
         }),
       ),
     (error: unknown) => {
-      assert.ok(error instanceof MiniAppRuntimeError);
+      if (!(error instanceof MiniAppRuntimeError)) return false;
       assert.equal(error.code, "RUNTIME_TIMEOUT");
       assert.equal(error.scriptStack, "at home (miniapp.js:10)");
       assert.deepEqual(error.logs, [{ level: "warn", message: "before timeout" }]);
@@ -161,8 +161,7 @@ test("rejects malformed envelopes, inspections, and operations", () => {
           },
         }),
       ),
-    (error: unknown) =>
-      error instanceof MiniAppRuntimeError && error.code === "VALIDATION_FAILED",
+    (error: unknown) => error instanceof MiniAppRuntimeError && error.code === "VALIDATION_FAILED",
   );
   assert.throws(
     () =>
@@ -201,7 +200,6 @@ test("rejects invalid UI in an otherwise valid native response", () => {
           },
         }),
       ),
-    (error: unknown) =>
-      error instanceof MiniAppRuntimeError && error.code === "INVALID_UI_TREE",
+    (error: unknown) => error instanceof MiniAppRuntimeError && error.code === "INVALID_UI_TREE",
   );
 });

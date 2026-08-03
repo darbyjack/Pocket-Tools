@@ -1,20 +1,17 @@
 import { execFile } from "node:child_process";
-import {
-  mkdtemp,
-  readdir,
-  readFile,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const executeFile = promisify(execFile);
+const require = createRequire(import.meta.url);
 const ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const PROJECT = resolve(ROOT, "packages/sdk-contract/tsconfig.declarations.json");
 const OUTPUT = resolve(ROOT, "packages/sdk-contract/dist");
+const TYPESCRIPT_CLI = await resolveTypescriptCli();
 
 async function main(): Promise<void> {
   const mode = process.argv[2];
@@ -44,12 +41,33 @@ async function main(): Promise<void> {
   }
 }
 
+async function resolveTypescriptCli(): Promise<string> {
+  const packageRoot = resolve(dirname(require.resolve("typescript")), "..");
+  const manifest = JSON.parse(
+    await readFile(resolve(packageRoot, "package.json"), "utf8"),
+  ) as unknown;
+
+  if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest)) {
+    throw new Error("The installed TypeScript package manifest is invalid.");
+  }
+
+  const bin = (manifest as { readonly bin?: unknown }).bin;
+  if (bin === null || typeof bin !== "object" || Array.isArray(bin)) {
+    throw new Error("The installed TypeScript package does not declare a tsc binary.");
+  }
+
+  const tsc = (bin as { readonly tsc?: unknown }).tsc;
+  if (typeof tsc !== "string" || tsc.length === 0) {
+    throw new Error("The installed TypeScript package does not declare a tsc binary.");
+  }
+
+  return resolve(packageRoot, tsc);
+}
+
 async function emitDeclarations(output: string): Promise<void> {
-  await executeFile(
-    process.platform === "win32" ? "tsc.cmd" : "tsc",
-    ["--project", PROJECT, "--outDir", output],
-    { cwd: ROOT },
-  );
+  await executeFile(process.execPath, [TYPESCRIPT_CLI, "--project", PROJECT, "--outDir", output], {
+    cwd: ROOT,
+  });
   await rewriteDeclarationImports(output);
 }
 
@@ -58,10 +76,7 @@ async function rewriteDeclarationImports(directory: string): Promise<void> {
     if (!file.endsWith(".d.ts")) continue;
     const path = resolve(directory, file);
     const content = await readFile(path, "utf8");
-    const rewritten = content.replace(
-      /(["']\.[^"']+)\.ts(["'])/g,
-      "$1.js$2",
-    );
+    const rewritten = content.replace(/(["']\.[^"']+)\.ts(["'])/g, "$1.js$2");
     if (rewritten !== content) await writeFile(path, rewritten, "utf8");
   }
 }

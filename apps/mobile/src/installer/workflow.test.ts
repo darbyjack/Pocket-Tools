@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { DIAGNOSTIC_APP_ID_PREFIX } from "../storage/namespaces.ts";
 import {
   assertCandidateIdentity,
   createPreviewStorageId,
@@ -8,9 +9,7 @@ import {
 } from "./workflow.ts";
 
 test("an update cannot change the permanent manifest ID", () => {
-  assert.doesNotThrow(() =>
-    assertCandidateIdentity("edit", "daily-tool", "daily-tool"),
-  );
+  assert.doesNotThrow(() => assertCandidateIdentity("edit", "daily-tool", "daily-tool"));
   assert.throws(
     () => assertCandidateIdentity("edit", "daily-tool", "other-tool"),
     /cannot change manifest\.id/,
@@ -22,9 +21,15 @@ test("a duplicate must use a new permanent manifest ID", () => {
     () => assertCandidateIdentity("duplicate", "daily-tool", "daily-tool"),
     /duplicate must change manifest\.id/,
   );
-  assert.doesNotThrow(() =>
-    assertCandidateIdentity("duplicate", "daily-tool", "other-tool"),
+  assert.doesNotThrow(() => assertCandidateIdentity("duplicate", "daily-tool", "other-tool"));
+});
+
+test("host diagnostic manifest IDs are reserved", () => {
+  assert.throws(
+    () => assertCandidateIdentity("create", null, `${DIAGNOSTIC_APP_ID_PREFIX}manual`),
+    /reserved for host diagnostics/,
   );
+  assert.doesNotThrow(() => assertCandidateIdentity("create", null, "lifecycle-helper"));
 });
 
 test("only the exact inspected and previewed source can be persisted", () => {

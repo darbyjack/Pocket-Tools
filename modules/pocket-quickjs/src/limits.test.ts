@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  DEFAULT_QUICKJS_SANDBOX_LIMITS,
-  resolveQuickJsSandboxLimits,
-} from "./limits.ts";
+import { DEFAULT_QUICKJS_SANDBOX_LIMITS, resolveQuickJsSandboxLimits } from "./limits.ts";
 
 test("uses bounded defaults", () => {
   assert.deepEqual(resolveQuickJsSandboxLimits(), DEFAULT_QUICKJS_SANDBOX_LIMITS);
@@ -21,10 +18,7 @@ test("rejects non-integer and out-of-range limits", () => {
     () => resolveQuickJsSandboxLimits({ executionTimeoutMilliseconds: 9 }),
     /executionTimeoutMilliseconds/,
   );
-  assert.throws(
-    () => resolveQuickJsSandboxLimits({ maximumLogEntries: 1.5 }),
-    /maximumLogEntries/,
-  );
+  assert.throws(() => resolveQuickJsSandboxLimits({ maximumLogEntries: 1.5 }), /maximumLogEntries/);
   assert.throws(
     () => resolveQuickJsSandboxLimits({ runtimeMemoryBytes: 1024 * 1024 * 1024 }),
     /runtimeMemoryBytes/,

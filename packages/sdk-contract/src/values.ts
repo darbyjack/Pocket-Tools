@@ -5,7 +5,10 @@ export type SerializableValue =
   | readonly SerializableValue[]
   | { readonly [key: string]: SerializableValue };
 
-export function isSerializableValue(value: unknown, seen = new Set<object>()): value is SerializableValue {
+export function isSerializableValue(
+  value: unknown,
+  seen = new Set<object>(),
+): value is SerializableValue {
   if (
     value === null ||
     typeof value === "string" ||

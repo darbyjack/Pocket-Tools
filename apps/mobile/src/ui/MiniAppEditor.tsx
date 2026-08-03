@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { assertFirstRenderAgainstRetainedState } from "../installer/first-render";
 import { NEW_MINI_APP_TEMPLATE } from "../installer/template";
@@ -44,15 +37,8 @@ interface PreviewSession extends CandidateInspection {
   readonly storageId: string;
 }
 
-export function MiniAppEditor({
-  installed,
-  mode,
-  onCancel,
-  onSaved,
-}: MiniAppEditorProps) {
-  const [source, setSource] = useState(
-    installed?.activeSource ?? NEW_MINI_APP_TEMPLATE,
-  );
+export function MiniAppEditor({ installed, mode, onCancel, onSaved }: MiniAppEditorProps) {
+  const [source, setSource] = useState(installed?.activeSource ?? NEW_MINI_APP_TEMPLATE);
   const [candidate, setCandidate] = useState<CandidateInspection | null>(null);
   const [preview, setPreview] = useState<PreviewSession | null>(null);
   const [previewReadySource, setPreviewReadySource] = useState<string | null>(null);
@@ -71,11 +57,7 @@ export function MiniAppEditor({
   const validateCandidate = useCallback(
     async (currentSource: string): Promise<MiniAppInspection> => {
       const inspection = await inspectMiniApp(currentSource);
-      assertCandidateIdentity(
-        mode,
-        installed?.id ?? null,
-        inspection.manifest.id,
-      );
+      assertCandidateIdentity(mode, installed?.id ?? null, inspection.manifest.id);
       return inspection;
     },
     [installed, mode],
@@ -148,10 +130,7 @@ export function MiniAppEditor({
 
   const handlePreviewReady = useCallback(
     (inspection: MiniAppInspection) => {
-      if (
-        preview !== null &&
-        inspection.manifest.id === preview.inspection.manifest.id
-      ) {
+      if (preview !== null && inspection.manifest.id === preview.inspection.manifest.id) {
         setPreviewError(null);
         setPreviewReadySource(preview.source);
       }
@@ -166,11 +145,7 @@ export function MiniAppEditor({
 
   const handleSave = useCallback(async () => {
     if (
-      !isCurrentSourceApproved(
-        source,
-        candidate?.source ?? null,
-        previewReadySource,
-      ) ||
+      !isCurrentSourceApproved(source, candidate?.source ?? null, previewReadySource) ||
       candidate === null
     ) {
       setError(
@@ -182,17 +157,10 @@ export function MiniAppEditor({
     setBusy(true);
     setError(null);
     try {
-      await assertFirstRenderAgainstRetainedState(
-        source,
-        candidate.inspection,
-      );
+      await assertFirstRenderAgainstRetainedState(source, candidate.inspection);
       const saved =
         mode === "edit" && installed !== null
-          ? await updateInstalledMiniApp(
-              installed.id,
-              candidate.inspection,
-              source,
-            )
+          ? await updateInstalledMiniApp(installed.id, candidate.inspection, source)
           : await installMiniApp(candidate.inspection, source);
       if (preview !== null) await clearAppData(preview.storageId);
       onSaved(saved);
@@ -211,24 +179,12 @@ export function MiniAppEditor({
         ? `Duplicate ${installed?.name ?? "mini app"}`
         : "Install a mini-app script";
   const canSave =
-    !busy &&
-    isCurrentSourceApproved(
-      source,
-      candidate?.source ?? null,
-      previewReadySource,
-    );
+    !busy && isCurrentSourceApproved(source, candidate?.source ?? null, previewReadySource);
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
+    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.toolbar}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onCancel}
-          style={styles.secondaryButton}
-        >
+        <Pressable accessibilityRole="button" onPress={onCancel} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>Cancel</Text>
         </Pressable>
         <Text style={styles.title}>{title}</Text>
@@ -237,17 +193,17 @@ export function MiniAppEditor({
       <View style={styles.disclosure}>
         <Text style={styles.disclosureTitle}>Offline SDK authority</Text>
         <Text style={styles.disclosureText}>
-          This script can use only isolated local settings, records, and durable
-          timers. It cannot access the network, files, location, notifications,
-          secrets, React Native, or Android APIs.
+          This script can use only isolated local settings, records, and durable timers. It cannot
+          access the network, files, location, notifications, secrets, React Native, or Android
+          APIs.
         </Text>
       </View>
 
       {mode === "duplicate" ? (
         <View style={styles.notice}>
           <Text style={styles.noticeText}>
-            Change manifest.id before previewing. A duplicate cannot reuse the
-            original app’s permanent storage identity.
+            Change manifest.id before previewing. A duplicate cannot reuse the original app’s
+            permanent storage identity.
           </Text>
         </View>
       ) : null}
@@ -269,17 +225,8 @@ export function MiniAppEditor({
           label={busy ? "Working…" : "Validate"}
           onPress={handleValidate}
         />
-        <EditorButton
-          disabled={busy}
-          label="Preview"
-          onPress={handlePreview}
-        />
-        <EditorButton
-          disabled={!canSave}
-          label={saveLabel}
-          onPress={handleSave}
-          primary
-        />
+        <EditorButton disabled={busy} label="Preview" onPress={handlePreview} />
+        <EditorButton disabled={!canSave} label={saveLabel} onPress={handleSave} primary />
       </View>
 
       {message === null ? null : (
@@ -343,12 +290,7 @@ function EditorButton({
         disabled ? styles.editorButtonDisabled : null,
       ]}
     >
-      <Text
-        style={[
-          styles.editorButtonText,
-          primary ? styles.editorButtonPrimaryText : null,
-        ]}
-      >
+      <Text style={[styles.editorButtonText, primary ? styles.editorButtonPrimaryText : null]}>
         {label}
       </Text>
     </Pressable>

@@ -24,12 +24,7 @@ export interface MoneyField extends FieldBase<"money"> {
 
 export interface DateTimeField extends FieldBase<"datetime"> {}
 
-export type FieldDefinition =
-  | TextField
-  | BooleanField
-  | NumberField
-  | MoneyField
-  | DateTimeField;
+export type FieldDefinition = TextField | BooleanField | NumberField | MoneyField | DateTimeField;
 
 export const field = {
   text(definition: Omit<TextField, "type"> = {}): TextField {
@@ -87,10 +82,7 @@ export interface StoredRecord {
 export interface CollectionClient {
   insert(record: Readonly<Record<string, SerializableValue>>): StoredRecord;
   get(id: string): StoredRecord | null;
-  update(
-    id: string,
-    changes: Readonly<Record<string, SerializableValue>>,
-  ): StoredRecord;
+  update(id: string, changes: Readonly<Record<string, SerializableValue>>): StoredRecord;
   remove(id: string): void;
   query(query?: CollectionQuery): readonly StoredRecord[];
   count(query?: CollectionQuery): number;

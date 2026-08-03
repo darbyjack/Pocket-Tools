@@ -2,6 +2,9 @@
   "name": "@pocket-tools/sdk-contract",
   "version": "1.0.0",
   "private": true,
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -9,8 +12,5 @@
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     }
-  },
-  "files": [
-    "dist"
-  ]
+  }
 }
