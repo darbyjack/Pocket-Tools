@@ -1,8 +1,4 @@
-import type {
-  CollectionDefinition,
-  SerializableValue,
-  SettingDefinition,
-} from "../model.ts";
+import type { CollectionDefinition, SerializableValue, SettingDefinition } from "../model.ts";
 
 const RECORD_ID_PATTERN = /^[a-f0-9]{32}$/;
 const RESERVED_RECORD_FIELDS = new Set(["id", "createdAt", "updatedAt"]);
@@ -17,17 +13,22 @@ export function assertSettingValue(
   switch (definition.type) {
     case "text":
       if (typeof value !== "string") fail(path, "Expected text.");
-      if (value.length < (definition.minLength ?? 0)) fail(path, "Text is shorter than the minimum length.");
-      if (value.length > (definition.maxLength ?? 10_000)) fail(path, "Text exceeds the maximum length.");
+      if (value.length < (definition.minLength ?? 0))
+        fail(path, "Text is shorter than the minimum length.");
+      if (value.length > (definition.maxLength ?? 10_000))
+        fail(path, "Text exceeds the maximum length.");
       return;
     case "boolean":
       if (typeof value !== "boolean") fail(path, "Expected a boolean.");
       return;
     case "number":
     case "money":
-      if (typeof value !== "number" || !Number.isFinite(value)) fail(path, "Expected a finite number.");
-      if (definition.min !== undefined && value < definition.min) fail(path, "Value is below the minimum.");
-      if (definition.max !== undefined && value > definition.max) fail(path, "Value exceeds the maximum.");
+      if (typeof value !== "number" || !Number.isFinite(value))
+        fail(path, "Expected a finite number.");
+      if (definition.min !== undefined && value < definition.min)
+        fail(path, "Value is below the minimum.");
+      if (definition.max !== undefined && value > definition.max)
+        fail(path, "Value exceeds the maximum.");
       return;
     case "select":
       if (!definition.options.some((option) => option.value === value)) {
@@ -54,13 +55,15 @@ export function assertRecordInput(
 
   if (!partial) {
     for (const [name, field] of Object.entries(definition.fields)) {
-      if (!field.optional && !(name in value)) fail(`${path}.${name}`, "Required field is missing.");
+      if (!field.optional && !(name in value))
+        fail(`${path}.${name}`, "Required field is missing.");
     }
   }
 }
 
 export function assertRecordId(id: string, path: string): void {
-  if (!RECORD_ID_PATTERN.test(id)) fail(path, "Expected a 32-character lowercase hexadecimal record ID.");
+  if (!RECORD_ID_PATTERN.test(id))
+    fail(path, "Expected a 32-character lowercase hexadecimal record ID.");
 }
 
 function assertFieldValue(
@@ -76,17 +79,22 @@ function assertFieldValue(
   switch (definition.type) {
     case "text":
       if (typeof value !== "string") fail(path, "Expected text.");
-      if (value.length < (definition.minLength ?? 0)) fail(path, "Text is shorter than the minimum length.");
-      if (value.length > (definition.maxLength ?? 100_000)) fail(path, "Text exceeds the maximum length.");
+      if (value.length < (definition.minLength ?? 0))
+        fail(path, "Text is shorter than the minimum length.");
+      if (value.length > (definition.maxLength ?? 100_000))
+        fail(path, "Text exceeds the maximum length.");
       return;
     case "boolean":
       if (typeof value !== "boolean") fail(path, "Expected a boolean.");
       return;
     case "number":
     case "money":
-      if (typeof value !== "number" || !Number.isFinite(value)) fail(path, "Expected a finite number.");
-      if (definition.min !== undefined && value < definition.min) fail(path, "Value is below the minimum.");
-      if (definition.max !== undefined && value > definition.max) fail(path, "Value exceeds the maximum.");
+      if (typeof value !== "number" || !Number.isFinite(value))
+        fail(path, "Expected a finite number.");
+      if (definition.min !== undefined && value < definition.min)
+        fail(path, "Value is below the minimum.");
+      if (definition.max !== undefined && value > definition.max)
+        fail(path, "Value exceeds the maximum.");
       return;
     case "datetime":
       if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {

@@ -8,15 +8,8 @@ import type {
   StoredRecord,
   TimerSnapshot,
 } from "../model";
-import {
-  assertRecordId,
-  assertRecordInput,
-  assertSettingValue,
-} from "../runtime/sdk-validation";
-import {
-  isPreviewStorageId,
-  PREVIEW_STORAGE_PREFIX,
-} from "./namespaces";
+import { assertRecordId, assertRecordInput, assertSettingValue } from "../runtime/sdk-validation";
+import { isPreviewStorageId, PREVIEW_STORAGE_PREFIX } from "./namespaces";
 
 const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 const BUNDLED_SEED_KEY = "bundled-mini-apps-v1";
@@ -123,16 +116,11 @@ export async function initializeDatabase(): Promise<void> {
       "DELETE FROM records WHERE app_id GLOB ?",
       `${PREVIEW_STORAGE_PREFIX}*`,
     );
-    await database.runAsync(
-      "DELETE FROM timers WHERE app_id GLOB ?",
-      `${PREVIEW_STORAGE_PREFIX}*`,
-    );
+    await database.runAsync("DELETE FROM timers WHERE app_id GLOB ?", `${PREVIEW_STORAGE_PREFIX}*`);
   });
 }
 
-export async function seedBundledMiniAppsOnce(
-  seeds: readonly BundledMiniAppSeed[],
-): Promise<void> {
+export async function seedBundledMiniAppsOnce(seeds: readonly BundledMiniAppSeed[]): Promise<void> {
   const database = await databasePromise;
   await database.withTransactionAsync(async () => {
     const completed = await database.getFirstAsync<{ readonly value: string }>(
@@ -178,9 +166,7 @@ export async function listInstalledMiniApps(): Promise<readonly InstalledMiniApp
   return rows.map(mapInstalledMiniApp);
 }
 
-export async function getInstalledMiniApp(
-  appId: string,
-): Promise<InstalledMiniApp | null> {
+export async function getInstalledMiniApp(appId: string): Promise<InstalledMiniApp | null> {
   const database = await databasePromise;
   const row = await database.getFirstAsync<InstalledMiniAppRow>(
     `SELECT app_id, name, description, icon, active_source,
@@ -198,9 +184,7 @@ export async function installMiniApp(
 ): Promise<InstalledMiniApp> {
   const appId = inspection.manifest.id;
   if ((await getInstalledMiniApp(appId)) !== null) {
-    throw new Error(
-      `INSTALLATION_FAILED: A mini app with ID ${appId} is already installed.`,
-    );
+    throw new Error(`INSTALLATION_FAILED: A mini app with ID ${appId} is already installed.`);
   }
 
   const database = await databasePromise;
@@ -222,10 +206,9 @@ export async function installMiniApp(
     );
   } catch (cause) {
     if ((await getInstalledMiniApp(appId)) !== null) {
-      throw new Error(
-        `INSTALLATION_FAILED: A mini app with ID ${appId} is already installed.`,
-        { cause },
-      );
+      throw new Error(`INSTALLATION_FAILED: A mini app with ID ${appId} is already installed.`, {
+        cause,
+      });
     }
     throw new Error("INSTALLATION_FAILED: SQLite could not store the mini app.", {
       cause,
@@ -318,10 +301,7 @@ export async function rollbackInstalledMiniApp(
   return installed;
 }
 
-export async function deleteInstalledMiniApp(
-  appId: string,
-  deleteData: boolean,
-): Promise<void> {
+export async function deleteInstalledMiniApp(appId: string, deleteData: boolean): Promise<void> {
   const database = await databasePromise;
   await database.withTransactionAsync(async () => {
     await database.runAsync("DELETE FROM installed_mini_apps WHERE app_id = ?", appId);
@@ -581,9 +561,7 @@ export async function applyRuntimeOperations(
           break;
         }
         default:
-          throw new Error(
-            `INVALID_OPERATION: operations[${index}] has an unsupported type.`,
-          );
+          throw new Error(`INVALID_OPERATION: operations[${index}] has an unsupported type.`);
       }
     }
   });
@@ -611,16 +589,10 @@ function mapInstalledMiniApp(row: InstalledMiniAppRow): InstalledMiniApp {
   };
 }
 
-function requireCollection(
-  inspection: MiniAppInspection,
-  name: string,
-  operationIndex: number,
-) {
+function requireCollection(inspection: MiniAppInspection, name: string, operationIndex: number) {
   const definition = inspection.collections[name];
   if (definition === undefined) {
-    throw new Error(
-      `UNKNOWN_COLLECTION: operations[${operationIndex}].collection: ${name}`,
-    );
+    throw new Error(`UNKNOWN_COLLECTION: operations[${operationIndex}].collection: ${name}`);
   }
   return definition;
 }

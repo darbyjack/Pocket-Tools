@@ -4,11 +4,9 @@ const HEADER_URL = new URL(
   "../../../modules/pocket-quickjs/android/src/main/cpp/PocketQuickJsSources.h",
   import.meta.url,
 );
-const RAW_STRING_END = "\n)POCKET_JS\";";
+const RAW_STRING_END = '\n)POCKET_JS";';
 
-export type RuntimeSourceErrorCode =
-  | "RUNTIME_SOURCE_MISSING"
-  | "RUNTIME_SOURCE_INVALID";
+export type RuntimeSourceErrorCode = "RUNTIME_SOURCE_MISSING" | "RUNTIME_SOURCE_INVALID";
 
 export class RuntimeSourceError extends Error {
   readonly code: RuntimeSourceErrorCode;

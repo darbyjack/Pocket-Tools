@@ -1,11 +1,5 @@
 import { execFile } from "node:child_process";
-import {
-  mkdtemp,
-  readdir,
-  readFile,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
@@ -53,11 +47,7 @@ async function resolveTypescriptCli(): Promise<string> {
     await readFile(resolve(packageRoot, "package.json"), "utf8"),
   ) as unknown;
 
-  if (
-    manifest === null ||
-    typeof manifest !== "object" ||
-    Array.isArray(manifest)
-  ) {
+  if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest)) {
     throw new Error("The installed TypeScript package manifest is invalid.");
   }
 
@@ -75,11 +65,9 @@ async function resolveTypescriptCli(): Promise<string> {
 }
 
 async function emitDeclarations(output: string): Promise<void> {
-  await executeFile(
-    process.execPath,
-    [TYPESCRIPT_CLI, "--project", PROJECT, "--outDir", output],
-    { cwd: ROOT },
-  );
+  await executeFile(process.execPath, [TYPESCRIPT_CLI, "--project", PROJECT, "--outDir", output], {
+    cwd: ROOT,
+  });
   await rewriteDeclarationImports(output);
 }
 
@@ -88,18 +76,12 @@ async function rewriteDeclarationImports(directory: string): Promise<void> {
     if (!file.endsWith(".d.ts")) continue;
     const path = resolve(directory, file);
     const content = await readFile(path, "utf8");
-    const rewritten = content.replace(
-      /(["']\.[^"']+)\.ts(["'])/g,
-      "$1.js$2",
-    );
+    const rewritten = content.replace(/(["']\.[^"']+)\.ts(["'])/g, "$1.js$2");
     if (rewritten !== content) await writeFile(path, rewritten, "utf8");
   }
 }
 
-async function compareDirectories(
-  left: string,
-  right: string,
-): Promise<readonly string[]> {
+async function compareDirectories(left: string, right: string): Promise<readonly string[]> {
   const leftFiles = await listFiles(left);
   const rightFiles = await listFiles(right);
   const allFiles = new Set([...leftFiles, ...rightFiles]);
@@ -114,9 +96,7 @@ async function compareDirectories(
       readFile(resolve(left, file), "utf8"),
       readFile(resolve(right, file), "utf8"),
     ]);
-    if (
-      normalizeDeclaration(leftContent) !== normalizeDeclaration(rightContent)
-    ) {
+    if (normalizeDeclaration(leftContent) !== normalizeDeclaration(rightContent)) {
       differences.push(file);
     }
   }
@@ -127,10 +107,7 @@ function normalizeDeclaration(value: string): string {
   return value.replace(/\s+/g, "");
 }
 
-async function listFiles(
-  directory: string,
-  prefix = "",
-): Promise<readonly string[]> {
+async function listFiles(directory: string, prefix = ""): Promise<readonly string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const files: string[] = [];
   for (const entry of entries) {

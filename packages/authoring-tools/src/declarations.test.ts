@@ -10,9 +10,9 @@ const ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 
 test("the TypeScript CLI resolves without using a package subpath", async () => {
   const packageRoot = resolve(dirname(require.resolve("typescript")), "..");
-  const manifest = JSON.parse(
-    await readFile(resolve(packageRoot, "package.json"), "utf8"),
-  ) as { readonly bin?: { readonly tsc?: string } };
+  const manifest = JSON.parse(await readFile(resolve(packageRoot, "package.json"), "utf8")) as {
+    readonly bin?: { readonly tsc?: string };
+  };
 
   const tsc = manifest.bin?.tsc;
   assert.equal(typeof tsc, "string");
@@ -26,9 +26,7 @@ test("the TypeScript CLI resolves without using a package subpath", async () => 
 });
 
 test("the shared TypeScript config uses TypeScript 7 path rules", async () => {
-  const config = JSON.parse(
-    await readFile(resolve(ROOT, "tsconfig.json"), "utf8"),
-  ) as {
+  const config = JSON.parse(await readFile(resolve(ROOT, "tsconfig.json"), "utf8")) as {
     readonly compilerOptions?: {
       readonly baseUrl?: unknown;
       readonly paths?: Record<string, readonly string[]>;

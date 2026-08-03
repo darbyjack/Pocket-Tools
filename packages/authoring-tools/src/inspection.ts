@@ -66,9 +66,7 @@ export async function inspectMiniAppSource(
     manifest,
     settings,
     collections,
-    screens: Object.fromEntries(
-      screens.map((name) => [name, () => dummyPage]),
-    ),
+    screens: Object.fromEntries(screens.map((name) => [name, () => dummyPage])),
     actions: Object.fromEntries(actions.map((name) => [name, () => undefined])),
   } as unknown as MiniAppDefinition;
 
@@ -85,10 +83,7 @@ export async function inspectMiniAppSource(
   };
 }
 
-export async function validateMiniAppSource(
-  source: string,
-  fileName?: string,
-): Promise<void> {
+export async function validateMiniAppSource(source: string, fileName?: string): Promise<void> {
   await inspectMiniAppSource(source, fileName);
 }
 
@@ -113,11 +108,7 @@ function requireRecord(value: unknown, path: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function exactKeys(
-  value: Record<string, unknown>,
-  allowed: readonly string[],
-  path: string,
-): void {
+function exactKeys(value: Record<string, unknown>, allowed: readonly string[], path: string): void {
   const allowedKeys = new Set(allowed);
   for (const key of Object.keys(value)) {
     if (!allowedKeys.has(key)) {
@@ -127,8 +118,5 @@ function exactKeys(
 }
 
 function shapeError(path: string, message: string): AuthoringRuntimeError {
-  return new AuthoringRuntimeError(
-    "INVALID_RUNTIME_RESPONSE",
-    `${path}: ${message}.`,
-  );
+  return new AuthoringRuntimeError("INVALID_RUNTIME_RESPONSE", `${path}: ${message}.`);
 }

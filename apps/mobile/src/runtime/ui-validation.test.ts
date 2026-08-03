@@ -122,18 +122,12 @@ test("rejects unknown action and screen targets", () => {
   const page = validPage();
   const row = children(page)[4]!;
   children(row)[0]!.action = "removeAll";
-  assert.throws(
-    () => validatePageNode(page, inspection),
-    /Unknown declared action/,
-  );
+  assert.throws(() => validatePageNode(page, inspection), /Unknown declared action/);
 
   const secondPage = validPage();
   const secondRow = children(secondPage)[4]!;
   children(secondRow)[1]!.screen = "missing";
-  assert.throws(
-    () => validatePageNode(secondPage, inspection),
-    /Unknown declared screen/,
-  );
+  assert.throws(() => validatePageNode(secondPage, inspection), /Unknown declared screen/);
 });
 
 test("rejects non-serializable interaction input", () => {
@@ -150,18 +144,12 @@ test("rejects missing and incompatible setting bindings", () => {
   const page = validPage();
   const column = children(page)[3]!;
   children(column)[0]!.setting = "missing";
-  assert.throws(
-    () => validatePageNode(page, inspection),
-    /Unknown declared setting/,
-  );
+  assert.throws(() => validatePageNode(page, inspection), /Unknown declared setting/);
 
   const secondPage = validPage();
   const secondColumn = children(secondPage)[3]!;
   children(secondColumn)[1]!.setting = "title";
-  assert.throws(
-    () => validatePageNode(secondPage, inspection),
-    /incompatible type text/,
-  );
+  assert.throws(() => validatePageNode(secondPage, inspection), /incompatible type text/);
 });
 
 test("rejects non-finite formatted values and nested pages", () => {
@@ -169,10 +157,7 @@ test("rejects non-finite formatted values and nested pages", () => {
   const summary = children(page)[5]!;
   const values = summary.values as Array<Record<string, unknown>>;
   values[0]!.value = Number.POSITIVE_INFINITY;
-  assert.throws(
-    () => validatePageNode(page, inspection),
-    /Expected a finite number/,
-  );
+  assert.throws(() => validatePageNode(page, inspection), /Expected a finite number/);
 
   const nested = validPage();
   children(nested).push({
@@ -180,10 +165,7 @@ test("rejects non-finite formatted values and nested pages", () => {
     title: "Nested",
     children: [],
   });
-  assert.throws(
-    () => validatePageNode(nested, inspection),
-    /Page nodes cannot be nested/,
-  );
+  assert.throws(() => validatePageNode(nested, inspection), /Page nodes cannot be nested/);
 });
 
 test("rejects invalid list child types", () => {
@@ -191,10 +173,7 @@ test("rejects invalid list child types", () => {
   const section = children(page)[2]!;
   const list = children(section)[2]!;
   list.items = [{ type: "text", text: "Not a list item" }];
-  assert.throws(
-    () => validatePageNode(page, inspection),
-    /Lists may contain list-item nodes only/,
-  );
+  assert.throws(() => validatePageNode(page, inspection), /Lists may contain list-item nodes only/);
 });
 
 test("rejects oversized trees", () => {
@@ -206,8 +185,5 @@ test("rejects oversized trees", () => {
       text: `Node ${index}`,
     })),
   };
-  assert.throws(
-    () => validatePageNode(page, inspection),
-    /exceeds 512 nodes/,
-  );
+  assert.throws(() => validatePageNode(page, inspection), /exceeds 512 nodes/);
 });

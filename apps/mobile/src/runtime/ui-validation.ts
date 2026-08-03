@@ -145,7 +145,13 @@ function visitNode(
         }
       }
       if (node.emptyState !== undefined) {
-        const emptyState = visitNode(node.emptyState, `${path}.emptyState`, depth + 1, state, false);
+        const emptyState = visitNode(
+          node.emptyState,
+          `${path}.emptyState`,
+          depth + 1,
+          state,
+          false,
+        );
         if (emptyState.type !== "empty-state") {
           fail(`${path}.emptyState`, "A list emptyState must be an empty-state node.");
         }
@@ -156,7 +162,8 @@ function visitNode(
       exactKeys(node, ["type", "title", "values"], path);
       requireString(node.title, `${path}.title`, 1, 120);
       const values = requireArray(node.values, `${path}.values`);
-      if (values.length > 100) fail(`${path}.values`, "A summary cannot contain more than 100 values.");
+      if (values.length > 100)
+        fail(`${path}.values`, "A summary cannot contain more than 100 values.");
       for (const [index, entryValue] of values.entries()) {
         const entryPath = `${path}.values[${index}]`;
         const entry = requireObject(entryValue, entryPath);
@@ -182,7 +189,8 @@ function validateSettingBinding(
   optionalString(node.label, `${path}.label`, 1, 120);
   if (state.inspection === undefined) return;
   const definition = state.inspection.settings[settingName];
-  if (definition === undefined) fail(`${path}.setting`, `Unknown declared setting: ${settingName}.`);
+  if (definition === undefined)
+    fail(`${path}.setting`, `Unknown declared setting: ${settingName}.`);
   if (!allowedTypes.includes(definition.type)) {
     fail(`${path}.setting`, `Setting ${settingName} has incompatible type ${definition.type}.`);
   }
@@ -194,12 +202,7 @@ function validateInteractionInput(value: unknown, path: string): void {
   }
 }
 
-function visitChildren(
-  value: unknown,
-  path: string,
-  depth: number,
-  state: ValidationState,
-): void {
+function visitChildren(value: unknown, path: string, depth: number, state: ValidationState): void {
   const children = requireArray(value, path);
   for (const [index, child] of children.entries()) {
     visitNode(child, `${path}[${index}]`, depth + 1, state, false);

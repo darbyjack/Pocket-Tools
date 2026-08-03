@@ -7,16 +7,10 @@ import { inspectMiniAppSource } from "./inspection.ts";
 test("lifecycle diagnostics use valid SDK v1 scripts with colliding names", async () => {
   const [first, second] = await Promise.all([
     inspectMiniAppSource(
-      createLifecycleDiagnosticSource(
-        "lifecycle-diagnostic-test-a",
-        "Diagnostic A",
-      ),
+      createLifecycleDiagnosticSource("lifecycle-diagnostic-test-a", "Diagnostic A"),
     ),
     inspectMiniAppSource(
-      createLifecycleDiagnosticSource(
-        "lifecycle-diagnostic-test-b",
-        "Diagnostic B",
-      ),
+      createLifecycleDiagnosticSource("lifecycle-diagnostic-test-b", "Diagnostic B"),
     ),
   ]);
 

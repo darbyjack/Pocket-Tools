@@ -3,10 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.17.0",
-  "engines": {
-    "node": ">=24.16.0"
-  },
   "scripts": {
     "android": "pnpm sync:mini-apps && pnpm --dir apps/mobile android",
     "check": "pnpm sync:mini-apps:check && pnpm sdk:declarations:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
@@ -28,5 +24,9 @@
     "oxfmt": "0.61.0",
     "oxlint": "1.76.0",
     "typescript": "7.0.2"
-  }
+  },
+  "engines": {
+    "node": ">=24.16.0"
+  },
+  "packageManager": "pnpm@11.17.0"
 }

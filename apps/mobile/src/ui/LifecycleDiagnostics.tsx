@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import {
   getPendingTimerRecoveryCheckpoint,
@@ -15,21 +8,15 @@ import {
   resumeTimerRecoveryDiagnostic,
   runNamespaceIsolationDiagnostics,
 } from "../diagnostics/lifecycle";
-import type {
-  DiagnosticCheck,
-  TimerRecoveryCheckpoint,
-} from "../diagnostics/types";
+import type { DiagnosticCheck, TimerRecoveryCheckpoint } from "../diagnostics/types";
 
 export interface LifecycleDiagnosticsProps {
   readonly onBack: () => void;
 }
 
-export function LifecycleDiagnostics({
-  onBack,
-}: LifecycleDiagnosticsProps) {
+export function LifecycleDiagnostics({ onBack }: LifecycleDiagnosticsProps) {
   const [checks, setChecks] = useState<readonly DiagnosticCheck[]>([]);
-  const [checkpoint, setCheckpoint] =
-    useState<TimerRecoveryCheckpoint | null>(null);
+  const [checkpoint, setCheckpoint] = useState<TimerRecoveryCheckpoint | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,9 +77,7 @@ export function LifecycleDiagnostics({
       setCheckpoint(null);
       setChecks((current) => [
         ...current.filter(
-          (check) =>
-            check.id !== "timer-recovery-pending" &&
-            check.id !== "timer-recovery",
+          (check) => check.id !== "timer-recovery-pending" && check.id !== "timer-recovery",
         ),
         result,
       ]);
@@ -120,11 +105,7 @@ export function LifecycleDiagnostics({
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.headingRow}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onBack}
-          style={styles.secondaryButton}
-        >
+        <Pressable accessibilityRole="button" onPress={onBack} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>Back</Text>
         </Pressable>
         <View style={styles.headingCopy}>
@@ -136,10 +117,9 @@ export function LifecycleDiagnostics({
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>What this proves</Text>
         <Text style={styles.infoText}>
-          The suite uses temporary installed SDK v1 scripts through the normal
-          QuickJS and SQLite paths. It checks colliding names across app
-          namespaces, failure recovery, deletion choices, and durable timer
-          reconstruction after a real process stop.
+          The suite uses temporary installed SDK v1 scripts through the normal QuickJS and SQLite
+          paths. It checks colliding names across app namespaces, failure recovery, deletion
+          choices, and durable timer reconstruction after a real process stop.
         </Text>
       </View>
 
@@ -153,8 +133,8 @@ export function LifecycleDiagnostics({
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Immediate host suite</Text>
         <Text style={styles.mutedText}>
-          Creates two temporary installed scripts with identical setting,
-          collection, and timer names, then removes them after the run.
+          Creates two temporary installed scripts with identical setting, collection, and timer
+          names, then removes them after the run.
         </Text>
         <ActionButton
           disabled={busy || loading}
@@ -169,8 +149,8 @@ export function LifecycleDiagnostics({
         {checkpoint === null ? (
           <>
             <Text style={styles.mutedText}>
-              Prepare a temporary installed script and active durable timer.
-              Pocket Tools saves a checkpoint for the next launch.
+              Prepare a temporary installed script and active durable timer. Pocket Tools saves a
+              checkpoint for the next launch.
             </Text>
             <ActionButton
               disabled={busy || loading}
@@ -183,9 +163,8 @@ export function LifecycleDiagnostics({
             <View style={styles.pendingCard}>
               <Text style={styles.pendingTitle}>Checkpoint ready</Text>
               <Text style={styles.pendingText}>
-                Started at {checkpoint.startedAt}. Force-stop Pocket Tools, verify
-                that no process remains, wait at least one second, and reopen the
-                app before pressing Resume.
+                Started at {checkpoint.startedAt}. Force-stop Pocket Tools, verify that no process
+                remains, wait at least one second, and reopen the app before pressing Resume.
               </Text>
             </View>
             <Text selectable style={styles.command}>
@@ -193,8 +172,8 @@ export function LifecycleDiagnostics({
               adb shell pidof com.darbyjack.pockettools
             </Text>
             <Text style={styles.mutedText}>
-              The second command must print no PID. This manual observation proves
-              the timer did not keep React Native or QuickJS alive.
+              The second command must print no PID. This manual observation proves the timer did not
+              keep React Native or QuickJS alive.
             </Text>
             <ActionButton
               disabled={busy}
@@ -248,11 +227,7 @@ export function LifecycleDiagnostics({
         </View>
       )}
 
-      <ActionButton
-        disabled={busy}
-        label="Reset diagnostic state"
-        onPress={reset}
-      />
+      <ActionButton disabled={busy} label="Reset diagnostic state" onPress={reset} />
     </ScrollView>
   );
 }
@@ -279,12 +254,7 @@ function ActionButton({
         disabled ? styles.disabled : null,
       ]}
     >
-      <Text
-        style={[
-          styles.actionButtonText,
-          primary ? styles.primaryButtonText : null,
-        ]}
-      >
+      <Text style={[styles.actionButtonText, primary ? styles.primaryButtonText : null]}>
         {label}
       </Text>
     </Pressable>

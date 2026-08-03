@@ -1,7 +1,4 @@
-import {
-  DIAGNOSTIC_APP_ID_PREFIX,
-  PREVIEW_STORAGE_PREFIX,
-} from "../storage/namespaces.ts";
+import { DIAGNOSTIC_APP_ID_PREFIX, PREVIEW_STORAGE_PREFIX } from "../storage/namespaces.ts";
 
 export type InstallWorkflowMode = "create" | "duplicate" | "edit";
 
@@ -35,10 +32,7 @@ export function isCurrentSourceApproved(
   return inspectedSource === currentSource && previewedSource === currentSource;
 }
 
-export function createPreviewStorageId(
-  timestamp = Date.now(),
-  random = Math.random(),
-): string {
+export function createPreviewStorageId(timestamp = Date.now(), random = Math.random()): string {
   const randomPart = Math.floor(random * 0x1_0000_0000)
     .toString(36)
     .padStart(7, "0");

@@ -43,3 +43,4 @@ export declare const setting: {
 export interface SettingsClient {
     get<TValue extends SerializableValue = SerializableValue>(name: string): TValue;
 }
+export {};

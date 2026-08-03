@@ -1,10 +1,5 @@
 import { useEffect } from "react";
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import type { MiniAppInspection } from "../model";
 import { useMiniApp } from "../useMiniApp";
@@ -23,16 +18,8 @@ export function MiniAppRuntimePanel({
   onReady,
   onError,
 }: MiniAppRuntimePanelProps) {
-  const {
-    error,
-    inspection,
-    loading,
-    page,
-    snapshot,
-    invokeAction,
-    navigate,
-    updateSetting,
-  } = useMiniApp(source, storageId);
+  const { error, inspection, loading, page, snapshot, invokeAction, navigate, updateSetting } =
+    useMiniApp(source, storageId);
 
   useEffect(() => {
     if (error !== null) {

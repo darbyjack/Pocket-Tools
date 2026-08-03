@@ -40,17 +40,12 @@ export function findImportViolation(source: string): ImportViolation | null {
       }
     }
 
-    if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword
-    ) {
+    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
       const argument = node.arguments[0];
       violation = createViolation(
         sourceFile,
         argument ?? node,
-        argument === undefined
-          ? "<missing dynamic import>"
-          : argument.getText(sourceFile),
+        argument === undefined ? "<missing dynamic import>" : argument.getText(sourceFile),
         "Dynamic imports are unsupported.",
       );
       return;
@@ -73,9 +68,7 @@ function createViolation(
   moduleName: string,
   message: string,
 ): ImportViolation {
-  const position = sourceFile.getLineAndCharacterOfPosition(
-    node.getStart(sourceFile),
-  );
+  const position = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
   return {
     moduleName,
     line: position.line + 1,

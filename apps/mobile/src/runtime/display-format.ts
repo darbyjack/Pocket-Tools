@@ -28,9 +28,7 @@ export function formatDuration(seconds: number): string {
   const hours = Math.floor(totalSeconds / 3_600);
   const minutes = Math.floor((totalSeconds % 3_600) / 60);
   const remaining = totalSeconds % 60;
-  return [hours, minutes, remaining]
-    .map((part) => String(part).padStart(2, "0"))
-    .join(":");
+  return [hours, minutes, remaining].map((part) => String(part).padStart(2, "0")).join(":");
 }
 
 export function formatDateTime(value: string): string {

@@ -161,8 +161,7 @@ test("rejects malformed envelopes, inspections, and operations", () => {
           },
         }),
       ),
-    (error: unknown) =>
-      error instanceof MiniAppRuntimeError && error.code === "VALIDATION_FAILED",
+    (error: unknown) => error instanceof MiniAppRuntimeError && error.code === "VALIDATION_FAILED",
   );
   assert.throws(
     () =>
@@ -201,7 +200,6 @@ test("rejects invalid UI in an otherwise valid native response", () => {
           },
         }),
       ),
-    (error: unknown) =>
-      error instanceof MiniAppRuntimeError && error.code === "INVALID_UI_TREE",
+    (error: unknown) => error instanceof MiniAppRuntimeError && error.code === "INVALID_UI_TREE",
   );
 });

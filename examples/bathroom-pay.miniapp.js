@@ -1,12 +1,6 @@
 // @ts-check
 
-import {
-  collection,
-  defineMiniApp,
-  field,
-  setting,
-  ui,
-} from "@pocket-tools/sdk";
+import { collection, defineMiniApp, field, setting, ui } from "@pocket-tools/sdk";
 
 const TRIP_TIMER_ID = "currentTrip";
 const TRIPS_COLLECTION = "trips";

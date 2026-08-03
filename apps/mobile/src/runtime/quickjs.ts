@@ -1,10 +1,6 @@
 import { runInQuickJs } from "@pocket-tools/quickjs-runtime";
 
-import type {
-  MiniAppInspection,
-  RuntimeSnapshot,
-  RuntimeSuccess,
-} from "../model";
+import type { MiniAppInspection, RuntimeSnapshot, RuntimeSuccess } from "../model";
 import { MiniAppRuntimeError, parseRuntimeResponse } from "./protocol";
 
 export async function inspectMiniApp(source: string): Promise<MiniAppInspection> {
@@ -22,10 +18,7 @@ export async function inspectMiniApp(source: string): Promise<MiniAppInspection>
   return inspection;
 }
 
-export function renderMiniApp(
-  source: string,
-  snapshot: RuntimeSnapshot,
-): Promise<RuntimeSuccess> {
+export function renderMiniApp(source: string, snapshot: RuntimeSnapshot): Promise<RuntimeSuccess> {
   return execute(source, snapshot);
 }
 
@@ -54,10 +47,7 @@ export function formatMiniAppError(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
 }
 
-async function execute(
-  source: string,
-  snapshot: RuntimeSnapshot,
-): Promise<RuntimeSuccess> {
+async function execute(source: string, snapshot: RuntimeSnapshot): Promise<RuntimeSuccess> {
   const json = await runInQuickJs(source, JSON.stringify(snapshot));
   return parseRuntimeResponse(json);
 }

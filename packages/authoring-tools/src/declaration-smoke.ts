@@ -45,8 +45,7 @@ export const declarationSmokeMiniApp = defineMiniApp({
       context.data.collection("entries").insert({
         label: String(context.settings.get("label")),
         enabled: Boolean(context.settings.get("enabled")),
-        amount:
-          isSerializableObject(input) && input.source === "smoke" ? 1 : null,
+        amount: isSerializableObject(input) && input.source === "smoke" ? 1 : null,
       });
     },
   },

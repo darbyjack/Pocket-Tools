@@ -134,9 +134,7 @@ test("rejects removed setting properties rather than freezing placeholders", () 
   } as unknown as ReturnType<typeof validDefinition>;
 
   assert.ok(
-    validateMiniAppDefinition(definition).some(
-      (issue) => issue.path === "settings.count.step",
-    ),
+    validateMiniAppDefinition(definition).some((issue) => issue.path === "settings.count.step"),
   );
 });
 

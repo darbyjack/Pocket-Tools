@@ -1,9 +1,6 @@
 export { DIAGNOSTIC_APP_ID_PREFIX } from "../storage/namespaces.ts";
 
-export function createLifecycleDiagnosticSource(
-  appId: string,
-  appName: string,
-): string {
+export function createLifecycleDiagnosticSource(appId: string, appName: string): string {
   return `// @ts-check
 
 import { collection, defineMiniApp, field, setting, ui } from "@pocket-tools/sdk";

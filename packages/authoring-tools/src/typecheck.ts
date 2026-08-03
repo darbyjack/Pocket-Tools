@@ -5,10 +5,7 @@ import * as ts from "typescript-compiler-api";
 
 const ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const DEFAULT_FILE = resolve(ROOT, "pocket-mini-app.mjs");
-const SDK_DECLARATIONS = resolve(
-  ROOT,
-  "packages/sdk-contract/dist/index.d.ts",
-);
+const SDK_DECLARATIONS = resolve(ROOT, "packages/sdk-contract/dist/index.d.ts");
 
 export interface AuthoringTypecheckIssue {
   readonly code: number;
@@ -36,10 +33,7 @@ export class AuthoringTypecheckError extends Error {
   }
 }
 
-export function assertMiniAppTypeChecks(
-  source: string,
-  fileName = DEFAULT_FILE,
-): void {
+export function assertMiniAppTypeChecks(source: string, fileName = DEFAULT_FILE): void {
   const sourcePath = resolve(fileName);
   const options: ts.CompilerOptions = {
     allowJs: true,
@@ -67,30 +61,13 @@ export function assertMiniAppTypeChecks(
   const originalReadFile = host.readFile.bind(host);
   const originalGetSourceFile = host.getSourceFile.bind(host);
 
-  host.fileExists = (candidate) =>
-    samePath(candidate, sourcePath) || originalFileExists(candidate);
+  host.fileExists = (candidate) => samePath(candidate, sourcePath) || originalFileExists(candidate);
   host.readFile = (candidate) =>
     samePath(candidate, sourcePath) ? source : originalReadFile(candidate);
-  host.getSourceFile = (
-    candidate,
-    languageVersion,
-    onError,
-    shouldCreateNewSourceFile,
-  ) =>
+  host.getSourceFile = (candidate, languageVersion, onError, shouldCreateNewSourceFile) =>
     samePath(candidate, sourcePath)
-      ? ts.createSourceFile(
-          sourcePath,
-          source,
-          languageVersion,
-          true,
-          ts.ScriptKind.JS,
-        )
-      : originalGetSourceFile(
-          candidate,
-          languageVersion,
-          onError,
-          shouldCreateNewSourceFile,
-        );
+      ? ts.createSourceFile(sourcePath, source, languageVersion, true, ts.ScriptKind.JS)
+      : originalGetSourceFile(candidate, languageVersion, onError, shouldCreateNewSourceFile);
 
   const program = ts.createProgram({
     rootNames: [sourcePath],
@@ -102,8 +79,7 @@ export function assertMiniAppTypeChecks(
     .filter(
       (diagnostic) =>
         diagnostic.category === ts.DiagnosticCategory.Error &&
-        (diagnostic.file === undefined ||
-          samePath(diagnostic.file.fileName, sourcePath)),
+        (diagnostic.file === undefined || samePath(diagnostic.file.fileName, sourcePath)),
     )
     .map((diagnostic): AuthoringTypecheckIssue => {
       const position =

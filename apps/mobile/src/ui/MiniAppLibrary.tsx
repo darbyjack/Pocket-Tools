@@ -1,10 +1,4 @@
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import type { InstalledMiniApp } from "../storage/database";
 
@@ -36,16 +30,12 @@ export function MiniAppLibrary({
           <Text style={styles.eyebrow}>Pocket Tools</Text>
           <Text style={styles.title}>Mini-app library</Text>
           <Text style={styles.subtitle}>
-            Every installed script is offline and receives only isolated settings,
-            records, and durable timers.
+            Every installed script is offline and receives only isolated settings, records, and
+            durable timers.
           </Text>
         </View>
         <View style={styles.headingActions}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onCreate}
-            style={styles.primaryButton}
-          >
+          <Pressable accessibilityRole="button" onPress={onCreate} style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>Add script</Text>
           </Pressable>
           <Pressable
@@ -62,14 +52,10 @@ export function MiniAppLibrary({
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>No mini apps installed</Text>
           <Text style={styles.emptyText}>
-            Paste an agent-generated SDK v1 script to validate, preview, and install
-            it without rebuilding Pocket Tools.
+            Paste an agent-generated SDK v1 script to validate, preview, and install it without
+            rebuilding Pocket Tools.
           </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onCreate}
-            style={styles.primaryButton}
-          >
+          <Pressable accessibilityRole="button" onPress={onCreate} style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>Paste your first script</Text>
           </Pressable>
         </View>
@@ -96,11 +82,7 @@ export function MiniAppLibrary({
                 <Action label="Edit" onPress={() => onEdit(app)} />
                 <Action label="Duplicate" onPress={() => onDuplicate(app)} />
                 <Action label="Export" onPress={() => onExport(app)} />
-                <Action
-                  destructive
-                  label="Remove"
-                  onPress={() => onDelete(app)}
-                />
+                <Action destructive label="Remove" onPress={() => onDelete(app)} />
               </View>
             </View>
           ))}
@@ -120,17 +102,8 @@ function Action({
   readonly onPress: () => void;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={styles.actionButton}
-    >
-      <Text
-        style={[
-          styles.actionButtonText,
-          destructive ? styles.destructiveText : null,
-        ]}
-      >
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.actionButton}>
+      <Text style={[styles.actionButtonText, destructive ? styles.destructiveText : null]}>
         {label}
       </Text>
     </Pressable>

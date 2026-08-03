@@ -6,9 +6,7 @@
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "lib": [
-      "ES2024"
-    ],
+    "lib": ["ES2024"],
     "module": "ESNext",
     "moduleDetection": "force",
     "moduleResolution": "Bundler",
@@ -22,17 +20,10 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2024",
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "paths": {
-      "@pocket-tools/sdk": [
-        "./packages/sdk-contract/src/index.ts"
-      ]
+      "@pocket-tools/sdk": ["./packages/sdk-contract/src/index.ts"]
     }
   },
-  "include": [
-    "packages/**/*.ts",
-    "examples/**/*.js"
-  ]
+  "include": ["packages/**/*.ts", "examples/**/*.js"]
 }

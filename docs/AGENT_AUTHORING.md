@@ -26,6 +26,7 @@ Do not mix explanations into the JavaScript file. Put implementation notes in a 
 The block below is synchronized with [`docs/fixtures/agent-template.miniapp.js`](fixtures/agent-template.miniapp.js) and executed by repository tests.
 
 <!-- BEGIN fixture: agent-template.miniapp.js -->
+
 ```js
 // @ts-check
 
@@ -65,6 +66,7 @@ export default defineMiniApp({
   },
 });
 ```
+
 <!-- END fixture: agent-template.miniapp.js -->
 
 Replace the placeholder identity and remove every unused definition. Do not add empty settings, collections, screens, or actions merely for symmetry.
@@ -196,9 +198,7 @@ The optional second argument to a screen or action is `SerializableValue | undef
 ```js
 /** @param {import("@pocket-tools/sdk").SerializableValue | undefined} input */
 function inputObject(input) {
-  return input !== null && typeof input === "object" && !Array.isArray(input)
-    ? input
-    : {};
+  return input !== null && typeof input === "object" && !Array.isArray(input) ? input : {};
 }
 ```
 
@@ -246,7 +246,7 @@ ui.button({
   label: "Remove",
   action: "removeEntry",
   input: { id: record.id },
-})
+});
 ```
 
 Do not use writable globals to pass screen or action state.
@@ -302,7 +302,7 @@ ui.metric({
   value: 0,
   format: "money",
   liveTimer: { timerId: "activeTimer", ratePerHour: 25 },
-})
+});
 ```
 
 ## Forbidden and nonexistent APIs

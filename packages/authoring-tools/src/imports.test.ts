@@ -23,8 +23,6 @@ test("rejects static imports and re-exports outside the SDK", () => {
 });
 
 test("rejects dynamic imports even when they target the SDK", () => {
-  const violation = findImportViolation(
-    'const sdk = await import("@pocket-tools/sdk");',
-  );
+  const violation = findImportViolation('const sdk = await import("@pocket-tools/sdk");');
   assert.equal(violation?.message, "Dynamic imports are unsupported.");
 });

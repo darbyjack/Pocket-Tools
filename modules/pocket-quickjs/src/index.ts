@@ -1,9 +1,6 @@
 import { requireNativeModule } from "expo-modules-core";
 
-import {
-  resolveQuickJsSandboxLimits,
-  type QuickJsSandboxLimits,
-} from "./limits.ts";
+import { resolveQuickJsSandboxLimits, type QuickJsSandboxLimits } from "./limits.ts";
 
 interface PocketQuickJsNativeModule {
   readonly run: (

@@ -4,18 +4,9 @@ import process from "node:process";
 
 const root = resolve(import.meta.dirname, "..");
 const examplesDirectory = resolve(root, "examples");
-const catalogOutputPath = resolve(
-  root,
-  "apps/mobile/src/generated/bundled-mini-apps.json",
-);
-const authoringTemplatePath = resolve(
-  root,
-  "docs/fixtures/agent-template.miniapp.js",
-);
-const mobileTemplateOutputPath = resolve(
-  root,
-  "apps/mobile/src/installer/template.json",
-);
+const catalogOutputPath = resolve(root, "apps/mobile/src/generated/bundled-mini-apps.json");
+const authoringTemplatePath = resolve(root, "docs/fixtures/agent-template.miniapp.js");
+const mobileTemplateOutputPath = resolve(root, "apps/mobile/src/installer/template.json");
 
 const fileNames = (await readdir(examplesDirectory))
   .filter((fileName) => fileName.endsWith(".miniapp.js"))
@@ -24,14 +15,10 @@ const fileNames = (await readdir(examplesDirectory))
 const miniApps = await Promise.all(
   fileNames.map(async (fileName) => ({
     fileName: basename(fileName),
-    source: normalizeLineEndings(
-      await readFile(resolve(examplesDirectory, fileName), "utf8"),
-    ),
+    source: normalizeLineEndings(await readFile(resolve(examplesDirectory, fileName), "utf8")),
   })),
 );
-const authoringTemplate = normalizeLineEndings(
-  await readFile(authoringTemplatePath, "utf8"),
-);
+const authoringTemplate = normalizeLineEndings(await readFile(authoringTemplatePath, "utf8"));
 
 const outputs = [
   {

@@ -11,6 +11,6 @@
     "@pocket-tools/sdk-contract": "workspace:*",
     "quickjs-emscripten-core": "0.32.0",
     "typescript": "7.0.2",
-    "typescript-compiler-api": "npm:@typescript/typescript6@6.0.3"
+    "typescript-compiler-api": "npm:@typescript/typescript6@6.0.2"
   }
 }

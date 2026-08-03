@@ -37,15 +37,10 @@ export async function loadTimerRecoveryCheckpoint(): Promise<TimerRecoveryCheckp
 
 export async function clearTimerRecoveryCheckpoint(): Promise<void> {
   const database = await databasePromise;
-  await database.runAsync(
-    "DELETE FROM app_metadata WHERE key = ?",
-    CHECKPOINT_KEY,
-  );
+  await database.runAsync("DELETE FROM app_metadata WHERE key = ?", CHECKPOINT_KEY);
 }
 
-function isTimerRecoveryCheckpoint(
-  value: unknown,
-): value is TimerRecoveryCheckpoint {
+function isTimerRecoveryCheckpoint(value: unknown): value is TimerRecoveryCheckpoint {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     return false;
   }

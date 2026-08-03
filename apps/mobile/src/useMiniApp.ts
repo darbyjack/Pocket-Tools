@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import type {
-  MiniAppInspection,
-  PageNode,
-  RuntimeSnapshot,
-  SerializableValue,
-} from "./model";
+import type { MiniAppInspection, PageNode, RuntimeSnapshot, SerializableValue } from "./model";
 import {
   formatMiniAppError,
   inspectMiniApp,
@@ -27,14 +22,8 @@ export interface MiniAppState {
   readonly page: PageNode | null;
   readonly screen: string;
   readonly snapshot: RuntimeSnapshot | null;
-  readonly invokeAction: (
-    action: string,
-    input?: SerializableValue,
-  ) => Promise<void>;
-  readonly navigate: (
-    screen: string,
-    input?: SerializableValue,
-  ) => Promise<void>;
+  readonly invokeAction: (action: string, input?: SerializableValue) => Promise<void>;
+  readonly navigate: (screen: string, input?: SerializableValue) => Promise<void>;
   readonly updateSetting: (name: string, value: SerializableValue) => Promise<void>;
 }
 
@@ -50,16 +39,13 @@ export function useMiniApp(
   const [inspection, setInspection] = useState<MiniAppInspection | null>(null);
   const [page, setPage] = useState<PageNode | null>(null);
   const [screen, setScreen] = useState("home");
-  const [screenInput, setScreenInput] = useState<SerializableValue | undefined>(
-    undefined,
-  );
+  const [screenInput, setScreenInput] = useState<SerializableValue | undefined>(undefined);
   const [snapshot, setSnapshot] = useState<RuntimeSnapshot | null>(null);
   const [loading, setLoading] = useState(source !== null);
   const [error, setError] = useState<string | null>(null);
 
   const storageIdFor = useCallback(
-    (currentInspection: MiniAppInspection) =>
-      requestedStorageId ?? currentInspection.manifest.id,
+    (currentInspection: MiniAppInspection) => requestedStorageId ?? currentInspection.manifest.id,
     [requestedStorageId],
   );
 
@@ -81,9 +67,7 @@ export function useMiniApp(
         { screen: targetScreen },
       );
       const nextSnapshot: RuntimeSnapshot =
-        targetInput === undefined
-          ? baseSnapshot
-          : { ...baseSnapshot, screenInput: targetInput };
+        targetInput === undefined ? baseSnapshot : { ...baseSnapshot, screenInput: targetInput };
       const response = await renderMiniApp(source, nextSnapshot);
       if (response.value.page === undefined) {
         throw new Error("QuickJS did not return a page.");
@@ -104,11 +88,7 @@ export function useMiniApp(
       targetScreen: string,
       targetInput?: SerializableValue,
     ) => {
-      const rendered = await render(
-        currentInspection,
-        targetScreen,
-        targetInput,
-      );
+      const rendered = await render(currentInspection, targetScreen, targetInput);
       setSnapshot(rendered.snapshot);
       setPage(rendered.page);
     },
@@ -139,10 +119,7 @@ export function useMiniApp(
         if (!nextInspection.screens.includes("home")) {
           throw new Error("INVALID_SCRIPT: A home screen is required.");
         }
-        await ensureSettingDefaults(
-          nextInspection,
-          storageIdFor(nextInspection),
-        );
+        await ensureSettingDefaults(nextInspection, storageIdFor(nextInspection));
         const rendered = await render(nextInspection, "home");
 
         if (cancelled) return;
@@ -171,22 +148,11 @@ export function useMiniApp(
           throw new Error(`UNKNOWN_ACTION: ${action}`);
         }
         const storageId = storageIdFor(inspection);
-        const baseSnapshot = await loadRuntimeSnapshot(
-          inspection,
-          storageId,
-          "action",
-          { action },
-        );
+        const baseSnapshot = await loadRuntimeSnapshot(inspection, storageId, "action", { action });
         const actionSnapshot: RuntimeSnapshot =
-          input === undefined
-            ? baseSnapshot
-            : { ...baseSnapshot, actionInput: input };
+          input === undefined ? baseSnapshot : { ...baseSnapshot, actionInput: input };
         const response = await invokeMiniAppAction(source, actionSnapshot);
-        await applyRuntimeOperations(
-          inspection,
-          storageId,
-          response.value.operations,
-        );
+        await applyRuntimeOperations(inspection, storageId, response.value.operations);
         await refresh(inspection, screen, screenInput);
       } catch (caught) {
         setError(formatMiniAppError(caught));

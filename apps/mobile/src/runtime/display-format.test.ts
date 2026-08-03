@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  formatDateTime,
-  formatDisplayValue,
-  formatDuration,
-} from "./display-format.ts";
+import { formatDateTime, formatDisplayValue, formatDuration } from "./display-format.ts";
 
 test("formats money and numbers with the host locale", () => {
   assert.equal(formatDisplayValue(1234.5, "money"), "$1,234.50");

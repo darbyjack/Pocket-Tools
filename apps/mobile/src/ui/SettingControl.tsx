@@ -1,12 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
 import type { SerializableValue, SettingDefinition } from "../model";
 
@@ -108,14 +101,7 @@ interface TextSettingProps {
   readonly onChange: (name: string, value: SerializableValue) => Promise<void>;
 }
 
-function TextSetting({
-  name,
-  definition,
-  value,
-  label,
-  placeholder,
-  onChange,
-}: TextSettingProps) {
+function TextSetting({ name, definition, value, label, placeholder, onChange }: TextSettingProps) {
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
 
@@ -138,9 +124,7 @@ function TextSetting({
       )}
       <TextInput
         accessibilityLabel={label}
-        {...(definition.maxLength === undefined
-          ? {}
-          : { maxLength: definition.maxLength })}
+        {...(definition.maxLength === undefined ? {} : { maxLength: definition.maxLength })}
         onBlur={commit}
         onChangeText={setDraft}
         onSubmitEditing={commit}
@@ -154,22 +138,13 @@ function TextSetting({
 
 interface NumberSettingProps {
   readonly name: string;
-  readonly definition: Extract<
-    SettingDefinition,
-    { readonly type: "number" | "money" }
-  >;
+  readonly definition: Extract<SettingDefinition, { readonly type: "number" | "money" }>;
   readonly value: number;
   readonly label: string;
   readonly onChange: (name: string, value: SerializableValue) => Promise<void>;
 }
 
-function NumberSetting({
-  name,
-  definition,
-  value,
-  label,
-  onChange,
-}: NumberSettingProps) {
+function NumberSetting({ name, definition, value, label, onChange }: NumberSettingProps) {
   const [draft, setDraft] = useState(String(value));
   useEffect(() => setDraft(String(value)), [value]);
 

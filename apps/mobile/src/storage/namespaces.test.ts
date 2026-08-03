@@ -14,9 +14,6 @@ test("recognizes only reserved preview namespaces", () => {
 });
 
 test("recognizes only reserved lifecycle diagnostic app IDs", () => {
-  assert.equal(
-    isDiagnosticAppId(`${DIAGNOSTIC_APP_ID_PREFIX}abc-recovery`),
-    true,
-  );
+  assert.equal(isDiagnosticAppId(`${DIAGNOSTIC_APP_ID_PREFIX}abc-recovery`), true);
   assert.equal(isDiagnosticAppId("lifecycle-helper"), false);
 });
