@@ -6,14 +6,7 @@ interface PocketQuickJsNativeModule {
   readonly run: (
     source: string,
     requestJson: string,
-    maximumSourceBytes: number,
-    maximumRequestBytes: number,
-    maximumResultBytes: number,
-    runtimeMemoryBytes: number,
-    runtimeStackBytes: number,
-    executionTimeoutMilliseconds: number,
-    maximumLogEntries: number,
-    maximumLogBytes: number,
+    limits: QuickJsSandboxLimits,
   ) => Promise<string>;
 }
 
@@ -28,16 +21,5 @@ export function runInQuickJs(
   limitOverrides: Partial<QuickJsSandboxLimits> = {},
 ): Promise<string> {
   const limits = resolveQuickJsSandboxLimits(limitOverrides);
-  return nativeModule.run(
-    source,
-    requestJson,
-    limits.maximumSourceBytes,
-    limits.maximumRequestBytes,
-    limits.maximumResultBytes,
-    limits.runtimeMemoryBytes,
-    limits.runtimeStackBytes,
-    limits.executionTimeoutMilliseconds,
-    limits.maximumLogEntries,
-    limits.maximumLogBytes,
-  );
+  return nativeModule.run(source, requestJson, limits);
 }
