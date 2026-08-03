@@ -12,7 +12,7 @@ function validDefinition() {
     manifest: {
       id: "example-tool",
       name: "Example Tool",
-      sdkVersion: 1,
+      sdkVersion: "1.1",
     },
     settings: {
       title: setting.text({
@@ -59,8 +59,22 @@ function validDefinition() {
   });
 }
 
-test("accepts the complete frozen SDK v1 definition surface", () => {
+test("accepts the complete SDK 1.1 definition surface", () => {
   assert.deepEqual(validateMiniAppDefinition(validDefinition()), []);
+});
+
+test("accepts SDK 1.0 and legacy numeric v1 manifests", () => {
+  const sdk10 = {
+    ...validDefinition(),
+    manifest: { ...validDefinition().manifest, sdkVersion: "1.0" },
+  };
+  const legacy = {
+    ...validDefinition(),
+    manifest: { ...validDefinition().manifest, sdkVersion: 1 },
+  } as unknown as ReturnType<typeof validDefinition>;
+
+  assert.deepEqual(validateMiniAppDefinition(sdk10), []);
+  assert.deepEqual(validateMiniAppDefinition(legacy), []);
 });
 
 test("requires a kebab-case id and home screen", () => {
@@ -79,7 +93,7 @@ test("rejects unknown properties and unsupported SDK versions", () => {
   const definition = {
     ...validDefinition(),
     futureFeature: true,
-    manifest: { ...validDefinition().manifest, sdkVersion: 2 },
+    manifest: { ...validDefinition().manifest, sdkVersion: "2.0" },
   } as unknown as ReturnType<typeof validDefinition>;
   const paths = validateMiniAppDefinition(definition).map((issue) => issue.path);
   assert.ok(paths.includes("definition.futureFeature"));
