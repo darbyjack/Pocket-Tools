@@ -4,6 +4,7 @@ import {
   shouldInterruptAfterDeadline,
 } from "quickjs-emscripten-core";
 
+import { findImportViolation } from "./imports.ts";
 import { readEmbeddedRuntimeSources } from "./runtime-sources.ts";
 
 const SDK_MODULE = "@pocket-tools/sdk";
@@ -35,6 +36,14 @@ export interface InspectionRequest {
 }
 
 export async function executeInspection(source: string): Promise<unknown> {
+  const violation = findImportViolation(source);
+  if (violation !== null) {
+    throw new AuthoringRuntimeError(
+      "UNSUPPORTED_MODULE",
+      `${violation.message} (${violation.line}:${violation.column})`,
+    );
+  }
+
   const request: InspectionRequest = {
     mode: "inspect",
     now: new Date(0).toISOString(),
