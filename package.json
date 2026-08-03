@@ -13,6 +13,7 @@
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "inspect:mini-app": "pnpm --dir packages/authoring-tools mini-app inspect",
+    "lint": "oxlint .",
     "mini-app": "pnpm --dir packages/authoring-tools mini-app",
     "sdk:declarations": "node --experimental-strip-types packages/authoring-tools/src/declarations.ts write",
     "sdk:declarations:check": "node --experimental-strip-types packages/authoring-tools/src/declarations.ts check",
