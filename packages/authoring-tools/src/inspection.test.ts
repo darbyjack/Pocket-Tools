@@ -8,20 +8,21 @@ import { AuthoringTypecheckError } from "./typecheck.ts";
 
 const TEMPLATE_URL = new URL("../../../docs/fixtures/agent-template.miniapp.js", import.meta.url);
 
-test("inspects the canonical agent template through the embedded SDK runner", async () => {
+test("inspects the canonical SDK 1.1 template through the embedded runner", async () => {
   const source = await readFile(TEMPLATE_URL, "utf8");
   const inspection = await inspectMiniAppSource(source);
   assert.equal(inspection.manifest.id, "replace-with-tool-id");
+  assert.equal(inspection.manifest.sdkVersion, "1.1");
   assert.deepEqual(inspection.screens, ["home"]);
   assert.deepEqual(Object.keys(inspection.settings), ["message"]);
 });
 
-test("rejects imports outside the frozen virtual SDK", async () => {
+test("rejects imports outside the virtual SDK", async () => {
   const source = `
 import "node:fs";
 import { defineMiniApp, ui } from "@pocket-tools/sdk";
 export default defineMiniApp({
-  manifest: { id: "bad-import", name: "Bad Import", sdkVersion: 1 },
+  manifest: { id: "bad-import", name: "Bad Import", sdkVersion: "1.1" },
   screens: { home() { return ui.page({ title: "Bad", children: [] }); } },
 });
 `;
@@ -37,7 +38,7 @@ test("returns canonical validation paths for invalid definitions", async () => {
   const source = `
 import { defineMiniApp, setting, ui } from "@pocket-tools/sdk";
 export default defineMiniApp({
-  manifest: { id: "invalid-setting", name: "Invalid Setting", sdkVersion: 1 },
+  manifest: { id: "invalid-setting", name: "Invalid Setting", sdkVersion: "1.1" },
   settings: { title: setting.text({ label: "Title", default: "too long", maxLength: 2 }) },
   screens: { home() { return ui.page({ title: "Invalid", children: [] }); } },
 });
@@ -55,7 +56,7 @@ test("rejects invented SDK builders in unrendered screens", async () => {
   const source = `
 import { defineMiniApp, ui } from "@pocket-tools/sdk";
 export default defineMiniApp({
-  manifest: { id: "invented-ui", name: "Invented UI", sdkVersion: 1 },
+  manifest: { id: "invented-ui", name: "Invented UI", sdkVersion: "1.1" },
   screens: {
     home() { return ui.page({ title: "Home", children: [] }); },
     future() { return ui.table({ rows: [] }); },
