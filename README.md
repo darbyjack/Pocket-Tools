@@ -22,9 +22,9 @@ single-file mini-app source
   → generic inspection and definition validation
   → fresh bounded QuickJS-NG runtime
   → frozen virtual @pocket-tools/sdk module
-  → serialized UI and explicit operation results
+  → serialized UI, interaction input, and explicit operation results
   → React Native response and target validation
-  → host-owned native renderer
+  → host-owned native renderer and active-screen state
   → schema-validated Expo SQLite settings, records, and timers
 ```
 
@@ -39,8 +39,9 @@ SDK v1 supports:
 - Text, boolean, number, money, and select settings
 - Text, boolean, number, money, and datetime collection fields
 - Insert, get, update, remove, query, count, and sum
-- Equality and range filters, sorting, offset, and limit
+- Typed equality and range filters, sorting, offset, and limit
 - Multiple synchronous screens and actions
+- Finite serializable input for record-targeted buttons and navigation
 - Host-owned navigation and deterministic rerendering
 - Native page, section, row, column, heading, text, input, toggle, select, button, metric, timer, summary, list, and empty-state nodes
 - Durable start/get/stop timers
@@ -98,7 +99,7 @@ export default defineMiniApp({
 });
 ```
 
-The host rejects unsupported imports, ambient native access, unknown SDK properties, malformed definitions, invalid settings and records, invalid operation lists, undeclared actions/screens, invalid bridge values, and invalid UI output.
+The host rejects unsupported imports, ambient native access, unknown SDK properties, malformed definitions, invalid settings and records, invalid operation lists, undeclared actions/screens, invalid interaction and bridge values, and invalid UI output.
 
 ## Documentation
 
