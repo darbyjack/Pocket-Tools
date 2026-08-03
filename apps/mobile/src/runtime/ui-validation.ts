@@ -4,8 +4,11 @@ import type { MiniAppInspection, PageNode, SettingDefinition } from "../model.ts
 
 const MAXIMUM_UI_NODES = 512;
 const MAXIMUM_UI_DEPTH = 16;
+const MAXIMUM_LIST_ITEM_ACTIONS = 3;
 const IDENTIFIER_PATTERN = /^[a-z][A-Za-z0-9]*$/;
 const FORMATS = new Set(["plain", "money", "duration", "number"]);
+const ACTION_INTENTS = new Set(["default", "destructive"]);
+const ACTION_KEYS = ["label", "action", "input", "intent", "disabled", "confirmation"];
 
 type PlainObject = Record<string, unknown>;
 type DisplayFormat = "plain" | "money" | "duration" | "number";
@@ -103,16 +106,16 @@ function visitNode(
       exactKeys(node, ["type", "setting", "label"], path);
       validateSettingBinding(node, path, state, ["select"]);
       return node;
-    case "button": {
-      exactKeys(node, ["type", "label", "action", "input"], path);
-      requireString(node.label, `${path}.label`, 1, 120);
-      const action = requireIdentifier(node.action, `${path}.action`);
-      validateInteractionInput(node.input, `${path}.input`);
-      if (state.inspection !== undefined && !state.inspection.actions.includes(action)) {
-        fail(`${path}.action`, `Unknown declared action: ${action}.`);
+    case "button":
+      exactKeys(node, ["type", ...ACTION_KEYS], path);
+      validateActionControl(node, path, state);
+      if (
+        !supportsSdk11(state) &&
+        (node.intent !== undefined || node.disabled !== undefined || node.confirmation !== undefined)
+      ) {
+        fail(path, "Action intent, disabled state, and confirmation require SDK 1.1.");
       }
       return node;
-    }
     case "navigation": {
       exactKeys(node, ["type", "label", "screen", "input"], path);
       requireString(node.label, `${path}.label`, 1, 120);
@@ -128,12 +131,29 @@ function visitNode(
       requireString(node.title, `${path}.title`, 1, 120);
       optionalString(node.description, `${path}.description`, 0, 500);
       return node;
-    case "list-item":
-      exactKeys(node, ["type", "title", "subtitle", "trailing"], path);
+    case "list-item": {
+      exactKeys(node, ["type", "title", "subtitle", "trailing", "actions"], path);
       requireString(node.title, `${path}.title`, 1, 500);
       optionalString(node.subtitle, `${path}.subtitle`, 0, 500);
       optionalString(node.trailing, `${path}.trailing`, 0, 120);
+      if (node.actions !== undefined) {
+        if (!supportsSdk11(state)) fail(`${path}.actions`, "List-item actions require SDK 1.1.");
+        const actions = requireArray(node.actions, `${path}.actions`);
+        if (actions.length === 0 || actions.length > MAXIMUM_LIST_ITEM_ACTIONS) {
+          fail(
+            `${path}.actions`,
+            `List items may contain between 1 and ${MAXIMUM_LIST_ITEM_ACTIONS} actions.`,
+          );
+        }
+        for (const [index, actionValue] of actions.entries()) {
+          const actionPath = `${path}.actions[${index}]`;
+          const action = requireObject(actionValue, actionPath);
+          exactKeys(action, ACTION_KEYS, actionPath);
+          validateActionControl(action, actionPath, state);
+        }
+      }
       return node;
+    }
     case "list": {
       exactKeys(node, ["type", "title", "items", "emptyState"], path);
       optionalString(node.title, `${path}.title`, 1, 120);
@@ -162,8 +182,9 @@ function visitNode(
       exactKeys(node, ["type", "title", "values"], path);
       requireString(node.title, `${path}.title`, 1, 120);
       const values = requireArray(node.values, `${path}.values`);
-      if (values.length > 100)
+      if (values.length > 100) {
         fail(`${path}.values`, "A summary cannot contain more than 100 values.");
+      }
       for (const [index, entryValue] of values.entries()) {
         const entryPath = `${path}.values[${index}]`;
         const entry = requireObject(entryValue, entryPath);
@@ -179,6 +200,45 @@ function visitNode(
   }
 }
 
+function validateActionControl(
+  action: PlainObject,
+  path: string,
+  state: ValidationState,
+): void {
+  requireString(action.label, `${path}.label`, 1, 120);
+  const actionName = requireIdentifier(action.action, `${path}.action`);
+  validateInteractionInput(action.input, `${path}.input`);
+  if (state.inspection !== undefined && !state.inspection.actions.includes(actionName)) {
+    fail(`${path}.action`, `Unknown declared action: ${actionName}.`);
+  }
+  if (
+    action.intent !== undefined &&
+    (typeof action.intent !== "string" || !ACTION_INTENTS.has(action.intent))
+  ) {
+    fail(`${path}.intent`, "Expected default or destructive action intent.");
+  }
+  if (action.disabled !== undefined && typeof action.disabled !== "boolean") {
+    fail(`${path}.disabled`, "Expected a boolean disabled state.");
+  }
+  if (action.confirmation !== undefined) {
+    const confirmationPath = `${path}.confirmation`;
+    const confirmation = requireObject(action.confirmation, confirmationPath);
+    exactKeys(
+      confirmation,
+      ["title", "message", "confirmLabel", "cancelLabel"],
+      confirmationPath,
+    );
+    requireString(confirmation.title, `${confirmationPath}.title`, 1, 120);
+    optionalString(confirmation.message, `${confirmationPath}.message`, 0, 500);
+    optionalString(confirmation.confirmLabel, `${confirmationPath}.confirmLabel`, 1, 80);
+    optionalString(confirmation.cancelLabel, `${confirmationPath}.cancelLabel`, 1, 80);
+  }
+}
+
+function supportsSdk11(state: ValidationState): boolean {
+  return state.inspection === undefined || state.inspection.manifest.sdkVersion === "1.1";
+}
+
 function validateSettingBinding(
   node: PlainObject,
   path: string,
@@ -189,8 +249,9 @@ function validateSettingBinding(
   optionalString(node.label, `${path}.label`, 1, 120);
   if (state.inspection === undefined) return;
   const definition = state.inspection.settings[settingName];
-  if (definition === undefined)
+  if (definition === undefined) {
     fail(`${path}.setting`, `Unknown declared setting: ${settingName}.`);
+  }
   if (!allowedTypes.includes(definition.type)) {
     fail(`${path}.setting`, `Setting ${settingName} has incompatible type ${definition.type}.`);
   }
@@ -214,7 +275,9 @@ function requireObject(value: unknown, path: string): PlainObject {
     fail(path, "Expected a plain object.");
   }
   const prototype = Object.getPrototypeOf(value);
-  if (prototype !== Object.prototype && prototype !== null) fail(path, "Expected a plain object.");
+  if (prototype !== Object.prototype && prototype !== null) {
+    fail(path, "Expected a plain object.");
+  }
   return value as PlainObject;
 }
 
@@ -258,7 +321,9 @@ function requireIdentifier(value: unknown, path: string): string {
 }
 
 function requireFiniteNumber(value: unknown, path: string): void {
-  if (typeof value !== "number" || !Number.isFinite(value)) fail(path, "Expected a finite number.");
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    fail(path, "Expected a finite number.");
+  }
 }
 
 function requireDisplayValue(value: unknown, path: string): void {
@@ -283,7 +348,9 @@ function requireFormattedValue(
 
 function readFormat(value: unknown, path: string): DisplayFormat | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "string" || !FORMATS.has(value)) fail(path, "Unsupported display format.");
+  if (typeof value !== "string" || !FORMATS.has(value)) {
+    fail(path, "Unsupported display format.");
+  }
   return value as DisplayFormat;
 }
 
