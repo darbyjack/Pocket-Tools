@@ -1,15 +1,11 @@
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { ActivityIndicator, Alert, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+  initialWindowMetrics,
+  SafeAreaProvider,
+  SafeAreaView,
+} from "react-native-safe-area-context";
 
 import { DIAGNOSTIC_APP_ID_PREFIX } from "./src/diagnostics/fixtures";
 import { cleanupAbandonedLifecycleDiagnostics } from "./src/diagnostics/startup";
@@ -286,9 +282,13 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="dark" />
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <StatusBar style="dark" />
+      <SafeAreaView
+        edges={["top", "right", "bottom", "left"]}
+        mode="padding"
+        style={styles.safeArea}
+      >
         {content}
       </SafeAreaView>
     </SafeAreaProvider>

@@ -116,9 +116,7 @@ export async function getMiniAppRestoreConflict(
   if (installed !== null) return { kind: "installed", app: installed };
 
   const database = await databasePromise;
-  return (await hasStoredState(database, appId))
-    ? { kind: "retained-data", appId }
-    : null;
+  return (await hasStoredState(database, appId)) ? { kind: "retained-data", appId } : null;
 }
 
 export async function restoreMiniAppBackup(

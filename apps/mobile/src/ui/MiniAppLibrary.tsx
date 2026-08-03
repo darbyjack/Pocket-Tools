@@ -1,6 +1,7 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { InstalledMiniApp } from "../storage/database";
+import { ScreenScrollView } from "./ScreenScrollView";
 
 export interface MiniAppLibraryProps {
   readonly apps: readonly InstalledMiniApp[];
@@ -26,7 +27,7 @@ export function MiniAppLibrary({
   onRestore,
 }: MiniAppLibraryProps) {
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScreenScrollView contentContainerStyle={styles.content}>
       <View style={styles.headingRow}>
         <View style={styles.headingCopy}>
           <Text style={styles.eyebrow}>Pocket Tools</Text>
@@ -102,7 +103,7 @@ export function MiniAppLibrary({
           ))}
         </View>
       )}
-    </ScrollView>
+    </ScreenScrollView>
   );
 }
 
