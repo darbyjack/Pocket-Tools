@@ -6,6 +6,7 @@ import { MiniAppRuntimePanel } from "./MiniAppRuntimePanel";
 export interface InstalledMiniAppRunnerProps {
   readonly app: InstalledMiniApp;
   readonly onBack: () => void;
+  readonly onBackup: () => void;
   readonly onDuplicate: () => void;
   readonly onEdit: () => void;
   readonly onExport: () => void;
@@ -15,6 +16,7 @@ export interface InstalledMiniAppRunnerProps {
 export function InstalledMiniAppRunner({
   app,
   onBack,
+  onBackup,
   onDuplicate,
   onEdit,
   onExport,
@@ -32,6 +34,7 @@ export function InstalledMiniAppRunner({
           <ToolbarAction label="Edit" onPress={onEdit} />
           <ToolbarAction label="Duplicate" onPress={onDuplicate} />
           <ToolbarAction label="Export" onPress={onExport} />
+          <ToolbarAction label="Backup" onPress={onBackup} />
           {canRollback ? <ToolbarAction label="Roll back" onPress={onRollback} /> : null}
         </View>
       </View>
