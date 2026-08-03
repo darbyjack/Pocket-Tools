@@ -1,5 +1,3 @@
-export const DIAGNOSTIC_APP_ID_PREFIX = "lifecycle-diagnostic-";
-
 export function createLifecycleDiagnosticSource(
   appId: string,
   appName: string,
