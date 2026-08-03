@@ -12,6 +12,7 @@ export interface MiniAppLibraryProps {
   readonly apps: readonly InstalledMiniApp[];
   readonly onCreate: () => void;
   readonly onDelete: (app: InstalledMiniApp) => void;
+  readonly onDiagnostics: () => void;
   readonly onDuplicate: (app: InstalledMiniApp) => void;
   readonly onEdit: (app: InstalledMiniApp) => void;
   readonly onExport: (app: InstalledMiniApp) => void;
@@ -22,6 +23,7 @@ export function MiniAppLibrary({
   apps,
   onCreate,
   onDelete,
+  onDiagnostics,
   onDuplicate,
   onEdit,
   onExport,
@@ -38,13 +40,22 @@ export function MiniAppLibrary({
             records, and durable timers.
           </Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onCreate}
-          style={styles.primaryButton}
-        >
-          <Text style={styles.primaryButtonText}>Add script</Text>
-        </Pressable>
+        <View style={styles.headingActions}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onCreate}
+            style={styles.primaryButton}
+          >
+            <Text style={styles.primaryButtonText}>Add script</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onDiagnostics}
+            style={styles.secondaryButton}
+          >
+            <Text style={styles.secondaryButtonText}>Host diagnostics</Text>
+          </Pressable>
+        </View>
       </View>
 
       {apps.length === 0 ? (
@@ -85,7 +96,11 @@ export function MiniAppLibrary({
                 <Action label="Edit" onPress={() => onEdit(app)} />
                 <Action label="Duplicate" onPress={() => onDuplicate(app)} />
                 <Action label="Export" onPress={() => onExport(app)} />
-                <Action destructive label="Remove" onPress={() => onDelete(app)} />
+                <Action
+                  destructive
+                  label="Remove"
+                  onPress={() => onDelete(app)}
+                />
               </View>
             </View>
           ))}
@@ -135,6 +150,11 @@ const styles = StyleSheet.create({
   headingCopy: {
     gap: 5,
   },
+  headingActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 9,
+  },
   eyebrow: {
     color: "#475467",
     fontSize: 13,
@@ -163,6 +183,21 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#ffffff",
     fontSize: 15,
+    fontWeight: "700",
+  },
+  secondaryButton: {
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderColor: "#d0d5dd",
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: 16,
+  },
+  secondaryButtonText: {
+    color: "#344054",
+    fontSize: 14,
     fontWeight: "700",
   },
   emptyCard: {
