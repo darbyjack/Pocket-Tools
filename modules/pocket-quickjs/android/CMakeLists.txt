@@ -17,6 +17,7 @@ add_library(
   pocketquickjs
   SHARED
   src/main/cpp/PocketQuickJsJni.cpp
+  src/main/cpp/PocketQuickJsRuntime.cpp
   ${quickjs_SOURCE_DIR}/dtoa.c
   ${quickjs_SOURCE_DIR}/libregexp.c
   ${quickjs_SOURCE_DIR}/libunicode.c
@@ -25,5 +26,10 @@ add_library(
 
 target_compile_definitions(pocketquickjs PRIVATE _GNU_SOURCE)
 target_compile_features(pocketquickjs PRIVATE c_std_11 cxx_std_20)
-target_include_directories(pocketquickjs PRIVATE ${quickjs_SOURCE_DIR})
+target_include_directories(
+  pocketquickjs
+  PRIVATE
+  src/main/cpp
+  ${quickjs_SOURCE_DIR}
+)
 target_link_libraries(pocketquickjs PRIVATE android log m)
