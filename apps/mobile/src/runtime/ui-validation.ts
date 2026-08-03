@@ -6,6 +6,7 @@ const IDENTIFIER_PATTERN = /^[a-z][A-Za-z0-9]*$/;
 const FORMATS = new Set(["plain", "money", "duration", "number"]);
 
 type PlainObject = Record<string, unknown>;
+type DisplayFormat = "plain" | "money" | "duration" | "number";
 
 interface ValidationState {
   count: number;
@@ -52,11 +53,11 @@ function visitNode(
       optionalString(node.title, `${path}.title`, 1, 120);
       visitChildren(node.children, `${path}.children`, depth, state);
       return node;
-    case "metric":
+    case "metric": {
       exactKeys(node, ["type", "label", "value", "format", "liveTimer"], path);
       requireString(node.label, `${path}.label`, 1, 120);
-      requireDisplayValue(node.value, `${path}.value`);
-      optionalFormat(node.format, `${path}.format`);
+      const format = readFormat(node.format, `${path}.format`);
+      requireFormattedValue(node.value, format, `${path}.value`);
       if (node.liveTimer !== undefined) {
         const liveTimer = requireObject(node.liveTimer, `${path}.liveTimer`);
         exactKeys(liveTimer, ["timerId", "ratePerHour"], `${path}.liveTimer`);
@@ -64,6 +65,7 @@ function visitNode(
         requireFiniteNumber(liveTimer.ratePerHour, `${path}.liveTimer.ratePerHour`);
       }
       return node;
+    }
     case "timer":
       exactKeys(node, ["type", "timerId", "emptyValue"], path);
       requireIdentifier(node.timerId, `${path}.timerId`);
@@ -127,8 +129,8 @@ function visitNode(
         const entry = requireObject(entryValue, entryPath);
         exactKeys(entry, ["label", "value", "format"], entryPath);
         requireString(entry.label, `${entryPath}.label`, 1, 120);
-        requireDisplayValue(entry.value, `${entryPath}.value`);
-        optionalFormat(entry.format, `${entryPath}.format`);
+        const format = readFormat(entry.format, `${entryPath}.format`);
+        requireFormattedValue(entry.value, format, `${entryPath}.value`);
       }
       return node;
     }
@@ -220,10 +222,24 @@ function requireDisplayValue(value: unknown, path: string): void {
   requireString(value, path, 0, 2_000);
 }
 
-function optionalFormat(value: unknown, path: string): void {
-  if (value !== undefined && (typeof value !== "string" || !FORMATS.has(value))) {
+function requireFormattedValue(
+  value: unknown,
+  format: DisplayFormat | undefined,
+  path: string,
+): void {
+  if (format === "money" || format === "duration" || format === "number") {
+    requireFiniteNumber(value, path);
+    return;
+  }
+  requireDisplayValue(value, path);
+}
+
+function readFormat(value: unknown, path: string): DisplayFormat | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !FORMATS.has(value)) {
     fail(path, "Unsupported display format.");
   }
+  return value as DisplayFormat;
 }
 
 function fail(path: string, message: string): never {
