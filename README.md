@@ -90,6 +90,12 @@ The immediate suite creates two temporary installed scripts with colliding setti
 
 See [Lifecycle and Namespace Diagnostics](docs/LIFECYCLE_DIAGNOSTICS.md) for the complete evidence procedure and current verification boundary.
 
+## Prove the ordinary script workflow
+
+Use [Ordinary Agent-Script Acceptance](docs/ORDINARY_SCRIPT_ACCEPTANCE.md) to take the existing Bathroom Pay source through local SDK validation, on-device paste and preview, install, settings, timer recovery, records, summaries, valid and failed updates, rollback, export, and removal without rebuilding the host.
+
+The acceptance remains incomplete until actual repository command output and physical Android observations are recorded.
+
 ## Requirements
 
 - Node.js 24.16 or newer
@@ -148,6 +154,7 @@ The host rejects unsupported imports, ambient native access, unknown SDK propert
 - [Authoring error codes](docs/AUTHORING_ERRORS.md)
 - [Installed mini-app lifecycle](docs/INSTALLED_MINI_APPS.md)
 - [Lifecycle and namespace diagnostics](docs/LIFECYCLE_DIAGNOSTICS.md)
+- [Ordinary agent-script acceptance](docs/ORDINARY_SCRIPT_ACCEPTANCE.md)
 - [Frozen SDK v1](docs/SDK_OVERVIEW.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security model](docs/SECURITY_MODEL.md)
