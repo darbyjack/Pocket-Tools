@@ -10,7 +10,7 @@ type DisplayFormat = "plain" | "money" | "duration" | "number";
 
 interface ValidationState {
   count: number;
-  inspection?: MiniAppInspection;
+  inspection: MiniAppInspection | undefined;
 }
 
 export function validatePageNode(
