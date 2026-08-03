@@ -1,0 +1,15 @@
+{
+  "name": "@pocket-tools/authoring-tools",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "mini-app": "node --experimental-strip-types src/cli.ts"
+  },
+  "dependencies": {
+    "@jitl/quickjs-ng-wasmfile-release-sync": "0.32.0",
+    "@pocket-tools/sdk-contract": "workspace:*",
+    "quickjs-emscripten-core": "0.32.0",
+    "typescript": "7.0.2"
+  }
+}
