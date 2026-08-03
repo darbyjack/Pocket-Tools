@@ -7,6 +7,7 @@ import {
   inspectMiniAppSource,
 } from "./inspection.ts";
 import { AuthoringRuntimeError } from "./quickjs.ts";
+import { AuthoringTypecheckError } from "./typecheck.ts";
 
 const TEMPLATE_URL = new URL(
   "../../../docs/fixtures/agent-template.miniapp.js",
@@ -53,5 +54,25 @@ export default defineMiniApp({
     (error: unknown) =>
       error instanceof AuthoringValidationError &&
       error.issues.some((issue) => issue.path === "settings.title.default"),
+  );
+});
+
+test("rejects invented SDK builders in unrendered screens", async () => {
+  const source = `
+import { defineMiniApp, ui } from "@pocket-tools/sdk";
+export default defineMiniApp({
+  manifest: { id: "invented-ui", name: "Invented UI", sdkVersion: 1 },
+  screens: {
+    home() { return ui.page({ title: "Home", children: [] }); },
+    future() { return ui.table({ rows: [] }); },
+  },
+});
+`;
+
+  await assert.rejects(
+    inspectMiniAppSource(source),
+    (error: unknown) =>
+      error instanceof AuthoringTypecheckError &&
+      error.issues.some((issue) => issue.message.includes("Property 'table'")),
   );
 });
