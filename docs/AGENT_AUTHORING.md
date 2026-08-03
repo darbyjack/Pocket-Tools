@@ -1,6 +1,6 @@
 # Pocket Tools SDK v1 Agent Authoring Guide
 
-This is the canonical starting point for an agent that must produce one Pocket Tools mini-app script. Read this page before writing code. Use only the API documented here and in the linked frozen SDK reference.
+This is the canonical starting point for an agent producing one Pocket Tools mini-app. Read this page before writing code. Use only the API documented here and in the linked frozen declarations.
 
 ## Required output
 
@@ -15,15 +15,15 @@ The script must:
 5. Use lowercase kebab-case for `manifest.id`.
 6. Use lower camelCase for settings, collections, screens, actions, and timer IDs.
 7. Use only finite JSON-compatible values across the SDK boundary.
-8. Contain all business logic in the script. Never request host-specific code.
+8. Keep all mini-app business logic in the script. Never request host-specific code.
 9. Avoid top-level await and asynchronous screens or actions.
-10. Validate successfully with the local authoring command before delivery.
+10. Pass the local validation and inspection commands before delivery.
 
-Do not return explanations mixed into the JavaScript file. Put any user-facing instructions in a separate message.
+Do not mix explanations into the JavaScript file. Put implementation notes in a separate message.
 
 ## Canonical template
 
-The block below is synchronized with [`docs/fixtures/agent-template.miniapp.js`](fixtures/agent-template.miniapp.js) and is executed by repository tests.
+The block below is synchronized with [`docs/fixtures/agent-template.miniapp.js`](fixtures/agent-template.miniapp.js) and executed by repository tests.
 
 <!-- BEGIN fixture: agent-template.miniapp.js -->
 ```js
@@ -67,7 +67,7 @@ export default defineMiniApp({
 ```
 <!-- END fixture: agent-template.miniapp.js -->
 
-Replace the placeholder identity and remove every unused definition. Do not add empty settings, collections, or actions merely for symmetry.
+Replace the placeholder identity and remove every unused definition. Do not add empty settings, collections, screens, or actions merely for symmetry.
 
 ## Manifest
 
@@ -81,7 +81,7 @@ manifest: {
 }
 ```
 
-- `id` is permanent storage identity and must use lowercase kebab-case.
+- `id` is the permanent storage identity and must use lowercase kebab-case.
 - `name` is visible to the user.
 - `description` and `icon` are optional.
 - Only `sdkVersion: 1` is supported.
@@ -98,7 +98,7 @@ Available definitions:
 - `setting.money({ label, default, description?, min?, max?, visibleWhen? })`
 - `setting.select({ label, default, description?, options, visibleWhen? })`
 
-Read a value with:
+Read a setting with:
 
 ```js
 const value = context.settings.get("settingName");
@@ -110,14 +110,14 @@ A visibility rule performs exact equality against another declared setting:
 visibleWhen: { setting: "mode", equals: "advanced" }
 ```
 
-A select option value may be a string, finite number, or boolean. Option values must be unique, and the default must exactly equal one option value.
+Select option values may be strings, finite numbers, or booleans. They must be unique, and the default must exactly equal one option value.
 
-Scripts cannot set settings directly. Render one of these controls instead:
+Scripts cannot set settings directly. Render the matching control:
 
-- `ui.textInput` for a text setting
-- `ui.numberInput` for a number or money setting
-- `ui.toggle` for a boolean setting
-- `ui.select` for a select setting
+- `ui.textInput` for `setting.text`
+- `ui.numberInput` for `setting.number` or `setting.money`
+- `ui.toggle` for `setting.boolean`
+- `ui.select` for `setting.select`
 
 ## Collections and records
 
@@ -191,9 +191,22 @@ Rules:
 
 Every screen is synchronous and returns one `ui.page`.
 
+The optional second argument to a screen or action is `SerializableValue | undefined`. Narrow it before reading object properties:
+
+```js
+/** @param {import("@pocket-tools/sdk").SerializableValue | undefined} input */
+function inputObject(input) {
+  return input !== null && typeof input === "object" && !Array.isArray(input)
+    ? input
+    : {};
+}
+```
+
+Use serializable input for record IDs and other small interaction data:
+
 ```js
 screens: {
-  home(context) {
+  home() {
     return ui.page({
       title: "Home",
       children: [
@@ -207,7 +220,8 @@ screens: {
   },
 
   details(context, input) {
-    const id = String(input?.id ?? "");
+    const values = inputObject(input);
+    const id = String(values.id ?? "");
     return ui.page({ title: "Details", children: [ui.text({ text: id })] });
   },
 },
@@ -218,13 +232,14 @@ Actions are synchronous and request host operations:
 ```js
 actions: {
   removeEntry(context, input) {
-    const id = String(input?.id ?? "");
+    const values = inputObject(input);
+    const id = String(values.id ?? "");
     context.data.collection("entries").remove(id);
   },
 },
 ```
 
-Invoke an action with:
+Invoke the action with:
 
 ```js
 ui.button({
@@ -234,7 +249,7 @@ ui.button({
 })
 ```
 
-The optional second argument to a screen or action is the finite serializable `input` supplied by `ui.navigation` or `ui.button`. Use it for record IDs and other small interaction data. Do not use globals to pass state.
+Do not use writable globals to pass screen or action state.
 
 ## Native UI nodes
 
@@ -267,7 +282,7 @@ Input and interaction:
 
 Supported display formats are `plain`, `number`, `money`, and `duration`. Money is host-formatted as USD in SDK v1. Datetime record values are ISO strings; SDK v1 has no `datetime` display-format token.
 
-Arbitrary styles, colors, component names, event handlers, HTML, JSX, and React Native props are not supported.
+Arbitrary styles, colors, component names, event handlers, HTML, JSX, and React Native properties are unsupported.
 
 ## Timers
 
@@ -305,7 +320,7 @@ Do not import or use:
 - Invented data methods such as `find`, `findOne`, `delete`, `upsert`, `transaction`, or raw SQL
 - Migration declarations, deprecated aliases, compatibility layers, or permission manifests
 
-Do not assume a common web or mobile API exists. If it is not listed in this guide or the frozen declarations, it does not exist in SDK v1.
+Do not assume a common web or mobile API exists. When it is not listed in this guide or the frozen declarations, it does not exist in SDK v1.
 
 ## Validate and inspect locally
 
@@ -327,7 +342,7 @@ pnpm mini-app inspect ./path/to/tool.miniapp.js --json
 
 The commands execute the exact SDK and runner source embedded by the Android native module under QuickJS-NG WASM, then apply the canonical TypeScript definition validator. They do not launch Android.
 
-A nonzero exit code means the script must not be delivered. JSON failures include a stable `error.code`; definition failures also include `issues` with exact `path` and `message` values.
+A nonzero exit code means the script must not be delivered. JSON failures include a stable `error.code`; definition failures also include `issues` with exact `path` and `message` values. See [Authoring Error Codes](AUTHORING_ERRORS.md).
 
 ## Final agent checklist
 
@@ -357,6 +372,7 @@ Use [`AGENT_PROMPT.md`](AGENT_PROMPT.md) when delegating a script to an agent.
 
 - [Frozen SDK v1 reference](SDK_OVERVIEW.md)
 - [SDK v1 TypeScript declarations](../packages/sdk-contract/dist/index.d.ts)
+- [Authoring error codes](AUTHORING_ERRORS.md)
 - [Runtime and security boundary](SECURITY_MODEL.md)
 - [Existing Bathroom Pay reference](../examples/bathroom-pay.miniapp.js)
 - [Existing Tip Splitter reference](../examples/tip-splitter.miniapp.js)
