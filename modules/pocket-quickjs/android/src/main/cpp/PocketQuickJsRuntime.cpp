@@ -26,10 +26,16 @@ namespace {
 constexpr const char* kSdkModuleName = "@pocket-tools/sdk";
 constexpr std::size_t kMaximumFailureMessageBytes = 4 * 1024;
 constexpr std::size_t kMaximumFailureStackBytes = 16 * 1024;
+constexpr std::int64_t kMemoryLimitHeadroomBytes = 64 * 1024;
 
 struct LogEntry {
   std::string level;
   std::string message;
+};
+
+struct PromiseRejection {
+  std::string message;
+  bool reachedMemoryLimit;
 };
 
 struct RuntimeState {
@@ -39,7 +45,7 @@ struct RuntimeState {
   bool logsTruncated = false;
   std::size_t logBytes = 0;
   std::vector<LogEntry> logs;
-  std::unordered_map<void*, std::string> unhandledRejections;
+  std::unordered_map<void*, PromiseRejection> unhandledRejections;
 };
 
 class RuntimeOwner {
@@ -246,6 +252,14 @@ bool installConsole(JSContext* context) {
   return JS_SetPropertyStr(context, global.get(), "console", console.release()) >= 0;
 }
 
+bool runtimeReachedMemoryLimit(JSRuntime* runtime) {
+  JSMemoryUsage usage{};
+  JS_ComputeMemoryUsage(runtime, &usage);
+  if (usage.malloc_limit <= 0) return false;
+  return usage.malloc_size >= usage.malloc_limit ||
+      usage.malloc_limit - usage.malloc_size <= kMemoryLimitHeadroomBytes;
+}
+
 int interruptHandler(JSRuntime*, void* opaque) {
   auto* state = static_cast<RuntimeState*>(opaque);
   if (std::chrono::steady_clock::now() <= state->deadline) return 0;
@@ -264,7 +278,10 @@ void promiseRejectionTracker(
   if (isHandled) {
     state->unhandledRejections.erase(key);
   } else {
-    state->unhandledRejections[key] = valueToString(context, reason);
+    state->unhandledRejections[key] = PromiseRejection{
+        .message = valueToString(context, reason),
+        .reachedMemoryLimit = runtimeReachedMemoryLimit(JS_GetRuntime(context)),
+    };
   }
 }
 
@@ -352,10 +369,15 @@ bool drainPendingJobs(JSRuntime* runtime, RuntimeState& state, std::string& fail
   }
 
   if (!state.unhandledRejections.empty()) {
+    const PromiseRejection& rejection = state.unhandledRejections.begin()->second;
+    const bool memoryLimitReached = rejection.reachedMemoryLimit ||
+        runtimeReachedMemoryLimit(runtime);
     failure = failureJson(
         state.limits,
-        "UNHANDLED_PROMISE_REJECTION",
-        state.unhandledRejections.begin()->second,
+        memoryLimitReached ? "RUNTIME_MEMORY_LIMIT" : "UNHANDLED_PROMISE_REJECTION",
+        memoryLimitReached
+            ? "QuickJS reached the configured runtime memory limit."
+            : rejection.message,
         {},
         &state);
     return false;
