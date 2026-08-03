@@ -1,7 +1,7 @@
 import * as SQLite from "expo-sqlite";
 
 import type { MiniAppInspection, SerializableValue } from "../model";
-import { getInstalledMiniApp, type InstalledMiniApp } from "./database";
+import { inspectMiniApp } from "../runtime/quickjs";
 import {
   MINI_APP_BACKUP_FORMAT,
   MINI_APP_BACKUP_VERSION,
@@ -9,6 +9,7 @@ import {
   validateMiniAppBackupForRestore,
   type MiniAppBackupV1,
 } from "./backup";
+import { getInstalledMiniApp, type InstalledMiniApp } from "./database";
 
 const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 
@@ -38,6 +39,11 @@ export async function createMiniAppBackup(appId: string): Promise<MiniAppBackupV
   const app = await getInstalledMiniApp(appId);
   if (app === null) throw new Error(`BACKUP_NOT_FOUND: ${appId} is not installed.`);
 
+  const [activeInspection, lastKnownGoodInspection] = await Promise.all([
+    inspectMiniApp(app.activeSource),
+    inspectMiniApp(app.lastKnownGoodSource),
+  ]);
+
   const database = await databasePromise;
   const settingRows = await database.getAllAsync<BackupSettingRow>(
     `SELECT name, value_json
@@ -61,7 +67,7 @@ export async function createMiniAppBackup(appId: string): Promise<MiniAppBackupV
     appId,
   );
 
-  return parseMiniAppBackup({
+  const backup = parseMiniAppBackup({
     format: MINI_APP_BACKUP_FORMAT,
     version: MINI_APP_BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
@@ -91,6 +97,8 @@ export async function createMiniAppBackup(appId: string): Promise<MiniAppBackupV
       startedAt: row.started_at,
     })),
   });
+  validateMiniAppBackupForRestore(backup, activeInspection, lastKnownGoodInspection);
+  return backup;
 }
 
 export async function restoreMiniAppBackup(
