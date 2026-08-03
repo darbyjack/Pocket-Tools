@@ -11,7 +11,6 @@ function validDefinition() {
       id: "example-tool",
       name: "Example Tool",
       sdkVersion: 1,
-      version: 1,
     },
     screens: {
       home: () => ui.page({ title: "Example Tool", children: [] }),
@@ -36,46 +35,35 @@ test("requires a kebab-case id and home screen", () => {
   assert.ok(paths.includes("screens.home"));
 });
 
-test("rejects capabilities reserved for a later SDK", () => {
+test("rejects an unsupported SDK identifier", () => {
   const definition = {
     ...validDefinition(),
     manifest: {
       ...validDefinition().manifest,
-      permissions: [
-        {
-          capability: "network" as const,
-          reason: "Read a remote account balance.",
-          allowedHosts: ["api.example.com"],
-        },
-      ],
+      sdkVersion: 2,
     },
-  };
+  } as unknown as ReturnType<typeof validDefinition>;
 
   assert.ok(
     validateMiniAppDefinition(definition).some(
-      (issue) =>
-        issue.path === "manifest.permissions[0].capability" &&
-        issue.message.includes("later SDK"),
+      (issue) => issue.path === "manifest.sdkVersion",
     ),
   );
 });
 
-test("rejects indexes that reference unknown fields", () => {
+test("rejects empty collection definitions", () => {
   const definition = {
     ...validDefinition(),
     collections: {
       entries: {
-        fields: {
-          value: { type: "number" as const },
-        },
-        indexes: [{ fields: ["missing"] }],
+        fields: {},
       },
     },
   };
 
   assert.ok(
-    validateMiniAppDefinition(definition).some((issue) =>
-      issue.message.includes("Unknown indexed field"),
+    validateMiniAppDefinition(definition).some(
+      (issue) => issue.path === "collections.entries.fields",
     ),
   );
 });
