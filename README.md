@@ -2,7 +2,7 @@
 
 Pocket Tools is an Android-first host for small, scriptable personal utilities. A mini app is one JavaScript module that uses a small host-owned SDK and renders through native components.
 
-The first reference utility is **Bathroom Pay**, which tracks bathroom-trip time and calculates its gross pay equivalent without adding Bathroom Pay-specific behavior to the host.
+Bathroom Pay is the first reference script. Its business logic lives only in `examples/bathroom-pay.miniapp.js`; the host does not contain Bathroom Pay-specific runtime, storage, rendering, or hook code.
 
 ## Development rules
 
@@ -10,17 +10,19 @@ Read [AGENTS.md](AGENTS.md) before changing the project. The SDK contains only t
 
 ## Current phase
 
-The Android application connects the first complete product path:
+The Android application connects the first complete generic mini-app path:
 
 ```text
-bathroom-pay.miniapp.js
+examples/*.miniapp.js
+  → generated bundled-script data catalog
+  → generic useMiniApp(source) host path
   → isolated QuickJS-NG runtime
   → serialized UI and operation results
   → React Native renderer
   → Expo SQLite settings, records, and timers
 ```
 
-The implementation remains intentionally narrow: one bundled script, one home screen, the current SDK nodes, and only the storage and timer operations Bathroom Pay uses.
+The bundled catalog is temporary seed data for development. Adding another `examples/*.miniapp.js` file requires no host-code changes; the synchronizer discovers it automatically. Script installation and the copy-and-paste editor are later product layers.
 
 The canonical delivery map is [Wayfinder: Deliver the Pocket Tools Android MVP](https://github.com/darbyjack/Pocket-Tools/issues/1).
 
@@ -38,12 +40,12 @@ pnpm check
 pnpm android
 ```
 
-`pnpm android` synchronizes the canonical Bathroom Pay source into the mobile bundle and runs the Android development build. Expo Go cannot run Pocket Tools because the app contains a custom native QuickJS module.
+`pnpm android` synchronizes every `examples/*.miniapp.js` script into the generated data catalog and runs the Android development build. Expo Go cannot run Pocket Tools because the app contains a custom native QuickJS module.
 
 Individual checks:
 
 ```bash
-pnpm sync:examples:check
+pnpm sync:mini-apps:check
 pnpm format:check
 pnpm lint
 pnpm typecheck
@@ -76,7 +78,7 @@ The host rejects unsupported imports, ambient native access, unsupported SDK ide
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [Android Bathroom Pay slice](docs/ANDROID_SLICE.md)
+- [First Android mini-app slice](docs/ANDROID_SLICE.md)
 - [Security model](docs/SECURITY_MODEL.md)
 - [SDK v1 overview](docs/SDK_OVERVIEW.md)
 - [Bathroom Pay requirements](docs/BATHROOM_PAY_REQUIREMENTS.md)
