@@ -11,6 +11,16 @@ import { collection, defineMiniApp, field, setting, ui } from "@pocket-tools/sdk
 const COLLECTION = "sharedRecords";
 const TIMER = "sharedTimer";
 
+function stateNodes(context) {
+  const records = context.data.collection(COLLECTION).query();
+  const timer = context.timers.get(TIMER);
+  return [
+    ui.text({ text: String(context.settings.get("sharedValue")) }),
+    ui.metric({ label: "Records", value: records.length, format: "number" }),
+    ui.text({ text: timer === null ? "Timer stopped" : "Timer active" }),
+  ];
+}
+
 export default defineMiniApp({
   manifest: {
     id: ${JSON.stringify(appId)},
@@ -32,14 +42,20 @@ export default defineMiniApp({
   },
   screens: {
     home(context) {
-      const records = context.data.collection(COLLECTION).query();
-      const timer = context.timers.get(TIMER);
       return ui.page({
         title: ${JSON.stringify(appName)},
         children: [
-          ui.text({ text: String(context.settings.get("sharedValue")) }),
-          ui.metric({ label: "Records", value: records.length, format: "number" }),
-          ui.text({ text: timer === null ? "Timer stopped" : "Timer active" }),
+          ...stateNodes(context),
+          ui.navigation({ label: "Details", screen: "details" }),
+        ],
+      });
+    },
+    details(context) {
+      return ui.page({
+        title: "Diagnostic details",
+        children: [
+          ...stateNodes(context),
+          ui.navigation({ label: "Back", screen: "home" }),
         ],
       });
     },
