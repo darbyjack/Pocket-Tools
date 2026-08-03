@@ -5,7 +5,7 @@ import type {
   RuntimeSnapshot,
   RuntimeSuccess,
 } from "../model";
-import { parseRuntimeResponse } from "./protocol";
+import { MiniAppRuntimeError, parseRuntimeResponse } from "./protocol";
 
 export async function inspectMiniApp(source: string): Promise<MiniAppInspection> {
   const response = await execute(source, {
@@ -34,6 +34,24 @@ export function invokeMiniAppAction(
   snapshot: RuntimeSnapshot,
 ): Promise<RuntimeSuccess> {
   return execute(source, snapshot);
+}
+
+export function formatMiniAppError(caught: unknown): string {
+  if (caught instanceof MiniAppRuntimeError) {
+    const lines = [`${caught.code}: ${caught.message}`];
+    if (caught.scriptStack !== undefined && caught.scriptStack.length > 0) {
+      lines.push(caught.scriptStack);
+    }
+    if (caught.logs.length > 0) {
+      lines.push(
+        "Console output:",
+        ...caught.logs.map((entry) => `[${entry.level}] ${entry.message}`),
+      );
+    }
+    if (caught.logsTruncated) lines.push("Console output was truncated.");
+    return lines.join("\n");
+  }
+  return caught instanceof Error ? caught.message : String(caught);
 }
 
 async function execute(
