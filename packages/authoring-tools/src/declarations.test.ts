@@ -12,8 +12,13 @@ test("the TypeScript CLI resolves without using a package subpath", async () => 
     await readFile(resolve(packageRoot, "package.json"), "utf8"),
   ) as { readonly bin?: { readonly tsc?: string } };
 
-  assert.equal(typeof manifest.bin?.tsc, "string");
-  const path = resolve(packageRoot, manifest.bin.tsc);
+  const tsc = manifest.bin?.tsc;
+  assert.equal(typeof tsc, "string");
+  if (typeof tsc !== "string") {
+    throw new Error("The TypeScript package does not declare a tsc binary.");
+  }
+
+  const path = resolve(packageRoot, tsc);
   await access(path);
   assert.match(path.replaceAll("\\", "/"), /typescript\/bin\/tsc$/);
 });
