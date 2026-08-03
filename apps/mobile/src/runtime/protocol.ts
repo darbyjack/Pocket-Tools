@@ -1,6 +1,5 @@
 import type {
   MetricNode,
-  RuntimeFailure,
   RuntimeResponse,
   RuntimeSuccess,
   SettingDefinition,
@@ -50,11 +49,4 @@ export function settingIsVisible(
 ): boolean {
   const rule = definition.visibleWhen;
   return rule === undefined || values[rule.setting] === rule.equals;
-}
-
-export function runtimeFailure(message: string): RuntimeFailure {
-  return {
-    ok: false,
-    error: { code: "HOST_ERROR", message },
-  };
 }
