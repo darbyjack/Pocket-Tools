@@ -10,6 +10,7 @@ export interface ValidationIssue {
 
 const appIdPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const objectKeyPattern = /^[a-z][A-Za-z0-9]*$/;
+const reservedRecordFields = new Set(["id", "createdAt", "updatedAt"]);
 
 type PlainObject = Record<string, unknown>;
 
@@ -233,10 +234,14 @@ function validateCollection(name: string, value: unknown, issues: ValidationIssu
     addIssue(issues, `${path}.fields`, "At least one field is required.");
   }
   for (const [fieldName, fieldValue] of Object.entries(fields)) {
+    const fieldPath = `${path}.fields.${fieldName}`;
     if (!objectKeyPattern.test(fieldName)) {
-      addIssue(issues, `${path}.fields.${fieldName}`, "Use a lower camelCase identifier.");
+      addIssue(issues, fieldPath, "Use a lower camelCase identifier.");
     }
-    validateField(fieldValue, `${path}.fields.${fieldName}`, issues);
+    if (reservedRecordFields.has(fieldName)) {
+      addIssue(issues, fieldPath, "This record metadata name is reserved for the host.");
+    }
+    validateField(fieldValue, fieldPath, issues);
   }
 }
 
