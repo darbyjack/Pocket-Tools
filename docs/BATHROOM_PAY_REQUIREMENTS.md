@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Bathroom Pay tracks time spent on bathroom trips during paid work and calculates a gross pay equivalent for that elapsed time. It is the first complete proof that Pocket Tools can express a useful persistent utility entirely as a mini-app script.
+Bathroom Pay tracks time spent on bathroom trips during paid work and calculates a gross pay equivalent for that elapsed time. It is the first proof that Pocket Tools can express a useful persistent utility entirely as a mini-app script.
 
 The calculation is informational and must not be described as net pay, additional compensation, timecard advice, or a legal entitlement.
 
@@ -21,7 +21,7 @@ effective hourly rate =
   annual gross salary / (paid hours per week × paid weeks per year)
 ```
 
-The app must reject or safely handle zero and invalid divisors.
+The app must safely handle zero or invalid divisors.
 
 ### Trip earnings
 
@@ -52,21 +52,35 @@ Each completed trip stores:
 - Duration in seconds
 - Effective hourly rate at completion
 - Gross earnings equivalent
-- Optional notes
 - Host-generated creation and update timestamps
 
-## Required behavior
+## First working slice
 
-- Start one active bathroom-trip timer.
+The first Android slice must:
+
+- Configure hourly or salary pay.
+- Start one active bathroom timer.
 - Display elapsed duration and live gross equivalent.
-- End the active timer and create one durable trip record.
-- Recover an active trip after navigation, process death, relaunch, and device reboot.
-- Add a trip manually from start and end timestamps.
-- Edit and delete individual records.
-- Show today, current week, current month, current year, and all-time totals.
-- Show recent history in reverse chronological order.
-- Export records as JSON and CSV after capability approval.
-- Clear data only after explicit confirmation.
+- Stop the timer and create one durable trip record.
+- Recover the active trip after the app process is restarted.
+- Show stored trips and today's totals.
+- Run entirely through the public SDK and QuickJS boundary.
+
+The SDK must not expand until this slice works end to end.
+
+## Later Bathroom Pay layers
+
+After the first slice works, add these requirements one layer at a time:
+
+- Manual trip entry
+- Notes
+- Edit and delete individual records
+- Current week, current month, current year, and all-time totals
+- JSON and CSV export
+- Explicitly confirmed data clearing
+- Backup and restore
+
+These are product requirements, but they do not justify placeholder APIs before their implementation ticket begins.
 
 ## Date boundaries
 
@@ -80,20 +94,16 @@ Each completed trip stores:
 - Only one `currentTrip` timer may be active for this mini app.
 - Starting while already active must not create a second timer.
 - Stopping an absent timer produces a structured error.
-- A timer runs from host timestamps; the script is not kept alive.
-- Clock-change and reboot behavior must be covered by host timer tests.
+- The timer uses host timestamps; the script is not kept alive.
 
-## Export rules
+## Current pull-request acceptance
 
-JSON exports complete records in a documented stable shape. CSV escapes quotes, includes a header row, and uses raw ISO timestamps and numeric values to remain portable.
+The reference script in this pull request is accepted when it:
 
-## Acceptance criteria
+1. Uses only the public SDK.
+2. Contains no host-specific imports or privileged Bathroom Pay code.
+3. Type-checks with strict JavaScript checking.
+4. Passes definition validation.
+5. Exercises only APIs justified by the first Bathroom Pay slice.
 
-The reference script is complete when it:
-
-1. Installs through the ordinary paste-and-preview flow.
-2. Uses only the public SDK.
-3. Contains no host-specific imports or Bathroom Pay host code.
-4. Persists settings, records, and active timer state correctly.
-5. Passes embedded tests and host end-to-end tests.
-6. Can be exported, removed, and restored with its data.
+Runtime persistence and Android end-to-end behavior belong to the next working-slice pull request.
