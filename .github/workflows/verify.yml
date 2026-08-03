@@ -16,7 +16,7 @@ permissions:
 jobs:
   checks:
     name: Checks
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
@@ -42,7 +42,7 @@ jobs:
   android:
     name: Android development build
     needs: checks
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
@@ -78,8 +78,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Synchronize bundled scripts
-        run: pnpm sync:examples
+      - name: Synchronize bundled mini apps
+        run: pnpm sync:mini-apps
 
       - name: Generate Android project
         run: pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
