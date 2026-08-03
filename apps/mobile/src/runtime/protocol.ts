@@ -75,7 +75,9 @@ export function parseRuntimeResponse(json: string): RuntimeSuccess {
       );
     }
     throw new MiniAppRuntimeError(parsed.error.code, parsed.error.message, {
-      scriptStack: parsed.error.stack,
+      ...(parsed.error.stack === undefined
+        ? {}
+        : { scriptStack: parsed.error.stack }),
       logs,
       logsTruncated: parsed.logsTruncated,
     });
