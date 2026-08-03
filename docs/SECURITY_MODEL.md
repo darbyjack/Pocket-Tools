@@ -44,7 +44,7 @@ The first slice exposes only:
 - Host time
 - Native rendering of the current UI nodes
 
-There are no placeholder permission or capability APIs in the current SDK.
+There is no permission or capability layer in the current SDK because the first slice does not need one.
 
 ## Runtime limits
 
