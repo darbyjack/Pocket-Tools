@@ -19,7 +19,7 @@ Every script must:
 5. Provide a synchronous `home` screen.
 6. Use lower camelCase names for settings, collections, screens, actions, and timer IDs.
 7. Use lowercase kebab-case for `manifest.id`.
-8. Keep every bridge value finite and JSON-compatible.
+8. Keep every bridge and interaction value finite and JSON-compatible.
 9. Complete screens and actions synchronously.
 
 ## Manifest and definition
@@ -58,7 +58,7 @@ Settings are durable values isolated under the host-selected mini-app manifest I
 
 All settings support `label`, optional `description`, `default`, and optional `visibleWhen` equality rules.
 
-Text settings support `minLength` and `maxLength`. Number settings support `min`, `max`, and positive `step`. Money settings support `min` and `max`. Select options use unique string, number, or boolean values, and the default must exactly match one option.
+Text settings support `minLength` and `maxLength`. Number and money settings support `min` and `max`. Select options use unique string, number, or boolean values, and the default must exactly match one option.
 
 Scripts read settings through:
 
@@ -106,8 +106,16 @@ A query may contain:
 {
   where: [
     { field: "complete", operator: "eq", value: false },
-    { field: "createdAt", operator: "gte", value: "2026-08-01T00:00:00.000Z" },
-    { field: "createdAt", operator: "lte", value: "2026-08-31T23:59:59.999Z" },
+    {
+      field: "createdAt",
+      operator: "gte",
+      value: "2026-08-01T00:00:00.000Z",
+    },
+    {
+      field: "createdAt",
+      operator: "lte",
+      value: "2026-08-31T23:59:59.999Z",
+    },
   ],
   orderBy: [{ field: "createdAt", direction: "desc" }],
   offset: 0,
@@ -115,36 +123,58 @@ A query may contain:
 }
 ```
 
-Supported operators are `eq`, `gte`, and `lte`. Boolean and `null` comparisons use equality only. `limit` and `offset` are integers from 0 through 10,000. `sum` accepts number or money fields only.
+Supported operators are `eq`, `gte`, and `lte`. Text, boolean, and `null` comparisons use equality only. `null` may compare only against an optional field. Number, money, and datetime filters require values matching the declared field type. `limit` and `offset` are integers from 0 through 10,000. `sum` accepts number or money fields only.
 
-## Screens, actions, and navigation
+## Screens, actions, navigation, and input
 
 Screens and actions are named synchronous functions. Every script must declare `home`.
+
+A screen or action may receive optional finite serializable input as its second argument. This is how a utility opens, updates, or removes a specific record without hidden globals or mutable host objects.
 
 ```js
 screens: {
   home(context) {
+    const entries = context.data.collection("entries").query();
+
     return ui.page({
       title: "Home",
-      children: [ui.navigation({ label: "Details", screen: "details" })],
+      children: entries.map((entry) =>
+        ui.navigation({
+          label: String(entry.title),
+          screen: "details",
+          input: { id: entry.id },
+        }),
+      ),
     });
   },
-  details() {
+
+  details(context, input) {
+    const entry = context.data.collection("entries").get(String(input.id));
+
     return ui.page({
-      title: "Details",
-      children: [ui.navigation({ label: "Back", screen: "home" })],
+      title: entry === null ? "Missing entry" : String(entry.title),
+      children:
+        entry === null
+          ? []
+          : [
+              ui.button({
+                label: "Delete",
+                action: "deleteEntry",
+                input: { id: entry.id },
+              }),
+            ],
     });
   },
 },
 
 actions: {
-  save(context) {
-    context.data.collection("entries").insert({ title: "Saved" });
+  deleteEntry(context, input) {
+    context.data.collection("entries").remove(String(input.id));
   },
 },
 ```
 
-`ui.navigation` can target only a declared screen. `ui.button` can invoke only a declared action. The host owns the active screen and rerenders deterministically after navigation, setting updates, and actions.
+`ui.navigation` can target only a declared screen. `ui.button` can invoke only a declared action. Their optional `input` must satisfy the serializable-value contract. The host owns the active screen, preserves its input across rerenders, and rerenders deterministically after navigation, setting updates, and actions.
 
 Returning a promise from a screen or action produces `ASYNC_NOT_SUPPORTED`.
 
@@ -181,7 +211,7 @@ Every screen returns one `ui.page(...)`. Supported frozen nodes are:
 
 Input nodes bind by name to declared settings. `textInput` requires a text setting, `numberInput` requires a number or money setting, `toggle` requires a boolean setting, and `select` requires a select setting.
 
-The host validates exact property allowlists, setting bindings, action targets, screen targets, value types, strings, formats, node count, and depth before React Native renders the tree. Arbitrary style objects and native component properties are rejected.
+The host validates exact property allowlists, setting bindings, action targets, screen targets, interaction input, value types, strings, formats, node count, and depth before React Native renders the tree. Arbitrary style objects and native component properties are rejected.
 
 The current limits are 512 rendered nodes and 16 levels of depth. A page cannot be nested.
 
@@ -223,7 +253,7 @@ Pause, resume, cancel, metadata, notifications, and arbitrary background JavaScr
 
 ## Serializable values
 
-Bridge values may contain only:
+Bridge and interaction values may contain only:
 
 - `null`
 - finite numbers
