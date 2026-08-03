@@ -2,7 +2,9 @@ import type { MiniAppInspection, RuntimeSnapshot } from "../model";
 import {
   inspectMiniApp,
   invokeMiniAppAction,
+  renderMiniApp,
 } from "../runtime/quickjs";
+import { validatePageNode } from "../runtime/ui-validation";
 import {
   applyRuntimeOperations,
   deleteInstalledMiniApp,
@@ -75,6 +77,18 @@ export async function runNamespaceIsolationDiagnostics(): Promise<
         "namespace-isolation",
         "Settings, records, and timers are isolated",
         "Two installed scripts used identical setting, collection, and timer names without observing each other’s values.",
+      ),
+    );
+
+    await renderDiagnosticScreen(appA, "home");
+    await renderDiagnosticScreen(appA, "details");
+    await renderDiagnosticScreen(appA, "home");
+    assertSamePersistedState(snapshotA, await loadRenderSnapshot(appA));
+    checks.push(
+      passed(
+        "navigation-stability",
+        "Navigation leaves persisted state unchanged",
+        "The installed script rendered home, details, and home again through QuickJS without mutating its setting, record, or timer namespace.",
       ),
     );
 
@@ -209,13 +223,17 @@ export async function resumeTimerRecoveryDiagnostic(): Promise<DiagnosticCheck> 
     };
   }
 
-  try {
-    if (checkpoint.launchId === HOST_LAUNCH_ID) {
-      throw new Error(
-        "The host runtime has not relaunched since this checkpoint was prepared.",
-      );
-    }
+  if (checkpoint.launchId === HOST_LAUNCH_ID) {
+    return {
+      id: "timer-recovery-pending",
+      title: "Host relaunch still required",
+      status: "pending",
+      detail:
+        "This is still the host launch that prepared the checkpoint. Force-stop and reopen Pocket Tools before resuming; the checkpoint has been preserved.",
+    };
+  }
 
+  try {
     const inspection = await inspectMiniApp(checkpoint.source);
     if (inspection.manifest.id !== checkpoint.appId) {
       throw new Error(
@@ -323,6 +341,24 @@ async function invokeAction(app: DiagnosticApp, action: string): Promise<void> {
   );
 }
 
+async function renderDiagnosticScreen(
+  app: DiagnosticApp,
+  screen: string,
+): Promise<void> {
+  const snapshot = await loadRuntimeSnapshot(
+    app.inspection,
+    app.id,
+    "render",
+    { screen },
+  );
+  const response = await renderMiniApp(app.source, snapshot);
+  const page = response.value.page;
+  if (page === undefined) {
+    throw new Error(`The diagnostic screen ${screen} returned no page.`);
+  }
+  validatePageNode(page, app.inspection);
+}
+
 function loadRenderSnapshot(app: DiagnosticApp): Promise<RuntimeSnapshot> {
   return loadRuntimeSnapshot(app.inspection, app.id, "render", {
     screen: "home",
@@ -365,10 +401,10 @@ function assertSamePersistedState(
   after: RuntimeSnapshot,
 ): void {
   if (JSON.stringify(before.settings) !== JSON.stringify(after.settings)) {
-    throw new Error("The failed invocation changed settings.");
+    throw new Error("The operation changed settings unexpectedly.");
   }
   if (JSON.stringify(before.records) !== JSON.stringify(after.records)) {
-    throw new Error("The failed invocation changed records.");
+    throw new Error("The operation changed records unexpectedly.");
   }
 
   const startedAtValues = (snapshot: RuntimeSnapshot) =>
@@ -382,7 +418,7 @@ function assertSamePersistedState(
     JSON.stringify(startedAtValues(before)) !==
     JSON.stringify(startedAtValues(after))
   ) {
-    throw new Error("The failed invocation changed timers.");
+    throw new Error("The operation changed timers unexpectedly.");
   }
 }
 
