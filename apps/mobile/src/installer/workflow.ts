@@ -5,12 +5,16 @@ export function assertCandidateIdentity(
   installedId: string | null,
   candidateId: string,
 ): void {
-  if (mode !== "edit" || installedId === null || installedId === candidateId) {
-    return;
+  if (mode === "edit" && installedId !== null && installedId !== candidateId) {
+    throw new Error(
+      `INSTALLATION_FAILED: An update cannot change manifest.id from ${installedId} to ${candidateId}. Use Duplicate to create a new app.`,
+    );
   }
-  throw new Error(
-    `INSTALLATION_FAILED: An update cannot change manifest.id from ${installedId} to ${candidateId}. Use Duplicate to create a new app.`,
-  );
+  if (mode === "duplicate" && installedId !== null && installedId === candidateId) {
+    throw new Error(
+      `INSTALLATION_FAILED: A duplicate must change manifest.id from ${installedId} before it can be installed.`,
+    );
+  }
 }
 
 export function isCurrentSourceApproved(
