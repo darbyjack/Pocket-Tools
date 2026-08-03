@@ -56,7 +56,7 @@ The QuickJS module loader resolves only host-provided virtual modules. External 
 - Bathroom Pay settings and collection primitives
 - Start/get/stop timers
 - The UI nodes used by the first Bathroom Pay slice
-- Screens, actions, and deterministic embedded tests
+- Screens and actions
 - Serializable bridge values
 - Definition validation and structured errors
 
@@ -84,9 +84,8 @@ That work may be internally modular, but it must land as one functioning vertica
 3. QuickJS evaluates the script without ambient native access.
 4. The host validates the exported definition and SDK identifier.
 5. The script is previewed against temporary state.
-6. Embedded tests run against a deterministic harness.
-7. The host installs the validated source and initializes its current schema.
-8. At runtime, the host creates a bounded QuickJS context only when a screen or action needs execution.
+6. The host installs the validated source and initializes its current schema.
+7. At runtime, the host creates a bounded QuickJS context only when a screen or action needs execution.
 
 A failed install leaves existing installed state untouched. This is transactional integrity, not backward-compatibility support.
 
