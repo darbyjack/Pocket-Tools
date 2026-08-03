@@ -45,7 +45,7 @@ export async function readEmbeddedRuntimeSources(): Promise<EmbeddedRuntimeSourc
 }
 
 function extractRawString(header: string, name: string): string {
-  const startMarker = `inline constexpr char ${name}[] = R\"POCKET_JS(\n`;
+  const startMarker = `inline constexpr char ${name}[] = R"POCKET_JS(\n`;
   const start = header.indexOf(startMarker);
   if (start < 0) {
     throw new RuntimeSourceError(
