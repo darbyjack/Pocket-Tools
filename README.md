@@ -82,6 +82,14 @@ Updates render against a cloned copy of current installed state before the activ
 
 See [Installed Mini-App Lifecycle](docs/INSTALLED_MINI_APPS.md) for storage, preview, update, rollback, export, duplication, and removal behavior.
 
+## Validate lifecycle and isolation
+
+Open **Host diagnostics** from the installed mini-app library to run the repeatable namespace, failed-invocation recovery, deletion, and force-stop timer tests.
+
+The immediate suite creates two temporary installed scripts with colliding setting, collection, and timer names and proves that their state remains isolated. The timer procedure spans two launches and requires confirming with `adb shell pidof` that the application process is absent while the durable timer remains active.
+
+See [Lifecycle and Namespace Diagnostics](docs/LIFECYCLE_DIAGNOSTICS.md) for the complete evidence procedure and current verification boundary.
+
 ## Requirements
 
 - Node.js 24.16 or newer
@@ -139,6 +147,7 @@ The host rejects unsupported imports, ambient native access, unknown SDK propert
 - [Canonical agent prompt](docs/AGENT_PROMPT.md)
 - [Authoring error codes](docs/AUTHORING_ERRORS.md)
 - [Installed mini-app lifecycle](docs/INSTALLED_MINI_APPS.md)
+- [Lifecycle and namespace diagnostics](docs/LIFECYCLE_DIAGNOSTICS.md)
 - [Frozen SDK v1](docs/SDK_OVERVIEW.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security model](docs/SECURITY_MODEL.md)
