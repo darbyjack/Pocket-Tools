@@ -7,6 +7,7 @@ import {
   validateMiniAppSource,
 } from "./inspection.ts";
 import { AuthoringRuntimeError } from "./quickjs.ts";
+import { AuthoringTypecheckError } from "./typecheck.ts";
 
 type Command = "inspect" | "validate";
 
@@ -47,7 +48,7 @@ async function main(): Promise<void> {
 
   try {
     if (argumentsValue.command === "validate") {
-      await validateMiniAppSource(source);
+      await validateMiniAppSource(source, file);
       if (argumentsValue.json) {
         process.stdout.write(`${JSON.stringify({ ok: true, command: "validate", file })}\n`);
       } else {
@@ -56,7 +57,7 @@ async function main(): Promise<void> {
       return;
     }
 
-    const inspection = await inspectMiniAppSource(source);
+    const inspection = await inspectMiniAppSource(source, file);
     if (argumentsValue.json) {
       process.stdout.write(
         `${JSON.stringify({ ok: true, command: "inspect", file, inspection }, null, 2)}\n`,
@@ -76,6 +77,8 @@ async function main(): Promise<void> {
     );
   } catch (caught) {
     if (caught instanceof AuthoringValidationError) {
+      writeFailure(caught.code, caught.message, argumentsValue.json, caught.issues);
+    } else if (caught instanceof AuthoringTypecheckError) {
       writeFailure(caught.code, caught.message, argumentsValue.json, caught.issues);
     } else if (caught instanceof AuthoringRuntimeError) {
       writeFailure(caught.code, caught.message, argumentsValue.json, undefined, caught.scriptStack);
@@ -112,7 +115,7 @@ function writeFailure(
   code: string,
   message: string,
   json: boolean,
-  issues?: readonly { readonly path: string; readonly message: string }[],
+  issues?: readonly unknown[],
   scriptStack?: string,
 ): void {
   if (json) {
