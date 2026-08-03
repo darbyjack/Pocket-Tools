@@ -71,7 +71,7 @@ class PocketQuickJsInteractionInputTest {
           },
           details(context, input) {
             return ui.page({
-              title: `Entry ${input.id}`,
+              title: `Entry ${'$'}{input.id}`,
               children: [
                 ui.button({
                   label: 'Remove',
