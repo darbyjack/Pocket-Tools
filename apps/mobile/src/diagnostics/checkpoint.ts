@@ -28,7 +28,9 @@ export async function loadTimerRecoveryCheckpoint(): Promise<TimerRecoveryCheckp
 
   const value = JSON.parse(row.value) as unknown;
   if (!isTimerRecoveryCheckpoint(value)) {
-    throw new Error("DIAGNOSTIC_CHECKPOINT_INVALID: The saved timer recovery checkpoint is malformed.");
+    throw new Error(
+      "DIAGNOSTIC_CHECKPOINT_INVALID: The saved timer recovery checkpoint is malformed.",
+    );
   }
   return value;
 }
@@ -53,6 +55,7 @@ function isTimerRecoveryCheckpoint(
     typeof record.appName === "string" &&
     typeof record.source === "string" &&
     typeof record.startedAt === "string" &&
-    typeof record.preparedAt === "string"
+    typeof record.preparedAt === "string" &&
+    typeof record.launchId === "string"
   );
 }
