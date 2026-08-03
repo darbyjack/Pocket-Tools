@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 
+import { assertFirstRenderAgainstRetainedState } from "../installer/first-render";
 import { NEW_MINI_APP_TEMPLATE } from "../installer/template";
 import {
   assertCandidateIdentity,
@@ -181,6 +182,10 @@ export function MiniAppEditor({
     setBusy(true);
     setError(null);
     try {
+      await assertFirstRenderAgainstRetainedState(
+        source,
+        candidate.inspection,
+      );
       const saved =
         mode === "edit" && installed !== null
           ? await updateInstalledMiniApp(
