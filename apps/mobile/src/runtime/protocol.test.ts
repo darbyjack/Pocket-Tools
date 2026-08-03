@@ -125,7 +125,7 @@ test("preserves structured sandbox errors and captured logs", () => {
         }),
       ),
     (error: unknown) => {
-      assert.ok(error instanceof MiniAppRuntimeError);
+      if (!(error instanceof MiniAppRuntimeError)) return false;
       assert.equal(error.code, "RUNTIME_TIMEOUT");
       assert.equal(error.scriptStack, "at home (miniapp.js:10)");
       assert.deepEqual(error.logs, [{ level: "warn", message: "before timeout" }]);
