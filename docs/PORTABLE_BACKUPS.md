@@ -31,9 +31,9 @@ The existing **Export** action remains source-only. **Backup** is the portable s
 5. Review the manifest ID and state counts.
 6. Choose **Restore backup**.
 
-If the manifest ID is not installed, Pocket Tools creates the installation and restores its state.
+If the manifest ID has no installation or retained namespace, Pocket Tools creates the installation and restores its state.
 
-If the same manifest ID is already installed, Pocket Tools requires explicit confirmation before replacing it. Replacement is transactional: source, settings, records, and timers are all replaced together, or the existing installation remains unchanged.
+If the same manifest ID is installed or has data retained after removal, Pocket Tools requires explicit confirmation before replacing it. Replacement is transactional: source, settings, records, and timers are all replaced together, or the previous installation and retained state remain unchanged.
 
 ## Validation boundary
 
@@ -89,5 +89,6 @@ Before this slice is marked device-verified:
 4. Remove the app and its data.
 5. Restore the backup and confirm source, settings, records, summaries, rollback availability, and timer elapsed time.
 6. Modify the installed app, then restore the same backup with explicit replacement and confirm the complete previous state returns.
-7. Attempt malformed, unsupported-version, wrong-manifest, and schema-invalid backups and confirm the installed app remains unchanged.
-8. Relaunch Pocket Tools and confirm the restored state remains available.
+7. Remove the app while keeping data, then restore the backup and confirm retained-state replacement requires explicit confirmation.
+8. Attempt malformed, unsupported-version, wrong-manifest, and schema-invalid backups and confirm the installed app remains unchanged.
+9. Relaunch Pocket Tools and confirm the restored state remains available.
