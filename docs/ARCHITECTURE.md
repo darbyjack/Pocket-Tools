@@ -4,14 +4,16 @@
 
 Pocket Tools is an Android-first host for personal utilities authored as single JavaScript modules. The host owns native UI, persistence, lifecycle behavior, and failure containment. A mini app owns its declarative definition and business logic.
 
-The current product is one complete Bathroom Pay Android slice. New SDK surface must be justified by the next working product layer.
+The current product is one complete script-driven Android slice using Bathroom Pay as the reference script. New SDK surface must be justified by the next working product layer.
 
 ## Implemented boundaries
 
 ```text
 Expo / React Native host
-  ├─ Bathroom Pay settings UI
+  ├─ bundled mini-app catalog and selection
+  ├─ generic script lifecycle hook
   ├─ declarative native UI renderer
+  ├─ generic settings renderer
   ├─ Expo SQLite host state
   │    ├─ per-mini-app settings
   │    ├─ isolated collection records
@@ -21,6 +23,8 @@ Expo / React Native host
 ```
 
 A mini app never receives a React Native component, native module, SQLite handle, filesystem path, process environment, authentication token, or another mini app's state.
+
+The host contains no Bathroom Pay-specific execution, storage, rendering, or lifecycle code. Bathroom Pay is data: one script passed through the same path as any other mini app.
 
 ## Script format
 
@@ -33,14 +37,14 @@ The QuickJS module loader resolves only that host-provided module. External pack
 `packages/sdk-contract` is the source of truth for the implemented mini-app surface:
 
 - Manifest and current SDK identifier
-- Bathroom Pay setting and collection definitions
+- Current generic setting and collection definitions
 - Start/get/stop timers
 - Current declarative UI nodes
 - Screens and actions
 - Serializable bridge values
 - Definition validation and structured errors
 
-The runtime module contains the matching executable SDK surface required inside QuickJS. Contract changes must update the TypeScript contract, runtime module, example, documentation, and tests together.
+The runtime module contains the matching executable SDK surface required inside QuickJS. Contract changes must update the TypeScript contract, runtime module, reference scripts, documentation, and tests together.
 
 ## Runtime request model
 
@@ -66,6 +70,12 @@ Expo SQLite stores settings, records, and active timers under the calling mini-a
 
 The pre-release project does not provide schema migrations or compatibility paths. Obsolete development schemas are removed directly and development app data may be reset.
 
+## Bundled scripts
+
+During the first vertical slice, `examples/*.miniapp.js` files are synchronized into a generated JSON catalog bundled with the Expo application. The catalog is seed data only; it does not create app-specific host code.
+
+The synchronizer discovers scripts by filename pattern. Adding another example script does not require changes to the host hook, renderer, storage service, or QuickJS module. Runtime script installation and editing will replace the bundled-only development flow in a later layer.
+
 ## Failure model
 
 Each runtime invocation has independent memory, stack, source, input, UI, and execution-time bounds. Script failures return structured errors to React Native. The runtime is disposed after the request, so a failed script does not poison later requests or terminate the host process.
@@ -73,11 +83,11 @@ Each runtime invocation has independent memory, stack, source, input, UI, and ex
 ## Repository shape
 
 ```text
-apps/mobile/                    Expo Android host and current renderer
+apps/mobile/                    Expo Android host and generic renderer
 modules/pocket-quickjs/         Android QuickJS-NG Expo native module
 packages/sdk-contract/          current public authoring contract
-examples/                       canonical mini-app scripts
-scripts/                        source synchronization checks
+examples/                       reference mini-app scripts
+scripts/                        generic bundled-script synchronization
 docs/                           current architecture and requirements
 ```
 
