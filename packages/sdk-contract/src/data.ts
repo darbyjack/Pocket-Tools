@@ -2,11 +2,6 @@ import type { SerializableValue } from "./values.ts";
 
 interface FieldBase<TType extends string> {
   readonly type: TType;
-  readonly optional?: boolean;
-}
-
-export interface TextField extends FieldBase<"text"> {
-  readonly maxLength?: number;
 }
 
 export interface NumberField extends FieldBase<"number"> {
@@ -21,12 +16,9 @@ export interface MoneyField extends FieldBase<"money"> {
 
 export interface DateTimeField extends FieldBase<"datetime"> {}
 
-export type FieldDefinition = TextField | NumberField | MoneyField | DateTimeField;
+export type FieldDefinition = NumberField | MoneyField | DateTimeField;
 
 export const field = {
-  text(definition: Omit<TextField, "type"> = {}): TextField {
-    return { type: "text", ...definition };
-  },
   number(definition: Omit<NumberField, "type"> = {}): NumberField {
     return { type: "number", ...definition };
   },
