@@ -32,7 +32,7 @@ The library supports open, edit, duplicate, export through the Android share she
 
 See [`docs/INSTALLED_MINI_APPS.md`](../../docs/INSTALLED_MINI_APPS.md) for the complete lifecycle.
 
-## Run the sandbox instrumentation suite
+## Build and native instrumentation
 
 No GitHub Actions workflow is enabled. With an Android emulator or device connected:
 
@@ -45,32 +45,34 @@ cd apps/mobile/android
 ./gradlew :app:assembleDebug connectedDebugAndroidTest
 ```
 
-The instrumentation tests exercise timeout interruption, memory pressure, module restrictions, ambient-global isolation, runtime isolation, bridge validation, promise jobs, captured-log limits, result limits, and recovery after a failed script.
+The native instrumentation tests exercise timeout interruption, memory pressure, module restrictions, ambient-global isolation, runtime isolation, bridge validation, promise jobs, captured-log limits, result limits, and recovery after a failed script.
 
-## Verify installed-script isolation
+## Run lifecycle and namespace diagnostics
 
-On an emulator or device:
+Open **Host diagnostics** from the mini-app library.
 
-1. Open an installed script and create recognizable settings, records, and timer state.
-2. Edit it and enter preview.
-3. Change all three kinds of state in preview, then cancel.
-4. Reopen the installed script and confirm its state is unchanged.
-5. Preview a valid update, install it, and confirm the existing state remains.
-6. Roll back and confirm only source changes.
-7. Remove the app while keeping data, reinstall the same manifest ID, and confirm recovery.
-8. Remove the app and data, reinstall it, and confirm a clean namespace.
+The immediate suite uses two temporary installed scripts with the same setting, collection, and timer names to prove:
 
-## Verify process recovery
+- Per-manifest setting isolation
+- Per-manifest record isolation
+- Per-manifest timer isolation
+- No persistence from a failed invocation
+- A valid invocation works immediately after a failure
+- Remove-with-retained-data restores state after reinstall
+- Remove-with-data clears the entire namespace
 
-Using any installed script with a durable timer:
+The force-stop test prepares a temporary installed script and timer, saves a checkpoint, and resumes after relaunch. Use:
 
-1. Start the timer.
-2. Force-stop Pocket Tools from Android settings or `adb shell am force-stop com.darbyjack.pockettools`.
-3. Reopen Pocket Tools.
-4. Confirm the timer includes the elapsed time while the process was stopped.
-5. Stop the timer and confirm the script's resulting record and summaries remain after another relaunch.
+```bash
+adb shell am force-stop com.darbyjack.pockettools
+adb shell pidof com.darbyjack.pockettools
+```
 
-Bathroom Pay is currently the reference script used for this test.
+The second command must print no PID before reopening Pocket Tools. The resumed diagnostic then checks the persisted start timestamp, reconstructed elapsed time, and normal timer stop behavior.
+
+Temporary diagnostic installations use a reserved manifest prefix, are hidden from the normal library, and are cleaned after each run. Startup removes abandoned diagnostics while preserving an active force-stop checkpoint.
+
+See [`docs/LIFECYCLE_DIAGNOSTICS.md`](../../docs/LIFECYCLE_DIAGNOSTICS.md) for the exact procedure and evidence boundary.
 
 ## Reset development data
 
