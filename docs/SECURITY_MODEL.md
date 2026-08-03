@@ -4,7 +4,7 @@
 
 A mini-app script may compute values and use the frozen offline SDK without gaining ambient authority over the phone, host application, another script, or host-owned services.
 
-Every script is untrusted, including scripts produced by an agent or written by the device owner.
+Every script is untrusted, including scripts produced by an agent, pasted by the device owner, bundled as a reference, or previously installed successfully.
 
 ## Trust boundaries
 
@@ -14,10 +14,11 @@ Trusted:
 - The frozen SDK v1 TypeScript contract
 - The matching embedded QuickJS SDK and runner
 - Host-owned React Native and SQLite services
+- Host-selected installed and preview storage namespaces
 
 Untrusted:
 
-- Mini-app source
+- Pasted, bundled, installed, preview, and rollback mini-app source
 - Script manifests and definitions
 - Script-generated queries and UI trees
 - Script-requested operations
@@ -31,12 +32,14 @@ Untrusted:
 4. Cross-boundary values are finite JSON-compatible values made from plain objects and arrays.
 5. Native objects and host references never enter the script runtime.
 6. Host state is passed as function arguments, not writable globals.
-7. SQLite namespaces are selected from the inspected manifest ID by trusted host code.
+7. SQLite namespaces are selected by trusted host code; scripts cannot provide or discover a storage namespace.
 8. Settings, records, queries, operation lists, action targets, screen targets, and UI trees are validated before use.
 9. SQLite independently validates every persisted setting and record write.
 10. One action's writes are applied in one transaction or not at all.
 11. Running timers do not imply running script code.
 12. Runtime, allocation, response-decoding, and validation failures become structured errors.
+13. Preview state is isolated from installed state under a disposable host-only namespace.
+14. Installed source changes only after the exact candidate source passes validation and its first isolated native render.
 
 ## Frozen host authority
 
@@ -51,6 +54,18 @@ SDK v1 exposes only:
 - Native rendering of the frozen declarative UI nodes
 
 No capability or permission framework exists because SDK v1 has no file, network, notification, location, secret, or custom-native authority to grant.
+
+## Source installation boundary
+
+The installation record is host-owned SQLite data containing manifest metadata, active source, last-known-good source, and timestamps. A script cannot read or modify its installation record.
+
+The on-device editor inspects a candidate through the same embedded SDK and runner used by ordinary execution. A candidate is not stored as active source merely because its manifest parses successfully. The exact current editor source must complete a first render in preview before install or update becomes available.
+
+For updates, the host clones the installed app's current settings, records, and timers into a disposable preview namespace. Preview operations can mutate only the clone. Validation, preview, or first-render failure leaves both active source and installed state unchanged.
+
+A successful update moves the old active source to last-known-good source in the same SQLite statement that installs the candidate. Rollback validates the saved source before swapping it back. Rollback never changes script-owned state.
+
+Bundled references are one-time installation seeds, not trusted code and not a privileged execution path.
 
 ## Runtime isolation
 
@@ -102,7 +117,7 @@ QuickJS validates runtime inputs, collection/query use, requested operations, ta
 
 ## Settings and data isolation
 
-The host loads and writes state under the inspected manifest ID. A script cannot provide another namespace or construct SQL.
+Ordinary installed execution loads and writes state under the installed manifest ID. Preview uses an internal ID beginning with a reserved host-only prefix. A script receives neither value and cannot construct SQL.
 
 Settings are checked against their declared type, options, text bounds, and numeric bounds before persistence and again when loaded.
 
@@ -111,6 +126,8 @@ Collection fields are required unless explicitly optional. Unknown fields, host-
 Query filters are typed. Text and boolean values support equality only. Number, money, and datetime fields support equality and ranges. Only optional fields may compare to `null`. Query fields, ordering, offset, limit, and sum targets are validated in QuickJS.
 
 Insert, update, and remove operations cross the boundary explicitly. SQLite rechecks the declared collection, record ID, exact fields, required values, and merged update before mutating state. All operations from one action execute in one transaction.
+
+Preview clones regenerate host-owned record IDs. SDK v1 has no relational reference field, so no script-visible record relationship is broken by this isolation step.
 
 ## UI and interaction validation
 
@@ -122,19 +139,29 @@ The host owns active-screen state and rerendering after navigation, settings cha
 
 ## Timers
 
-Timer IDs are lower camelCase names scoped by manifest ID. A timer stores a UTC start timestamp. The host reconstructs elapsed time after relaunch without keeping QuickJS or the React Native process alive.
+Timer IDs are lower camelCase names scoped by the trusted storage namespace. A timer stores a UTC start timestamp. The host reconstructs elapsed time after relaunch without keeping QuickJS or the React Native process alive.
 
 SDK v1 does not expose pause, resume, arbitrary metadata, notifications, or background JavaScript.
 
-## Console logging
+## Console logging and failure display
 
 The sandbox provides bounded `console.log`, `console.info`, `console.warn`, and `console.error`. Captured messages return as diagnostic records only and never write directly to Android services or persisted state.
+
+`MiniAppRuntimeError` preserves the machine-readable code, bounded script stack, captured logs, and truncation state. The editor and installed runner present this diagnostic data as text without executing or interpreting it.
+
+## Export, duplicate, and removal
+
+Source export uses the host-owned Android share sheet. The script itself receives no sharing or clipboard capability.
+
+Duplicate copies source into the editor only. It does not copy state, and installation requires a new manifest ID.
+
+Removal deletes the trusted installation record. The user explicitly chooses whether isolated settings, records, and timers are retained for reinstall or deleted. A script cannot trigger installation, export, duplication, rollback, or removal.
 
 ## Failure handling
 
 Failures use machine-readable codes for invalid source, definitions, settings, records, queries, operations, actions, screens, timers, UI, bridge values, unsupported modules, promises, runtime limits, native allocation, and malformed native responses.
 
-`MiniAppRuntimeError` preserves the code, bounded script stack, captured logs, and truncation state. A failed invocation cannot retain global state, partially apply an action, or poison the next invocation.
+A failed invocation cannot retain global state, partially apply an action, change active source, or poison the next invocation. Disposable preview rows may be removed at startup without affecting installed namespaces.
 
 ## Manual verification
 
@@ -150,6 +177,8 @@ cd apps/mobile/android
 ```
 
 The Android suite covers sandbox containment, runtime recovery, frozen SDK builders, inspection metadata, multiple screens, native input nodes, typed filters, offset/limit behavior, and explicit insert/update/remove operations.
+
+The installed-script phase additionally requires manual device checks for preview isolation, failed-update preservation, rollback, source export, retained-data reinstall, and full-data deletion.
 
 ## Deferred capabilities
 

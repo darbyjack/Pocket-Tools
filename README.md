@@ -19,16 +19,17 @@ No GitHub Actions workflow is enabled. Repository checks and Android builds are 
 
 ```text
 single-file mini-app source
-  → generic inspection and definition validation
+  → on-device validation and isolated preview
+  → installed active source in SQLite
   → fresh bounded QuickJS-NG runtime
   → frozen virtual @pocket-tools/sdk module
   → serialized UI, interaction input, and explicit operation results
   → React Native response and target validation
   → host-owned native renderer and active-screen state
-  → schema-validated Expo SQLite settings, records, and timers
+  → schema-validated isolated settings, records, and timers
 ```
 
-The generated bundled catalog is temporary development seed data. The later installer layer will replace the bundled-only entry path with paste, preview, install, edit, update, rollback, export, and deletion entirely on Android.
+Bundled reference scripts are imported into the installed mini-app library only once. Pasted and bundled scripts then use the same installed-source runtime path. A user can paste, preview, install, run, edit, update, roll back, export, duplicate, and remove a script entirely on Android without rebuilding Pocket Tools.
 
 The canonical delivery map is [Wayfinder: Deliver the Pocket Tools Android MVP](https://github.com/darbyjack/Pocket-Tools/issues/1).
 
@@ -69,6 +70,18 @@ pnpm mini-app inspect ./path/to/tool.miniapp.js --json
 
 These commands execute the exact SDK and runner source embedded in the Android native module under QuickJS-NG WASM, then apply the canonical SDK definition validator.
 
+## Install a mini-app on Android
+
+1. Open the mini-app library and choose **Add script**.
+2. Paste one SDK v1 JavaScript module.
+3. Validate it.
+4. Preview it in a disposable storage namespace.
+5. Install it after the current exact source completes its first render.
+
+Updates render against a cloned copy of current installed state before the active source changes. Failed validation, preview, or first render leaves the working installation untouched. Successful updates preserve the previous source for rollback.
+
+See [Installed Mini-App Lifecycle](docs/INSTALLED_MINI_APPS.md) for storage, preview, update, rollback, export, duplication, and removal behavior.
+
 ## Requirements
 
 - Node.js 24.16 or newer
@@ -83,7 +96,7 @@ pnpm check
 pnpm android
 ```
 
-`pnpm android` synchronizes `examples/*.miniapp.js` into the generated development catalog and starts the Android development build. Expo Go cannot run Pocket Tools because the app contains a custom native QuickJS module.
+`pnpm android` synchronizes `examples/*.miniapp.js` into the generated one-time seed catalog and starts the Android development build. Expo Go cannot run Pocket Tools because the app contains a custom native QuickJS module.
 
 Individual checks:
 
@@ -125,6 +138,7 @@ The host rejects unsupported imports, ambient native access, unknown SDK propert
 - [Agent authoring guide](docs/AGENT_AUTHORING.md)
 - [Canonical agent prompt](docs/AGENT_PROMPT.md)
 - [Authoring error codes](docs/AUTHORING_ERRORS.md)
+- [Installed mini-app lifecycle](docs/INSTALLED_MINI_APPS.md)
 - [Frozen SDK v1](docs/SDK_OVERVIEW.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security model](docs/SECURITY_MODEL.md)

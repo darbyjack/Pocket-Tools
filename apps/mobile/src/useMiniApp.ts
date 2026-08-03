@@ -7,6 +7,7 @@ import type {
   SerializableValue,
 } from "./model";
 import {
+  formatMiniAppError,
   inspectMiniApp,
   invokeMiniAppAction,
   renderMiniApp,
@@ -15,7 +16,6 @@ import { validatePageNode } from "./runtime/ui-validation";
 import {
   applyRuntimeOperations,
   ensureSettingDefaults,
-  initializeDatabase,
   loadRuntimeSnapshot,
   setSetting,
 } from "./storage/database";
@@ -43,7 +43,10 @@ interface RenderedMiniApp {
   readonly snapshot: RuntimeSnapshot;
 }
 
-export function useMiniApp(source: string | null): MiniAppState {
+export function useMiniApp(
+  source: string | null,
+  requestedStorageId: string | null = null,
+): MiniAppState {
   const [inspection, setInspection] = useState<MiniAppInspection | null>(null);
   const [page, setPage] = useState<PageNode | null>(null);
   const [screen, setScreen] = useState("home");
@@ -53,6 +56,12 @@ export function useMiniApp(source: string | null): MiniAppState {
   const [snapshot, setSnapshot] = useState<RuntimeSnapshot | null>(null);
   const [loading, setLoading] = useState(source !== null);
   const [error, setError] = useState<string | null>(null);
+
+  const storageIdFor = useCallback(
+    (currentInspection: MiniAppInspection) =>
+      requestedStorageId ?? currentInspection.manifest.id,
+    [requestedStorageId],
+  );
 
   const render = useCallback(
     async (
@@ -67,6 +76,7 @@ export function useMiniApp(source: string | null): MiniAppState {
 
       const baseSnapshot = await loadRuntimeSnapshot(
         currentInspection,
+        storageIdFor(currentInspection),
         "render",
         { screen: targetScreen },
       );
@@ -85,7 +95,7 @@ export function useMiniApp(source: string | null): MiniAppState {
         snapshot: nextSnapshot,
       };
     },
-    [source],
+    [source, storageIdFor],
   );
 
   const refresh = useCallback(
@@ -125,12 +135,14 @@ export function useMiniApp(source: string | null): MiniAppState {
     setLoading(true);
     void (async () => {
       try {
-        await initializeDatabase();
         const nextInspection = await inspectMiniApp(source);
         if (!nextInspection.screens.includes("home")) {
           throw new Error("INVALID_SCRIPT: A home screen is required.");
         }
-        await ensureSettingDefaults(nextInspection);
+        await ensureSettingDefaults(
+          nextInspection,
+          storageIdFor(nextInspection),
+        );
         const rendered = await render(nextInspection, "home");
 
         if (cancelled) return;
@@ -138,9 +150,7 @@ export function useMiniApp(source: string | null): MiniAppState {
         setSnapshot(rendered.snapshot);
         setPage(rendered.page);
       } catch (caught) {
-        if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : String(caught));
-        }
+        if (!cancelled) setError(formatMiniAppError(caught));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -149,7 +159,7 @@ export function useMiniApp(source: string | null): MiniAppState {
     return () => {
       cancelled = true;
     };
-  }, [render, source]);
+  }, [render, source, storageIdFor]);
 
   const invokeAction = useCallback(
     async (action: string, input?: SerializableValue) => {
@@ -160,21 +170,29 @@ export function useMiniApp(source: string | null): MiniAppState {
         if (!inspection.actions.includes(action)) {
           throw new Error(`UNKNOWN_ACTION: ${action}`);
         }
-        const baseSnapshot = await loadRuntimeSnapshot(inspection, "action", {
-          action,
-        });
+        const storageId = storageIdFor(inspection);
+        const baseSnapshot = await loadRuntimeSnapshot(
+          inspection,
+          storageId,
+          "action",
+          { action },
+        );
         const actionSnapshot: RuntimeSnapshot =
           input === undefined
             ? baseSnapshot
             : { ...baseSnapshot, actionInput: input };
         const response = await invokeMiniAppAction(source, actionSnapshot);
-        await applyRuntimeOperations(inspection, response.value.operations);
+        await applyRuntimeOperations(
+          inspection,
+          storageId,
+          response.value.operations,
+        );
         await refresh(inspection, screen, screenInput);
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : String(caught));
+        setError(formatMiniAppError(caught));
       }
     },
-    [inspection, refresh, screen, screenInput, source],
+    [inspection, refresh, screen, screenInput, source, storageIdFor],
   );
 
   const navigate = useCallback(
@@ -189,7 +207,7 @@ export function useMiniApp(source: string | null): MiniAppState {
         setSnapshot(rendered.snapshot);
         setPage(rendered.page);
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : String(caught));
+        setError(formatMiniAppError(caught));
       }
     },
     [inspection, render],
@@ -201,13 +219,13 @@ export function useMiniApp(source: string | null): MiniAppState {
       setError(null);
 
       try {
-        await setSetting(inspection, name, value);
+        await setSetting(inspection, storageIdFor(inspection), name, value);
         await refresh(inspection, screen, screenInput);
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : String(caught));
+        setError(formatMiniAppError(caught));
       }
     },
-    [inspection, refresh, screen, screenInput],
+    [inspection, refresh, screen, screenInput, storageIdFor],
   );
 
   return {
