@@ -67,34 +67,32 @@ test("rejects unknown fields rather than treating them as compatibility data", (
 
 test("rejects duplicate state identities", () => {
   const backup = validBackup();
+  const setting = backup.settings[0];
+  const record = backup.records[0];
+  const timer = backup.timers[0];
+  assert.ok(setting !== undefined);
+  assert.ok(record !== undefined);
+  assert.ok(timer !== undefined);
+
   assert.throws(
-    () =>
-      parseMiniAppBackup({
-        ...backup,
-        settings: [...backup.settings, backup.settings[0]],
-      }),
+    () => parseMiniAppBackup({ ...backup, settings: [...backup.settings, setting] }),
     /duplicate name hourlyRate/,
   );
   assert.throws(
-    () =>
-      parseMiniAppBackup({
-        ...backup,
-        records: [...backup.records, backup.records[0]],
-      }),
+    () => parseMiniAppBackup({ ...backup, records: [...backup.records, record] }),
     /duplicate id 0123456789abcdef0123456789abcdef/,
   );
   assert.throws(
-    () =>
-      parseMiniAppBackup({
-        ...backup,
-        timers: [...backup.timers, backup.timers[0]],
-      }),
+    () => parseMiniAppBackup({ ...backup, timers: [...backup.timers, timer] }),
     /duplicate id activeTimer/,
   );
 });
 
 test("rejects invalid timestamps, record IDs, and non-finite values", () => {
   const backup = validBackup();
+  const record = backup.records[0];
+  assert.ok(record !== undefined);
+
   assert.throws(
     () => parseMiniAppBackup({ ...backup, exportedAt: "yesterday" }),
     /canonical ISO 8601 UTC timestamp/,
@@ -103,7 +101,7 @@ test("rejects invalid timestamps, record IDs, and non-finite values", () => {
     () =>
       parseMiniAppBackup({
         ...backup,
-        records: [{ ...backup.records[0], id: "record-1" }],
+        records: [{ ...record, id: "record-1" }],
       }),
     /32-character lowercase hexadecimal record ID/,
   );
