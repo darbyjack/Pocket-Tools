@@ -8,12 +8,23 @@ import {
 } from "./workflow.ts";
 
 test("an update cannot change the permanent manifest ID", () => {
-  assert.doesNotThrow(() => assertCandidateIdentity("edit", "daily-tool", "daily-tool"));
+  assert.doesNotThrow(() =>
+    assertCandidateIdentity("edit", "daily-tool", "daily-tool"),
+  );
   assert.throws(
     () => assertCandidateIdentity("edit", "daily-tool", "other-tool"),
     /cannot change manifest\.id/,
   );
-  assert.doesNotThrow(() => assertCandidateIdentity("duplicate", "daily-tool", "other-tool"));
+});
+
+test("a duplicate must use a new permanent manifest ID", () => {
+  assert.throws(
+    () => assertCandidateIdentity("duplicate", "daily-tool", "daily-tool"),
+    /duplicate must change manifest\.id/,
+  );
+  assert.doesNotThrow(() =>
+    assertCandidateIdentity("duplicate", "daily-tool", "other-tool"),
+  );
 });
 
 test("only the exact inspected and previewed source can be persisted", () => {
