@@ -2,9 +2,9 @@
 
 ## Security objective
 
-A pasted mini-app script must be able to compute values and request narrowly defined host operations without gaining ambient authority over the phone, host application, other scripts, or user data.
+A pasted mini-app script may compute values and use narrowly defined host services without gaining ambient authority over the phone, host application, other scripts, or user data.
 
-The host treats every script as untrusted, including scripts produced by an agent or written by the device owner.
+Every script is untrusted, including scripts produced by an agent or written by the device owner.
 
 ## Trust boundaries
 
@@ -13,57 +13,44 @@ Trusted:
 - Signed Pocket Tools host code
 - The canonical SDK contract
 - Host-owned native modules and services
-- Host database migrations
-- Permission and installation UI
+- Installation UI
 
 Untrusted:
 
-- Pasted or imported script source
+- Pasted script source
 - Script manifests and schemas
 - Script-generated UI trees
-- Script action payloads and return values
-- Imported mini-app backups until validated
+- Script action return values
 
 ## Core invariants
 
 1. Scripts execute in QuickJS-NG, not the React Native JavaScript runtime.
 2. Each active mini app receives an isolated runtime and host namespace.
 3. Only explicitly exposed SDK bridge methods are callable.
-4. Every cross-boundary value must satisfy `SerializableValue` and size limits.
+4. Every cross-boundary value must satisfy `SerializableValue` and host limits.
 5. Native objects and host references never cross into the script runtime.
-6. Capabilities are denied unless declared and granted.
-7. Preview mode cannot use installed data or durable side effects.
-8. Installation and migrations are transactional and retain the last working version.
-9. Running timers do not imply running script code.
-10. A runtime failure must not terminate or corrupt the host.
+6. Preview mode cannot use installed data or durable side effects.
+7. Installation writes occur only after validation succeeds.
+8. Running timers do not imply running script code.
+9. A runtime failure must not terminate or corrupt the host.
 
-## Capability model
+## Current host services
 
-The manifest declares user-visible capabilities and a reason for each one. SDK v1 initially recognizes:
+The first slice exposes only:
 
-- `file-export`
-- `file-import`
-- `notifications`
+- Settings declared by the script
+- Isolated collection storage
+- Durable start/get/stop timers
+- Host time
+- Native rendering of the current UI nodes
 
-Capabilities including network, location, secure values, device information, and arbitrary background work are reserved for later SDK versions. Declaring a known but unsupported capability fails validation rather than silently granting it.
-
-Capability declarations do not grant access by themselves. The installer presents them to the user, and the permission broker supplies only approved host methods.
+There are no placeholder permission or capability APIs in the current SDK.
 
 ## Runtime limits
 
-The contract defines initial defaults:
+QuickJS execution, bridge payloads, source size, logging, and rendered UI trees must be bounded.
 
-- 32 MiB normal runtime memory
-- 64 MiB absolute runtime memory ceiling
-- 512 KiB stack
-- 250 ms CPU time per host invocation
-- 512 KiB script source
-- 1 MiB result payload
-- 100 log entries per invocation
-- UI depth of 32 nodes
-- 1,000 UI nodes per render
-
-These are conservative starting values. Device benchmarks may change them, but limit changes must remain explicit, tested, and documented.
+Exact values are not part of the SDK contract before an Android runtime exists to measure them. The runtime implementation must select explicit limits, test interruption and allocation failure on Android, and document the values alongside those tests.
 
 ## Bridge validation
 
@@ -88,13 +75,13 @@ Rejected values include:
 - dates and native handles
 - objects with custom prototypes
 
-Dates cross the boundary as ISO 8601 strings. Money crosses as finite numeric amounts plus schema or formatting metadata.
+Dates cross the boundary as ISO 8601 strings.
 
 ## Data isolation
 
-Every operation is scoped by the host to the calling mini-app ID. Scripts cannot supply or override the namespace. Raw SQL is never exposed. Collection and field identifiers are validated against the installed schema.
+Every operation is scoped by the host to the calling mini-app ID. Scripts cannot supply or override that namespace. Raw SQL is never exposed. Collection and field identifiers are validated against the installed definition.
 
-Preview data uses a temporary namespace that is destroyed after preview. Backup imports are validated before they can replace active state.
+Preview state uses a temporary namespace that is destroyed after preview.
 
 ## Source and module restrictions
 
@@ -105,16 +92,16 @@ Installed scripts may import only host-provided virtual SDK modules. The host re
 - Package registry imports
 - Remote URLs
 - Native module references
-- `eval` or equivalent code-loading bridges supplied by the host
+- Host-provided code-evaluation bridges
 
-QuickJS language features remain available only within the bounded runtime. The host does not provide network, filesystem, process, or React Native globals.
+The host does not provide network, filesystem, process, or React Native globals.
 
 ## Failure handling
 
-Runtime interruption, allocation failure, invalid output, migration failure, permission denial, and bridge-validation failure become structured `PocketToolsError` values. Host logs must avoid recording secrets or complete user datasets.
+Runtime interruption, allocation failure, invalid output, and bridge-validation failure become structured `PocketToolsError` values. Host logs must avoid recording complete user datasets.
 
-A failed script update leaves the previous source, grants, schema, and data active. A failed preview is disposable. A failed runtime invocation may dispose and recreate that mini app's runtime without affecting other apps.
+A failed install does not modify installed source or data. A failed preview is discarded. A failed invocation may dispose and recreate only that mini app's runtime.
 
-## Threats deferred beyond SDK v1
+## Deferred work
 
-Network access, secret storage, location, public script distribution, automatic remote updates, and exact background work require additional threat modeling before implementation. They are not partially enabled in the MVP.
+File access, network access, secret storage, location, notifications, public script distribution, remote updates, and background jobs require separate concrete product requirements and threat modeling. They are not represented by placeholder SDK APIs.
