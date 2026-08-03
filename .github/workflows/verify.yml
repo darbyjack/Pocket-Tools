@@ -1,0 +1,97 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: self-hosted
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.16.0
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run repository checks
+        run: pnpm check
+
+  android:
+    name: Android development build
+    needs: checks
+    runs-on: self-hosted
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.16.0
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: >-
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
+            ndk;27.1.12297006
+            cmake;3.22.1
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Synchronize bundled scripts
+        run: pnpm sync:examples
+
+      - name: Generate Android project
+        run: pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
+
+      - name: Assemble development build
+        working-directory: apps/mobile/android
+        run: ./gradlew --no-daemon --stacktrace :app:assembleDebug
+
+      - name: Upload development APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: pocket-tools-android-debug
+          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
