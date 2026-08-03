@@ -130,9 +130,7 @@ export function validateMiniAppBackupForRestore(
     const definition =
       activeInspection.settings[setting.name] ?? lastKnownGoodInspection.settings[setting.name];
     if (definition === undefined) {
-      throw backupError(
-        `backup.settings.${setting.name} is not declared by either saved source.`,
-      );
+      throw backupError(`backup.settings.${setting.name} is not declared by either saved source.`);
     }
     assertSettingValue(definition, setting.value, `backup.settings.${setting.name}`);
   }
@@ -191,12 +189,7 @@ function parseSetting(value: unknown, index: number): MiniAppBackupSetting {
 function parseRecord(value: unknown, index: number): MiniAppBackupRecord {
   const path = `backup.records[${index}]`;
   const record = requireObject(value, path);
-  assertExactKeys(
-    record,
-    ["id", "collection", "data", "createdAt", "updatedAt"],
-    [],
-    path,
-  );
+  assertExactKeys(record, ["id", "collection", "data", "createdAt", "updatedAt"], [], path);
   const data = requireObject(record.data, `${path}.data`);
   assertSerializableValue(data, `${path}.data`);
   return {

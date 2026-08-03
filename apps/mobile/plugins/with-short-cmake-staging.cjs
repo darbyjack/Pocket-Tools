@@ -1,14 +1,8 @@
-const {
-  withProjectBuildGradle,
-  withSettingsGradle,
-} = require("expo/config-plugins");
+const { withProjectBuildGradle, withSettingsGradle } = require("expo/config-plugins");
 
-const LEGACY_PROJECT_MARKER =
-  "// Pocket Tools: short Windows CMake staging directories";
-const SETTINGS_START_MARKER =
-  "// Pocket Tools: begin short Windows CMake staging directories";
-const SETTINGS_END_MARKER =
-  "// Pocket Tools: end short Windows CMake staging directories";
+const LEGACY_PROJECT_MARKER = "// Pocket Tools: short Windows CMake staging directories";
+const SETTINGS_START_MARKER = "// Pocket Tools: begin short Windows CMake staging directories";
+const SETTINGS_END_MARKER = "// Pocket Tools: end short Windows CMake staging directories";
 
 const SETTINGS_SNIPPET = `${SETTINGS_START_MARKER}
 def pocketToolsShortCmakeStagingEnabled =
@@ -54,9 +48,7 @@ module.exports = function withShortCmakeStaging(config) {
 
 function removeLegacyProjectSnippet(contents) {
   const markerIndex = contents.indexOf(LEGACY_PROJECT_MARKER);
-  return markerIndex === -1
-    ? contents
-    : `${contents.slice(0, markerIndex).trimEnd()}\n`;
+  return markerIndex === -1 ? contents : `${contents.slice(0, markerIndex).trimEnd()}\n`;
 }
 
 function removeSettingsSnippet(contents) {
@@ -65,9 +57,7 @@ function removeSettingsSnippet(contents) {
 
   const end = contents.indexOf(SETTINGS_END_MARKER, start);
   if (end === -1) {
-    throw new Error(
-      "Pocket Tools CMake staging settings marker is missing its end marker.",
-    );
+    throw new Error("Pocket Tools CMake staging settings marker is missing its end marker.");
   }
 
   return `${contents.slice(0, start).trimEnd()}\n${contents

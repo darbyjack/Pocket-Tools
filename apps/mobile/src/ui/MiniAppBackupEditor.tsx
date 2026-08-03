@@ -8,10 +8,7 @@ import {
   validateMiniAppBackupForRestore,
   type MiniAppBackupV1,
 } from "../storage/backup";
-import {
-  getMiniAppRestoreConflict,
-  restoreMiniAppBackup,
-} from "../storage/backup-storage";
+import { getMiniAppRestoreConflict, restoreMiniAppBackup } from "../storage/backup-storage";
 import type { InstalledMiniApp } from "../storage/database";
 import { ScreenScrollView } from "./ScreenScrollView";
 
