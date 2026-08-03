@@ -198,8 +198,9 @@ A validation failure or preview/first-render failure is acceptable; persistence 
 ### Export
 
 1. Choose **Export**.
-2. Confirm the Android share sheet opens with the active source as text and the title `Bathroom Pay.miniapp.js`.
-3. Confirm the exported source contains `manifest.id: "bathroom-pay"` and the original home-screen copy.
+2. Confirm the Android share sheet opens with the active source as text.
+3. If the Android chooser surfaces the supplied share title, confirm it is `Bathroom Pay.miniapp.js`.
+4. Confirm the exported source contains `id: "bathroom-pay"` and the original home-screen copy.
 
 ### Removal
 
