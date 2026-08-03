@@ -26,7 +26,7 @@ export interface EmbeddedRuntimeSources {
 }
 
 export async function readEmbeddedRuntimeSources(): Promise<EmbeddedRuntimeSources> {
-  const header = await readFile(HEADER_URL, "utf8");
+  const header = (await readFile(HEADER_URL, "utf8")).replaceAll("\r\n", "\n");
   return {
     sdk: extractRawString(header, "kSdk"),
     runner: extractRawString(header, "kRunner"),
