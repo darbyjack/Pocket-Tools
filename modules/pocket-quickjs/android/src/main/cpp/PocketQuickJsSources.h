@@ -183,7 +183,10 @@ inline constexpr char kRunner[] = R"POCKET_JS(
     return value;
   };
   const fieldDefinition = (collectionName, fieldName) => {
-    if (systemFields.has(fieldName)) return { type: "system" };
+    if (fieldName === "id") return { type: "text", optional: false, hostOwned: true };
+    if (fieldName === "createdAt" || fieldName === "updatedAt") {
+      return { type: "datetime", optional: false, hostOwned: true };
+    }
     const field = collectionDefinition(collectionName).fields[fieldName];
     if (!isPlainObject(field)) {
       fail("VALIDATION_FAILED", `Unknown field ${collectionName}.${fieldName}.`);
@@ -261,6 +264,38 @@ inline constexpr char kRunner[] = R"POCKET_JS(
     mutableRecords[name] = records.map((record) => ({ ...record }));
   }
 
+  const assertQueryValue = (field, value, operator, path) => {
+    if (value === null) {
+      if (operator !== "eq" || field.optional !== true) {
+        fail("VALIDATION_FAILED", `${path} may compare null only to an optional field with eq.`);
+      }
+      return;
+    }
+    if (field.type === "text") {
+      if (typeof value !== "string") fail("VALIDATION_FAILED", `${path} must be text.`);
+      if (operator !== "eq") fail("VALIDATION_FAILED", `${path} supports eq only for text.`);
+      return;
+    }
+    if (field.type === "boolean") {
+      if (typeof value !== "boolean") fail("VALIDATION_FAILED", `${path} must be a boolean.`);
+      if (operator !== "eq") fail("VALIDATION_FAILED", `${path} supports eq only for booleans.`);
+      return;
+    }
+    if (field.type === "number" || field.type === "money") {
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        fail("VALIDATION_FAILED", `${path} must be a finite number.`);
+      }
+      return;
+    }
+    if (field.type === "datetime") {
+      if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
+        fail("VALIDATION_FAILED", `${path} must be a date-time string.`);
+      }
+      return;
+    }
+    fail("VALIDATION_FAILED", `${path} has an unsupported query field type.`);
+  };
+
   const validateQuery = (collectionName, query = {}) => {
     if (!isPlainObject(query)) fail("VALIDATION_FAILED", "Collection queries must be plain objects.");
     exactKeys(query, ["where", "orderBy", "limit", "offset"], "query");
@@ -270,35 +305,24 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       fail("VALIDATION_FAILED", "query.where and query.orderBy must be arrays.");
     }
     for (const [index, filter] of where.entries()) {
-      if (!isPlainObject(filter)) fail("VALIDATION_FAILED", `query.where[${index}] is invalid.`);
-      exactKeys(filter, ["field", "operator", "value"], `query.where[${index}]`);
-      if (typeof filter.field !== "string") fail("VALIDATION_FAILED", "Query fields must be strings.");
+      const path = `query.where[${index}]`;
+      if (!isPlainObject(filter)) fail("VALIDATION_FAILED", `${path} is invalid.`);
+      exactKeys(filter, ["field", "operator", "value"], path);
+      if (typeof filter.field !== "string") fail("VALIDATION_FAILED", `${path}.field must be text.`);
+      if (filter.operator !== "eq" && filter.operator !== "gte" && filter.operator !== "lte") {
+        fail("VALIDATION_FAILED", `${path}.operator is unsupported.`);
+      }
       const field = fieldDefinition(collectionName, filter.field);
-      if (!new Set(["eq", "gte", "lte"]).has(filter.operator)) {
-        fail("VALIDATION_FAILED", `query.where[${index}].operator is unsupported.`);
-      }
-      if (
-        filter.value !== null &&
-        typeof filter.value !== "string" &&
-        typeof filter.value !== "number" &&
-        typeof filter.value !== "boolean"
-      ) {
-        fail("VALIDATION_FAILED", `query.where[${index}].value must be primitive.`);
-      }
-      if (typeof filter.value === "number" && !Number.isFinite(filter.value)) {
-        fail("VALIDATION_FAILED", `query.where[${index}].value must be finite.`);
-      }
-      if (filter.operator !== "eq" && (field.type === "boolean" || filter.value === null)) {
-        fail("VALIDATION_FAILED", `query.where[${index}] supports equality only for this value.`);
-      }
+      assertQueryValue(field, filter.value, filter.operator, `${path}.value`);
     }
     for (const [index, order] of orderBy.entries()) {
-      if (!isPlainObject(order)) fail("VALIDATION_FAILED", `query.orderBy[${index}] is invalid.`);
-      exactKeys(order, ["field", "direction"], `query.orderBy[${index}]`);
-      if (typeof order.field !== "string") fail("VALIDATION_FAILED", "Order fields must be strings.");
+      const path = `query.orderBy[${index}]`;
+      if (!isPlainObject(order)) fail("VALIDATION_FAILED", `${path} is invalid.`);
+      exactKeys(order, ["field", "direction"], path);
+      if (typeof order.field !== "string") fail("VALIDATION_FAILED", `${path}.field must be text.`);
       fieldDefinition(collectionName, order.field);
       if (order.direction !== "asc" && order.direction !== "desc") {
-        fail("VALIDATION_FAILED", `query.orderBy[${index}].direction is unsupported.`);
+        fail("VALIDATION_FAILED", `${path}.direction is unsupported.`);
       }
     }
     for (const key of ["limit", "offset"]) {
@@ -340,7 +364,7 @@ inline constexpr char kRunner[] = R"POCKET_JS(
   };
 
   const collection = (name) => {
-    const definition = collectionDefinition(name);
+    collectionDefinition(name);
     return Object.freeze({
       insert(record) {
         assertRecord(name, record, `operations.${name}.record`);
@@ -369,7 +393,10 @@ inline constexpr char kRunner[] = R"POCKET_JS(
           ...changes,
           updatedAt: request.now,
         };
-        assertRecord(name, Object.fromEntries(Object.entries(updated).filter(([key]) => !systemFields.has(key))), `operations.${name}.record`);
+        const recordData = Object.fromEntries(
+          Object.entries(updated).filter(([key]) => !systemFields.has(key)),
+        );
+        assertRecord(name, recordData, `operations.${name}.record`);
         mutableRecords[name][index] = updated;
         operations.push({ type: "update", collection: name, id, changes: { ...changes } });
         return { ...updated };
