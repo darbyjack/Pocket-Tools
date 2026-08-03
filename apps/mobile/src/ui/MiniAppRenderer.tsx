@@ -190,8 +190,10 @@ function NodeView(props: NodeViewProps) {
           name={node.setting}
           definition={definition}
           value={settingValues[node.setting] ?? definition.default}
-          label={node.label}
-          placeholder={node.type === "text-input" ? node.placeholder : undefined}
+          {...(node.label === undefined ? {} : { label: node.label })}
+          {...(node.type !== "text-input" || node.placeholder === undefined
+            ? {}
+            : { placeholder: node.placeholder })}
           onChange={onSettingChange}
         />
       );
@@ -239,10 +241,7 @@ function NodeView(props: NodeViewProps) {
             <Text style={styles.cardTitle}>{node.title}</Text>
           )}
           {node.items.length === 0 && node.emptyState !== undefined ? (
-            <NodeView
-              {...props}
-              node={node.emptyState}
-            />
+            <NodeView {...props} node={node.emptyState} />
           ) : (
             node.items.map((item, index) => (
               <NodeView
