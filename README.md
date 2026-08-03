@@ -2,15 +2,20 @@
 
 Pocket Tools is an Android-first host for small, scriptable personal utilities. A mini app is one JavaScript module that uses a small host-owned SDK and renders through native components.
 
-Bathroom Pay is the first reference script. Its business logic lives only in `examples/bathroom-pay.miniapp.js`; the host does not contain Bathroom Pay-specific runtime, storage, rendering, or hook code.
+The current reference scripts are:
+
+- **Bathroom Pay**, which exercises durable timers, records, aggregates, actions, and conditional settings.
+- **Tip Splitter**, which exercises a complete calculator built from durable script-declared inputs and native metric and summary output.
+
+Their business logic lives only under `examples/*.miniapp.js`; the host contains no Bathroom Pay or Tip Splitter runtime, storage, rendering, or hook code.
 
 ## Development rules
 
-Read [AGENTS.md](AGENTS.md) before changing the project. The SDK contains only the settings, storage, timer, and UI primitives required by the current working slice. New APIs are added only when the next end-to-end layer needs them.
+Read [AGENTS.md](AGENTS.md) before changing the project. The SDK contains only the settings, storage, timer, and UI primitives required by current working mini apps. New APIs are added only when the next end-to-end layer needs them.
 
 ## Current phase
 
-The Android application connects the first complete generic mini-app path:
+The Android application connects a generic mini-app path:
 
 ```text
 examples/*.miniapp.js
@@ -18,11 +23,14 @@ examples/*.miniapp.js
   → generic useMiniApp(source) host path
   → isolated QuickJS-NG runtime
   → serialized UI and operation results
+  → strict host UI validation
   → React Native renderer
   → Expo SQLite settings, records, and timers
 ```
 
 The bundled catalog is temporary seed data for development. Adding another `examples/*.miniapp.js` file requires no host-code changes; the synchronizer discovers it automatically. Script installation and the copy-and-paste editor are later product layers.
+
+The host validates every supported UI node against an exact property allowlist before rendering. Unknown properties, unsupported nodes, invalid action identifiers, non-finite formatted values, nested pages, and oversized trees are rejected.
 
 The canonical delivery map is [Wayfinder: Deliver the Pocket Tools Android MVP](https://github.com/darbyjack/Pocket-Tools/issues/1).
 
@@ -51,6 +59,8 @@ pnpm lint
 pnpm typecheck
 pnpm test
 ```
+
+No GitHub Actions workflow is enabled yet. Repository checks and Android builds are run manually until CI is deliberately introduced later.
 
 ## Mini-app shape
 
