@@ -1,7 +1,8 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { InstalledMiniApp } from "../storage/database";
 import { MiniAppRuntimePanel } from "./MiniAppRuntimePanel";
+import { ScreenScrollView } from "./ScreenScrollView";
 
 export interface InstalledMiniAppRunnerProps {
   readonly app: InstalledMiniApp;
@@ -25,7 +26,7 @@ export function InstalledMiniAppRunner({
   const canRollback = app.activeSource !== app.lastKnownGoodSource;
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScreenScrollView contentContainerStyle={styles.content}>
       <View style={styles.toolbar}>
         <Pressable accessibilityRole="button" onPress={onBack} style={styles.backButton}>
           <Text style={styles.backButtonText}>Library</Text>
@@ -40,7 +41,7 @@ export function InstalledMiniAppRunner({
       </View>
 
       <MiniAppRuntimePanel source={app.activeSource} storageId={app.id} />
-    </ScrollView>
+    </ScreenScrollView>
   );
 }
 
