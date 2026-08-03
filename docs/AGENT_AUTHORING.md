@@ -1,6 +1,6 @@
-# Pocket Tools SDK v1 Agent Authoring Guide
+# Pocket Tools SDK 1.1 Agent Authoring Guide
 
-This is the canonical starting point for an agent producing one Pocket Tools mini-app. Read this page before writing code. Use only the API documented here and in the linked frozen declarations.
+This is the canonical starting point for an agent producing one Pocket Tools mini-app. Use only the API documented here and in the committed TypeScript declarations.
 
 ## Required output
 
@@ -10,16 +10,16 @@ The script must:
 
 1. Import only from `@pocket-tools/sdk`.
 2. Default-export one `defineMiniApp(...)` result.
-3. Declare `sdkVersion: 1`.
+3. Declare `sdkVersion: "1.1"` for new scripts.
 4. Declare a synchronous `home` screen.
 5. Use lowercase kebab-case for `manifest.id`.
 6. Use lower camelCase for settings, collections, screens, actions, and timer IDs.
 7. Use only finite JSON-compatible values across the SDK boundary.
-8. Keep all mini-app business logic in the script. Never request host-specific code.
+8. Keep all business logic in the script. Never request host-specific code.
 9. Avoid top-level await and asynchronous screens or actions.
 10. Pass the local validation and inspection commands before delivery.
 
-Do not mix explanations into the JavaScript file. Put implementation notes in a separate message.
+SDK 1.1 hosts continue to run SDK 1.0 scripts. Legacy numeric `sdkVersion: 1` is read as SDK 1.0 for already-installed scripts, but new source should use the explicit string version.
 
 ## Canonical template
 
@@ -37,7 +37,7 @@ export default defineMiniApp({
     id: "replace-with-tool-id",
     name: "Replace With Tool Name",
     description: "Replace with one sentence describing the utility.",
-    sdkVersion: 1,
+    sdkVersion: "1.1",
   },
 
   settings: {
@@ -69,28 +69,25 @@ export default defineMiniApp({
 
 <!-- END fixture: agent-template.miniapp.js -->
 
-Replace the placeholder identity and remove every unused definition. Do not add empty settings, collections, screens, or actions merely for symmetry.
+Replace the placeholder identity and remove unused definitions.
 
-## Manifest
+## Manifest versions
 
 ```js
 manifest: {
   id: "daily-counter",
   name: "Daily Counter",
   description: "Track a small daily count.",
-  icon: "optional-host-icon-name",
-  sdkVersion: 1,
+  sdkVersion: "1.1",
 }
 ```
 
-- `id` is the permanent storage identity and must use lowercase kebab-case.
-- `name` is visible to the user.
-- `description` and `icon` are optional.
-- Only `sdkVersion: 1` is supported.
+- `"1.0"` supports the original frozen offline SDK surface.
+- `"1.1"` adds action presentation, actionable list items, disabled controls, destructive intent, and host-owned confirmation.
+- A script must declare the lowest version whose features it uses.
+- Unsupported versions are rejected before installation.
 
 ## Settings
-
-Settings are durable, isolated by manifest ID, and changed only through settings-bound native controls.
 
 Available definitions:
 
@@ -100,30 +97,9 @@ Available definitions:
 - `setting.money({ label, default, description?, min?, max?, visibleWhen? })`
 - `setting.select({ label, default, description?, options, visibleWhen? })`
 
-Read a setting with:
-
-```js
-const value = context.settings.get("settingName");
-```
-
-A visibility rule performs exact equality against another declared setting:
-
-```js
-visibleWhen: { setting: "mode", equals: "advanced" }
-```
-
-Select option values may be strings, finite numbers, or booleans. They must be unique, and the default must exactly equal one option value.
-
-Scripts cannot set settings directly. Render the matching control:
-
-- `ui.textInput` for `setting.text`
-- `ui.numberInput` for `setting.number` or `setting.money`
-- `ui.toggle` for `setting.boolean`
-- `ui.select` for `setting.select`
+Read a setting with `context.settings.get("settingName")`. Scripts cannot set settings directly; render the matching `ui.textInput`, `ui.numberInput`, `ui.toggle`, or `ui.select` control.
 
 ## Collections and records
-
-Declare structured local records with `collection` and `field`:
 
 ```js
 collections: {
@@ -136,23 +112,12 @@ collections: {
 }
 ```
 
-Available fields:
+Available fields are `text`, `boolean`, `number`, `money`, and `datetime`. Fields are required unless `optional: true`.
 
-- `field.text({ optional?, minLength?, maxLength? })`
-- `field.boolean({ optional? })`
-- `field.number({ optional?, min?, max? })`
-- `field.money({ optional?, min?, max? })`
-- `field.datetime({ optional? })`
-
-Fields are required unless `optional: true`. Optional fields may be omitted or set to `null`.
-
-The host owns `id`, `createdAt`, and `updatedAt`. Never declare or write those names.
-
-Use a collection client inside a screen or action:
+The host owns `id`, `createdAt`, and `updatedAt`. Use the collection client inside screens and actions:
 
 ```js
 const entries = context.data.collection("entries");
-
 entries.insert({ title: "Example", complete: false, amount: null, dueAt: null });
 const record = entries.get(recordId);
 entries.update(recordId, { complete: true });
@@ -162,127 +127,106 @@ const count = entries.count(query);
 const total = entries.sum("amount", query);
 ```
 
-Writes should normally occur in actions. All operations requested by one action are applied transactionally by the host.
+Writes requested by one action are applied transactionally by the host.
 
-### Queries
-
-```js
-const records = entries.query({
-  where: [
-    { field: "complete", operator: "eq", value: false },
-    { field: "createdAt", operator: "gte", value: "2026-08-01T00:00:00.000Z" },
-    { field: "createdAt", operator: "lte", value: "2026-08-31T23:59:59.999Z" },
-  ],
-  orderBy: [{ field: "createdAt", direction: "desc" }],
-  offset: 0,
-  limit: 50,
-});
-```
-
-Rules:
-
-- Operators are `eq`, `gte`, and `lte`.
-- Text and boolean fields support `eq` only.
-- Number, money, and datetime fields support equality and ranges.
-- Only optional fields may be compared with `null`, using `eq`.
-- `orderBy.direction` is `asc` or `desc`.
-- `limit` and `offset` are integers from 0 through 10,000.
-- `sum` accepts number or money fields only.
+Queries support `eq`, `gte`, and `lte`, ascending or descending ordering, and integer `limit`/`offset` values from 0 through 10,000. Text and boolean fields support `eq` only. `sum` accepts number or money fields only.
 
 ## Screens, actions, and interaction input
 
-Every screen is synchronous and returns one `ui.page`.
-
-The optional second argument to a screen or action is `SerializableValue | undefined`. Narrow it before reading object properties:
-
-```js
-/** @param {import("@pocket-tools/sdk").SerializableValue | undefined} input */
-function inputObject(input) {
-  return input !== null && typeof input === "object" && !Array.isArray(input) ? input : {};
-}
-```
-
-Use serializable input for record IDs and other small interaction data:
-
-```js
-screens: {
-  home() {
-    return ui.page({
-      title: "Home",
-      children: [
-        ui.navigation({
-          label: "Open details",
-          screen: "details",
-          input: { id: "record-id" },
-        }),
-      ],
-    });
-  },
-
-  details(context, input) {
-    const values = inputObject(input);
-    const id = String(values.id ?? "");
-    return ui.page({ title: "Details", children: [ui.text({ text: id })] });
-  },
-},
-```
-
-Actions are synchronous and request host operations:
+Screens and actions are synchronous. Their optional second argument is `SerializableValue | undefined`. Narrow it before use.
 
 ```js
 actions: {
   removeEntry(context, input) {
-    const values = inputObject(input);
-    const id = String(values.id ?? "");
-    context.data.collection("entries").remove(id);
+    if (typeof input !== "string") throw new Error("A record ID is required.");
+    context.data.collection("entries").remove(input);
   },
-},
+}
 ```
 
-Invoke the action with:
+Invoke an action through a button:
 
 ```js
 ui.button({
   label: "Remove",
   action: "removeEntry",
-  input: { id: record.id },
+  input: record.id,
 });
 ```
 
 Do not use writable globals to pass screen or action state.
 
+## SDK 1.1 action controls
+
+SDK 1.1 adds reusable declarative action controls:
+
+```js
+ui.action({
+  label: "Delete",
+  action: "removeEntry",
+  input: record.id,
+  intent: "destructive",
+  disabled: false,
+  confirmation: {
+    title: "Delete this entry?",
+    message: "This cannot be undone.",
+    confirmLabel: "Delete",
+    cancelLabel: "Keep entry",
+  },
+});
+```
+
+Fields:
+
+- `label`: required visible label.
+- `action`: required declared action name.
+- `input`: optional finite serializable action input.
+- `intent`: optional `"default"` or `"destructive"` presentation.
+- `disabled`: optional boolean. Disabled actions cannot be invoked.
+- `confirmation`: optional host-owned confirmation metadata.
+
+The host owns the native confirmation dialog. Scripts do not receive callbacks, promises, alert objects, or native components. Cancellation performs no operation; confirmation invokes the action once.
+
+Ordinary buttons support the same optional `intent`, `disabled`, and `confirmation` fields.
+
+## Actionable list items
+
+SDK 1.1 list items may expose up to three actions:
+
+```js
+ui.listItem({
+  title: String(record.createdAt),
+  subtitle: String(record.title),
+  trailing: "$12.50",
+  actions: [
+    ui.action({
+      label: "Delete",
+      action: "removeEntry",
+      input: record.id,
+      intent: "destructive",
+      confirmation: { title: "Delete this entry?" },
+    }),
+  ],
+});
+```
+
+List actions must target declared handlers. Arbitrary children, swipe gestures, custom menus, direct collection bindings, and script-owned modals are not part of SDK 1.1.
+
 ## Native UI nodes
 
-Structure and copy:
+Structure and display:
 
-- `ui.page({ title, children })`
-- `ui.section({ title?, children })`
-- `ui.row({ children })`
-- `ui.column({ children })`
-- `ui.heading({ text, level? })`
-- `ui.text({ text })`
-
-Display:
-
-- `ui.metric({ label, value, format?, liveTimer? })`
-- `ui.timer({ timerId, emptyValue? })`
-- `ui.summary({ title, values })`
-- `ui.list({ title?, items, emptyState? })`
-- `ui.listItem({ title, subtitle?, trailing? })`
-- `ui.emptyState({ title, description? })`
+- `ui.page`, `ui.section`, `ui.row`, `ui.column`
+- `ui.heading`, `ui.text`, `ui.metric`, `ui.timer`
+- `ui.summary`, `ui.list`, `ui.listItem`, `ui.emptyState`
 
 Input and interaction:
 
-- `ui.textInput({ setting, label?, placeholder? })`
-- `ui.numberInput({ setting, label? })`
-- `ui.toggle({ setting, label? })`
-- `ui.select({ setting, label? })`
-- `ui.button({ label, action, input? })`
-- `ui.navigation({ label, screen, input? })`
+- `ui.textInput`, `ui.numberInput`, `ui.toggle`, `ui.select`
+- `ui.button`, `ui.navigation`
+- SDK 1.1: `ui.action` and `listItem.actions`
 
-Supported display formats are `plain`, `number`, `money`, and `duration`. Money is host-formatted as USD in SDK v1. Datetime record values are ISO strings; SDK v1 has no `datetime` display-format token.
-
-Arbitrary styles, colors, component names, event handlers, HTML, JSX, and React Native properties are unsupported.
+Supported display formats are `plain`, `number`, `money`, and `duration`. Arbitrary styles, colors, component names, event handlers, HTML, JSX, and React Native properties are unsupported.
 
 ## Timers
 
@@ -292,35 +236,13 @@ const timer = context.timers.get("activeTimer");
 const stopped = context.timers.stop("activeTimer");
 ```
 
-Timers are durable host timestamps. A running timer survives process death without keeping JavaScript alive. SDK v1 has no pause, resume, notification, callback, or background-execution API.
-
-A live money metric may use:
-
-```js
-ui.metric({
-  label: "Current value",
-  value: 0,
-  format: "money",
-  liveTimer: { timerId: "activeTimer", ratePerHour: 25 },
-});
-```
+Timers are durable host timestamps. A running timer survives process death without keeping JavaScript alive. There is no pause, notification, callback, or arbitrary background-execution API.
 
 ## Forbidden and nonexistent APIs
 
-Do not import or use:
+Do not use Node.js modules, React, React Native, Expo, JSX, HTML, network APIs, filesystem APIs, clipboard, location, notifications, secrets, dynamic imports, external packages, remote URLs, timers such as `setTimeout`, raw SQLite, native handles, Android APIs, custom native modules, invented UI builders, invented data methods, migration declarations, or permission manifests.
 
-- Node.js modules such as `fs`, `path`, `process`, or `Buffer`
-- React, React Native, Expo, JSX, HTML, DOM APIs, or WebView APIs
-- `fetch`, XMLHttpRequest, WebSocket, or any network package
-- Filesystem, document picker, clipboard, location, notifications, secrets, or credentials
-- Dynamic imports, external packages, relative imports, or remote URLs
-- `setTimeout`, `setInterval`, workers, or arbitrary background JavaScript
-- SQLite, SQL, native handles, Android APIs, or custom native modules
-- Invented builders such as `ui.form`, `ui.table`, `ui.dateInput`, `ui.modal`, or `ui.chart`
-- Invented data methods such as `find`, `findOne`, `delete`, `upsert`, `transaction`, or raw SQL
-- Migration declarations, deprecated aliases, compatibility layers, or permission manifests
-
-Do not assume a common web or mobile API exists. When it is not listed in this guide or the frozen declarations, it does not exist in SDK v1.
+When an API is not listed in this guide or the committed declarations, it does not exist.
 
 ## Validate and inspect locally
 
@@ -340,39 +262,25 @@ pnpm mini-app validate ./path/to/tool.miniapp.js --json
 pnpm mini-app inspect ./path/to/tool.miniapp.js --json
 ```
 
-The commands execute the exact SDK and runner source embedded by the Android native module under QuickJS-NG WASM, then apply the canonical TypeScript definition validator. They do not launch Android.
+The commands execute the same SDK and runner source embedded by the Android native module, then apply the canonical TypeScript validators.
 
-A nonzero exit code means the script must not be delivered. JSON failures include a stable `error.code`; definition failures also include `issues` with exact `path` and `message` values. See [Authoring Error Codes](AUTHORING_ERRORS.md).
+## Final checklist
 
-## Final agent checklist
-
-Before returning a script, confirm all of the following:
-
-- [ ] The output is one JavaScript ES module.
-- [ ] It imports only from `@pocket-tools/sdk`.
-- [ ] It default-exports one `defineMiniApp(...)` result.
-- [ ] The manifest ID is lowercase kebab-case and `sdkVersion` is `1`.
+- [ ] The script imports only from `@pocket-tools/sdk`.
+- [ ] The manifest uses lowercase kebab-case and an explicit supported SDK version.
 - [ ] `home` exists and every screen/action is synchronous.
-- [ ] Every referenced setting, collection, action, screen, and timer is declared or intentionally created.
-- [ ] Every settings-bound input uses a compatible setting type.
-- [ ] Required record fields are always supplied.
-- [ ] Record IDs and timestamps are never declared or written by the script.
-- [ ] Query operators and values match their field types.
-- [ ] Interaction state is passed through serializable `input`, not globals.
-- [ ] No unsupported import, host API, invented builder, or invented data method appears.
-- [ ] No non-finite number, function, class instance, bigint, symbol, cycle, or native value crosses the boundary.
-- [ ] The script passes `pnpm validate:mini-app`.
-- [ ] `pnpm inspect:mini-app` reports the intended manifest, settings, collections, screens, and actions.
-
-## Copy-and-paste agent prompt
-
-Use [`AGENT_PROMPT.md`](AGENT_PROMPT.md) when delegating a script to an agent.
+- [ ] Every setting, collection, action, screen, and timer reference is valid.
+- [ ] Every interaction input is finite and serializable.
+- [ ] Every SDK 1.1 action targets a declared handler.
+- [ ] Destructive operations use host-owned confirmation where appropriate.
+- [ ] No unsupported import, host API, builder, style, or data method appears.
+- [ ] The script passes validation and inspection.
 
 ## Authoritative references
 
-- [Frozen SDK v1 reference](SDK_OVERVIEW.md)
-- [SDK v1 TypeScript declarations](../packages/sdk-contract/dist/index.d.ts)
+- [SDK overview](SDK_OVERVIEW.md)
+- [SDK TypeScript declarations](../packages/sdk-contract/dist/index.d.ts)
 - [Authoring error codes](AUTHORING_ERRORS.md)
 - [Runtime and security boundary](SECURITY_MODEL.md)
-- [Existing Bathroom Pay reference](../examples/bathroom-pay.miniapp.js)
-- [Existing Tip Splitter reference](../examples/tip-splitter.miniapp.js)
+- [Bathroom Pay SDK 1.1 reference](../examples/bathroom-pay.miniapp.js)
+- [Tip Splitter SDK 1.0 compatibility reference](../examples/tip-splitter.miniapp.js)
