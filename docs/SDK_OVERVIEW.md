@@ -4,7 +4,7 @@
 
 An agent should be able to read the SDK documentation and return one copy-and-paste JavaScript module that passes the same validator used by the phone application.
 
-The contract currently lives in `packages/sdk-contract/src`. Later phases will generate a distributable declaration file and machine-readable schema from it.
+The contract lives in `packages/sdk-contract/src`. The current surface is intentionally limited to the first working Bathroom Pay slice.
 
 ## Required script shape
 
@@ -13,10 +13,9 @@ Every script must:
 1. Be one ES module.
 2. Import only from the virtual `@pocket-tools/sdk` module.
 3. Default-export one `defineMiniApp(...)` result.
-4. Declare `sdkVersion: 1` and a positive script `version`.
+4. Declare `sdkVersion: 1`.
 5. Provide a `home` screen.
-6. Request only capabilities it uses.
-7. Use only serializable values across host boundaries.
+6. Use only serializable values across host boundaries.
 
 ## Manifest
 
@@ -26,62 +25,67 @@ manifest: {
   name: "Bathroom Pay",
   description: "Track bathroom time and gross pay equivalent.",
   sdkVersion: 1,
-  version: 1,
-  permissions: [
-    {
-      capability: "file-export",
-      reason: "Export trip history as JSON or CSV files.",
-    },
-  ],
 }
 ```
 
-IDs use lowercase kebab-case. Object keys for screens, actions, settings, and collections use lower camelCase.
+IDs use lowercase kebab-case. Screen, action, setting, collection, and field keys use lower camelCase.
 
 ## Settings
 
-Settings are declared metadata backed by host persistence. Supported v1 definitions are text, number, money, boolean, and select. Conditional visibility uses a declarative equality rule so the host can render settings without executing arbitrary UI code.
+The current setting definitions are:
+
+- `setting.select`
+- `setting.money`
+- `setting.number`
+
+Conditional visibility uses a declarative equality rule.
 
 ## Collections
 
-Collections declare fields and optional indexes. Supported v1 field types are text, number, money, boolean, datetime, and JSON. Scripts receive collection clients for validated CRUD, queries, pagination, and numeric aggregates. Raw SQL is unavailable.
+The current field definitions are:
+
+- `field.text`
+- `field.number`
+- `field.money`
+- `field.datetime`
+
+Scripts receive collection clients for insert, query, count, and sum. Raw SQL, schema migrations, indexes, and unused CRUD operations are unavailable.
 
 ## Screens and UI
 
-A screen is a function receiving `MiniAppContext` and returning one `ui.page(...)` tree. SDK v1 covers layouts, display values, timers, forms, inputs, buttons, links, lists, summaries, and basic tables.
+A screen receives `MiniAppContext` and returns one `ui.page(...)` tree.
 
-The host validates tree depth, node count, properties, action names, payloads, and screen targets before rendering native components.
+The current UI surface contains only the nodes used by the first Bathroom Pay slice:
+
+- Page and section
+- Metric and timer
+- Button
+- Summary
+- List, list item, and empty state
+
+The host owns native rendering, accessibility, and formatting.
 
 ## Actions
 
-Buttons and forms name an action. The host invokes the matching handler with a context and serializable payload. Actions request work through settings, data, timers, and approved capability clients.
-
-Actions do not receive component references, navigation objects, databases, or native modules.
+Buttons name an action. The host invokes the matching handler with settings, isolated data, timers, and current host time.
 
 ## Timers
 
-`context.timers` provides `start`, `get`, `pause`, `resume`, `stop`, and `cancel`. Timer records are host-owned and durable. Scripts should store completed timer results in their own collections when the user ends an activity.
-
-## Files
-
-`context.files.exportText(...)` and `importText(...)` require the matching declared and granted capabilities. The host chooses the Android document flow and validates size and MIME constraints.
-
-## Migrations
-
-Migration keys are target script versions. A script at version 3 may define migrations `2` and `3`. The installer runs required migrations in order inside a transaction before activating the new source.
+`context.timers` provides `start`, `get`, and `stop`. Timer records are host-owned and durable. The script is not kept alive while a timer runs.
 
 ## Embedded tests
 
-Scripts may contain deterministic tests. The harness controls settings, host time, actions, rendering, collections, timers, files, and permission outcomes. Tests must not depend on wall-clock time, the network, or device-specific state.
+Scripts may contain deterministic tests. The harness controls settings, time, actions, rendering, collections, and timers. Tests must not depend on wall-clock time or device-specific state.
 
-## Versioning rules
+## Change policy
 
-- Adding optional APIs may remain within SDK v1.
-- Removing, renaming, or behaviorally breaking an API requires SDK v2.
-- A host may support multiple SDK major versions.
-- Script versions and SDK versions are independent.
-- Deprecated APIs produce validation warnings before removal from a future SDK major.
+The project supports one current SDK contract during development.
+
+- Obsolete APIs are removed directly.
+- No compatibility shims, deprecated aliases, fallbacks, or script migrations are added.
+- Documentation, examples, and tests change with the contract.
+- New APIs require a concrete working mini-app need.
 
 ## Current implementation status
 
-Phase 0 defines the contract and validates definitions in the repository. QuickJS execution, Android rendering, persistence implementations, installer UI, and the deterministic embedded-test harness are delivered by later map tickets.
+This pull request defines and validates the minimal contract. QuickJS execution, Android rendering, and host persistence must be implemented together as the next working end-to-end slice before the contract expands.
