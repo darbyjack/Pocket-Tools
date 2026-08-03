@@ -13,10 +13,13 @@ import {
   assertRecordInput,
   assertSettingValue,
 } from "../runtime/sdk-validation";
+import {
+  isPreviewStorageId,
+  PREVIEW_STORAGE_PREFIX,
+} from "./namespaces";
 
 const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 const BUNDLED_SEED_KEY = "bundled-mini-apps-v1";
-const PREVIEW_STORAGE_PREFIX = "__preview__";
 
 interface SettingRow {
   readonly name: string;
@@ -330,7 +333,7 @@ export async function preparePreviewStorage(
   sourceStorageId: string | null,
   previewStorageId: string,
 ): Promise<void> {
-  if (!previewStorageId.startsWith(PREVIEW_STORAGE_PREFIX)) {
+  if (!isPreviewStorageId(previewStorageId)) {
     throw new Error("INSTALLATION_FAILED: Preview storage must use the reserved host namespace.");
   }
 
