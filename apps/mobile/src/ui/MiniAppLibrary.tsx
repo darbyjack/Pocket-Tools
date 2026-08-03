@@ -11,6 +11,7 @@ export interface MiniAppLibraryProps {
   readonly onEdit: (app: InstalledMiniApp) => void;
   readonly onExport: (app: InstalledMiniApp) => void;
   readonly onOpen: (app: InstalledMiniApp) => void;
+  readonly onRestore: () => void;
 }
 
 export function MiniAppLibrary({
@@ -22,6 +23,7 @@ export function MiniAppLibrary({
   onEdit,
   onExport,
   onOpen,
+  onRestore,
 }: MiniAppLibraryProps) {
   return (
     <ScrollView contentContainerStyle={styles.content}>
@@ -38,6 +40,9 @@ export function MiniAppLibrary({
           <Pressable accessibilityRole="button" onPress={onCreate} style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>Add script</Text>
           </Pressable>
+          <Pressable accessibilityRole="button" onPress={onRestore} style={styles.secondaryButton}>
+            <Text style={styles.secondaryButtonText}>Restore backup</Text>
+          </Pressable>
           <Pressable
             accessibilityRole="button"
             onPress={onDiagnostics}
@@ -52,12 +57,21 @@ export function MiniAppLibrary({
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>No mini apps installed</Text>
           <Text style={styles.emptyText}>
-            Paste an agent-generated SDK v1 script to validate, preview, and install it without
-            rebuilding Pocket Tools.
+            Paste an agent-generated SDK v1 script or restore a portable backup without rebuilding
+            Pocket Tools.
           </Text>
-          <Pressable accessibilityRole="button" onPress={onCreate} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Paste your first script</Text>
-          </Pressable>
+          <View style={styles.headingActions}>
+            <Pressable accessibilityRole="button" onPress={onCreate} style={styles.primaryButton}>
+              <Text style={styles.primaryButtonText}>Paste your first script</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onRestore}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>Restore backup</Text>
+            </Pressable>
+          </View>
         </View>
       ) : (
         <View style={styles.list}>
