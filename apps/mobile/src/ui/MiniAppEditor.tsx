@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { assertFirstRenderAgainstRetainedState } from "../installer/first-render";
 import { NEW_MINI_APP_TEMPLATE } from "../installer/template";
@@ -18,6 +18,7 @@ import {
   type InstalledMiniApp,
 } from "../storage/database";
 import { MiniAppRuntimePanel } from "./MiniAppRuntimePanel";
+import { ScreenScrollView } from "./ScreenScrollView";
 
 export type MiniAppEditorMode = "create" | "duplicate" | "edit";
 
@@ -182,7 +183,11 @@ export function MiniAppEditor({ installed, mode, onCancel, onSaved }: MiniAppEdi
     !busy && isCurrentSourceApproved(source, candidate?.source ?? null, previewReadySource);
 
   return (
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScreenScrollView
+      contentContainerStyle={styles.content}
+      keyboardAware
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.toolbar}>
         <Pressable accessibilityRole="button" onPress={onCancel} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>Cancel</Text>
@@ -264,7 +269,7 @@ export function MiniAppEditor({ installed, mode, onCancel, onSaved }: MiniAppEdi
           />
         </View>
       )}
-    </ScrollView>
+    </ScreenScrollView>
   );
 }
 
