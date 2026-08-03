@@ -102,4 +102,3 @@ export declare const ui: {
     readonly list: (definition: Omit<ListNode, "type">) => ListNode;
     readonly summary: (definition: Omit<SummaryNode, "type">) => SummaryNode;
 };
-export {};
