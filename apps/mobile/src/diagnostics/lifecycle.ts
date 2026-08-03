@@ -27,6 +27,7 @@ import type { DiagnosticCheck, TimerRecoveryCheckpoint } from "./types";
 const SETTING = "sharedValue";
 const COLLECTION = "sharedRecords";
 const TIMER = "sharedTimer";
+const HOST_LAUNCH_ID = createDiagnosticSuffix();
 
 interface DiagnosticApp {
   readonly id: string;
@@ -181,6 +182,7 @@ export async function prepareTimerRecoveryDiagnostic(): Promise<{
     source: app.source,
     startedAt: timer.startedAt,
     preparedAt: new Date().toISOString(),
+    launchId: HOST_LAUNCH_ID,
   };
   await saveTimerRecoveryCheckpoint(checkpoint);
 
@@ -208,6 +210,12 @@ export async function resumeTimerRecoveryDiagnostic(): Promise<DiagnosticCheck> 
   }
 
   try {
+    if (checkpoint.launchId === HOST_LAUNCH_ID) {
+      throw new Error(
+        "The host runtime has not relaunched since this checkpoint was prepared.",
+      );
+    }
+
     const inspection = await inspectMiniApp(checkpoint.source);
     if (inspection.manifest.id !== checkpoint.appId) {
       throw new Error(
@@ -259,7 +267,7 @@ export async function resumeTimerRecoveryDiagnostic(): Promise<DiagnosticCheck> 
     return passed(
       "timer-recovery",
       "Durable timer recovered after relaunch",
-      `The timer preserved ${timer.startedAt} and reconstructed ${timer.elapsedSeconds.toFixed(1)} seconds from its persisted timestamp.`,
+      `A new host launch preserved ${timer.startedAt} and reconstructed ${timer.elapsedSeconds.toFixed(1)} seconds from the persisted timestamp.`,
     );
   } catch (caught) {
     return failed(
