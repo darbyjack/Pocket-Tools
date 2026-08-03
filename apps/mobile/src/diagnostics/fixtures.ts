@@ -11,6 +11,7 @@ import { collection, defineMiniApp, field, setting, ui } from "@pocket-tools/sdk
 const COLLECTION = "sharedRecords";
 const TIMER = "sharedTimer";
 
+/** @param {import("@pocket-tools/sdk").MiniAppContext} context */
 function stateNodes(context) {
   const records = context.data.collection(COLLECTION).query();
   const timer = context.timers.get(TIMER);
