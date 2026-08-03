@@ -120,7 +120,12 @@ export function assertMiniAppTypeChecks(
 }
 
 function samePath(left: string, right: string): boolean {
-  return process.platform === "win32"
-    ? left.toLowerCase() === right.toLowerCase()
-    : left === right;
+  const normalizedLeft = normalizePath(left);
+  const normalizedRight = normalizePath(right);
+  return normalizedLeft === normalizedRight;
+}
+
+function normalizePath(value: string): string {
+  const normalized = resolve(value).replaceAll("\\", "/");
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
