@@ -59,7 +59,7 @@ async function executeEmbeddedRuntime(source: string, request: InspectionRequest
   runtime.setModuleLoader((moduleName) => {
     if (moduleName === SDK_MODULE) return sdk;
     if (moduleName === MINI_APP_MODULE) return source;
-    throw new Error(`Unsupported module: ${moduleName}`);
+    return unsupportedModuleSource(moduleName);
   });
 
   const context = runtime.newContext();
@@ -104,6 +104,14 @@ export default run(definition, ${JSON.stringify(request)});
     context.dispose();
     runtime.dispose();
   }
+}
+
+function unsupportedModuleSource(moduleName: string): string {
+  return `
+const error = new Error(${JSON.stringify(`Unsupported module: ${moduleName}`)});
+error.code = "UNSUPPORTED_MODULE";
+throw error;
+`;
 }
 
 function normalizeRuntimeError(caught: unknown): AuthoringRuntimeError {
