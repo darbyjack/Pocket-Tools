@@ -7,7 +7,7 @@ import type { MiniAppInspection } from "../model.ts";
 import { validatePageNode } from "./ui-validation.ts";
 
 const inspection: MiniAppInspection = {
-  manifest: { id: "example-tool", name: "Example Tool", sdkVersion: 1 },
+  manifest: { id: "example-tool", name: "Example Tool", sdkVersion: "1.1" },
   settings: {
     title: setting.text({ label: "Title", default: "Example" }),
     count: setting.number({ label: "Count", default: 1 }),
@@ -20,7 +20,7 @@ const inspection: MiniAppInspection = {
   },
   collections: {},
   screens: ["home", "details"],
-  actions: ["save"],
+  actions: ["save", "removeEntry"],
 };
 
 function validPage(): Record<string, unknown> {
@@ -55,6 +55,20 @@ function validPage(): Record<string, unknown> {
                 title: "Entry",
                 subtitle: "Details",
                 trailing: "1",
+                actions: [
+                  {
+                    label: "Delete",
+                    action: "removeEntry",
+                    input: "0123456789abcdef0123456789abcdef",
+                    intent: "destructive",
+                    confirmation: {
+                      title: "Delete entry?",
+                      message: "This cannot be undone.",
+                      confirmLabel: "Delete",
+                      cancelLabel: "Keep",
+                    },
+                  },
+                ],
               },
             ],
             emptyState: {
@@ -82,6 +96,7 @@ function validPage(): Record<string, unknown> {
             label: "Save",
             action: "save",
             input: { id: "entry-1" },
+            disabled: false,
           },
           {
             type: "navigation",
@@ -105,7 +120,14 @@ function children(node: Record<string, unknown>): Array<Record<string, unknown>>
   return node.children as Array<Record<string, unknown>>;
 }
 
-test("accepts every frozen SDK v1 UI node", () => {
+function firstListItem(page: Record<string, unknown>): Record<string, unknown> {
+  const section = children(page)[2]!;
+  const list = children(section)[2]!;
+  assert.ok(Array.isArray(list.items));
+  return (list.items as Array<Record<string, unknown>>)[0]!;
+}
+
+test("accepts every SDK 1.1 UI node and action control", () => {
   assert.doesNotThrow(() => validatePageNode(validPage(), inspection));
 });
 
@@ -124,6 +146,11 @@ test("rejects unknown action and screen targets", () => {
   children(row)[0]!.action = "removeAll";
   assert.throws(() => validatePageNode(page, inspection), /Unknown declared action/);
 
+  const listPage = validPage();
+  const listActions = firstListItem(listPage).actions as Array<Record<string, unknown>>;
+  listActions[0]!.action = "removeAll";
+  assert.throws(() => validatePageNode(listPage, inspection), /Unknown declared action/);
+
   const secondPage = validPage();
   const secondRow = children(secondPage)[4]!;
   children(secondRow)[1]!.screen = "missing";
@@ -138,6 +165,41 @@ test("rejects non-serializable interaction input", () => {
     () => validatePageNode(page, inspection),
     /Interaction input must be a finite serializable value/,
   );
+});
+
+test("rejects invalid action metadata and excessive list actions", () => {
+  const page = validPage();
+  const action = (firstListItem(page).actions as Array<Record<string, unknown>>)[0]!;
+  action.intent = "danger";
+  assert.throws(() => validatePageNode(page, inspection), /default or destructive/);
+
+  const confirmationPage = validPage();
+  const confirmationAction = (
+    firstListItem(confirmationPage).actions as Array<Record<string, unknown>>
+  )[0]!;
+  confirmationAction.confirmation = { title: "Delete?", extra: true };
+  assert.throws(() => validatePageNode(confirmationPage, inspection), /Unknown UI property/);
+
+  const disabledPage = validPage();
+  const row = children(disabledPage)[4]!;
+  children(row)[0]!.disabled = "yes";
+  assert.throws(() => validatePageNode(disabledPage, inspection), /boolean disabled state/);
+
+  const crowdedPage = validPage();
+  firstListItem(crowdedPage).actions = Array.from({ length: 4 }, () => ({
+    label: "Delete",
+    action: "removeEntry",
+  }));
+  assert.throws(() => validatePageNode(crowdedPage, inspection), /between 1 and 3 actions/);
+});
+
+test("requires SDK 1.1 for new action presentation", () => {
+  const sdk10Inspection: MiniAppInspection = {
+    ...inspection,
+    manifest: { ...inspection.manifest, sdkVersion: "1.0" },
+  };
+
+  assert.throws(() => validatePageNode(validPage(), sdk10Inspection), /require SDK 1\.1/);
 });
 
 test("rejects missing and incompatible setting bindings", () => {
