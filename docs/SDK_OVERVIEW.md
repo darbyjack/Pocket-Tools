@@ -72,10 +72,6 @@ Buttons name an action. The host invokes the matching handler with settings, iso
 
 `context.timers` provides `start`, `get`, and `stop`. Timer records are host-owned and durable. The script is not kept alive while a timer runs.
 
-## Embedded tests
-
-Scripts may contain deterministic tests. The harness controls settings, time, actions, rendering, collections, and timers. Tests must not depend on wall-clock time or device-specific state.
-
 ## Change policy
 
 The project supports one current SDK contract during development.
