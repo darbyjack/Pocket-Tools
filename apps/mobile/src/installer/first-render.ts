@@ -18,14 +18,12 @@ export async function assertFirstRenderAgainstRetainedState(
     { screen: "home" },
   );
   const settings: Record<string, SerializableValue> = {
-    ...Object.fromEntries(
-      Object.entries(inspection.settings).map(([name, definition]) => [
-        name,
-        definition.default,
-      ]),
-    ),
     ...snapshot.settings,
   };
+  for (const [name, definition] of Object.entries(inspection.settings)) {
+    if (!(name in settings)) settings[name] = definition.default;
+  }
+
   const candidateSnapshot: RuntimeSnapshot = {
     ...snapshot,
     settings,
