@@ -26,6 +26,8 @@ test("lifecycle diagnostics use valid SDK v1 scripts with colliding names", asyn
   assert.deepEqual(Object.keys(second.settings), ["sharedValue"]);
   assert.deepEqual(Object.keys(first.collections), ["sharedRecords"]);
   assert.deepEqual(Object.keys(second.collections), ["sharedRecords"]);
+  assert.deepEqual(first.screens, ["home", "details"]);
+  assert.deepEqual(second.screens, first.screens);
   assert.deepEqual(first.actions, ["seed", "addRecord", "stopTimer", "fail"]);
   assert.deepEqual(second.actions, first.actions);
 });
