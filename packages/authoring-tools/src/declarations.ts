@@ -1,5 +1,11 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import {
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -44,6 +50,20 @@ async function emitDeclarations(output: string): Promise<void> {
     ["--project", PROJECT, "--outDir", output],
     { cwd: ROOT },
   );
+  await rewriteDeclarationImports(output);
+}
+
+async function rewriteDeclarationImports(directory: string): Promise<void> {
+  for (const file of await listFiles(directory)) {
+    if (!file.endsWith(".d.ts")) continue;
+    const path = resolve(directory, file);
+    const content = await readFile(path, "utf8");
+    const rewritten = content.replace(
+      /(["']\.[^"']+)\.ts(["'])/g,
+      "$1.js$2",
+    );
+    if (rewritten !== content) await writeFile(path, rewritten, "utf8");
+  }
 }
 
 async function compareDirectories(left: string, right: string): Promise<readonly string[]> {
