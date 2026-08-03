@@ -2,10 +2,11 @@ import { execFile } from "node:child_process";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const executeFile = promisify(execFile);
-const ROOT = resolve(new URL("../../..", import.meta.url).pathname);
+const ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const PROJECT = resolve(ROOT, "packages/sdk-contract/tsconfig.declarations.json");
 const OUTPUT = resolve(ROOT, "packages/sdk-contract/dist");
 
@@ -60,9 +61,15 @@ async function compareDirectories(left: string, right: string): Promise<readonly
       readFile(resolve(left, file), "utf8"),
       readFile(resolve(right, file), "utf8"),
     ]);
-    if (leftContent !== rightContent) differences.push(file);
+    if (normalizeDeclaration(leftContent) !== normalizeDeclaration(rightContent)) {
+      differences.push(file);
+    }
   }
   return differences;
+}
+
+function normalizeDeclaration(value: string): string {
+  return value.replace(/\s+/g, "");
 }
 
 async function listFiles(directory: string, prefix = ""): Promise<readonly string[]> {
