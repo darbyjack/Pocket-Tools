@@ -6,6 +6,20 @@ const HEADER_URL = new URL(
 );
 const RAW_STRING_END = "\n)POCKET_JS\";";
 
+export type RuntimeSourceErrorCode =
+  | "RUNTIME_SOURCE_MISSING"
+  | "RUNTIME_SOURCE_INVALID";
+
+export class RuntimeSourceError extends Error {
+  readonly code: RuntimeSourceErrorCode;
+
+  constructor(code: RuntimeSourceErrorCode, message: string) {
+    super(message);
+    this.name = "RuntimeSourceError";
+    this.code = code;
+  }
+}
+
 export interface EmbeddedRuntimeSources {
   readonly sdk: string;
   readonly runner: string;
@@ -23,13 +37,19 @@ function extractRawString(header: string, name: string): string {
   const startMarker = `inline constexpr char ${name}[] = R\"POCKET_JS(\n`;
   const start = header.indexOf(startMarker);
   if (start < 0) {
-    throw new Error(`RUNTIME_SOURCE_MISSING: ${name} was not found in PocketQuickJsSources.h.`);
+    throw new RuntimeSourceError(
+      "RUNTIME_SOURCE_MISSING",
+      `${name} was not found in PocketQuickJsSources.h.`,
+    );
   }
 
   const contentStart = start + startMarker.length;
   const end = header.indexOf(RAW_STRING_END, contentStart);
   if (end < 0) {
-    throw new Error(`RUNTIME_SOURCE_INVALID: ${name} is missing its raw-string terminator.`);
+    throw new RuntimeSourceError(
+      "RUNTIME_SOURCE_INVALID",
+      `${name} is missing its raw-string terminator.`,
+    );
   }
 
   return header.slice(contentStart, end);
