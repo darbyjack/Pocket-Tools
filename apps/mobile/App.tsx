@@ -10,18 +10,18 @@ import {
   View,
 } from "react-native";
 
-import { BUNDLED_MINI_APPS } from "./src/generated/bundled-mini-apps";
+import bundledMiniApps from "./src/generated/bundled-mini-apps.json";
 import { MiniAppRenderer } from "./src/ui/MiniAppRenderer";
 import { SettingsPanel } from "./src/ui/SettingsPanel";
 import { useMiniApp } from "./src/useMiniApp";
 
 export default function App() {
   const [selectedFileName, setSelectedFileName] = useState<string | null>(
-    BUNDLED_MINI_APPS[0]?.fileName ?? null,
+    bundledMiniApps[0]?.fileName ?? null,
   );
   const selectedMiniApp = useMemo(
     () =>
-      BUNDLED_MINI_APPS.find(
+      bundledMiniApps.find(
         (miniApp) => miniApp.fileName === selectedFileName,
       ) ?? null,
     [selectedFileName],
@@ -40,11 +40,11 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
       <ScrollView contentContainerStyle={styles.content}>
-        {BUNDLED_MINI_APPS.length > 1 ? (
+        {bundledMiniApps.length > 1 ? (
           <View style={styles.library}>
             <Text style={styles.libraryTitle}>Mini apps</Text>
             <View style={styles.libraryRow}>
-              {BUNDLED_MINI_APPS.map((miniApp) => {
+              {bundledMiniApps.map((miniApp) => {
                 const selected = miniApp.fileName === selectedFileName;
                 return (
                   <Pressable
@@ -75,7 +75,7 @@ export default function App() {
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>No mini apps are available</Text>
             <Text style={styles.emptyText}>
-              Add a script to the generated mini-app catalog.
+              Add a script to the bundled mini-app catalog.
             </Text>
           </View>
         ) : null}
