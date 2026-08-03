@@ -10,7 +10,7 @@ Read [AGENTS.md](AGENTS.md) before changing the project. The current SDK contain
 
 ## Current phase
 
-This pull request establishes the repository and the smallest public contract needed to express Bathroom Pay. It does not add compatibility layers, migrations, permissions, or unused UI components.
+This pull request establishes the repository and the smallest public contract needed to express the first Bathroom Pay slice. It does not add compatibility layers, migrations, permissions, or unused UI components.
 
 The next implementation step must make this contract work end to end on Android before the SDK grows further.
 
