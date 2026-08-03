@@ -66,13 +66,13 @@ test("uses declarative setting visibility", () => {
   assert.equal(settingIsVisible(definition, { payType: "salary" }), false);
 });
 
-test("parses a frozen SDK inspection and CRUD operations", () => {
+test("parses an SDK 1.1 inspection and CRUD operations", () => {
   const response = parseRuntimeResponse(
     JSON.stringify({
       ok: true,
       value: {
         inspection: {
-          manifest: { id: "example-tool", name: "Example Tool", sdkVersion: 1 },
+          manifest: { id: "example-tool", name: "Example Tool", sdkVersion: "1.1" },
           settings: {
             title: { type: "text", label: "Title", default: "Example" },
           },
@@ -106,7 +106,23 @@ test("parses a frozen SDK inspection and CRUD operations", () => {
     }),
   );
   assert.deepEqual(response.value.inspection?.screens, ["home", "details"]);
+  assert.equal(response.value.inspection?.manifest.sdkVersion, "1.1");
   assert.equal(response.value.operations.length, 2);
+});
+
+test("accepts a normalized SDK 1.0 inspection", () => {
+  const response = parseRuntimeResponse(
+    success({
+      inspection: {
+        manifest: { id: "example-tool", name: "Example Tool", sdkVersion: "1.0" },
+        settings: {},
+        collections: {},
+        screens: ["home"],
+        actions: [],
+      },
+    }),
+  );
+  assert.equal(response.value.inspection?.manifest.sdkVersion, "1.0");
 });
 
 test("preserves structured sandbox errors and captured logs", () => {
@@ -153,10 +169,25 @@ test("rejects malformed envelopes, inspections, and operations", () => {
       parseRuntimeResponse(
         success({
           inspection: {
-            manifest: { id: "bad", name: "Bad", sdkVersion: 1 },
+            manifest: { id: "bad", name: "Bad", sdkVersion: "1.1" },
             settings: {},
             collections: {},
             screens: ["missingHome"],
+            actions: [],
+          },
+        }),
+      ),
+    (error: unknown) => error instanceof MiniAppRuntimeError && error.code === "VALIDATION_FAILED",
+  );
+  assert.throws(
+    () =>
+      parseRuntimeResponse(
+        success({
+          inspection: {
+            manifest: { id: "bad", name: "Bad", sdkVersion: "2.0" },
+            settings: {},
+            collections: {},
+            screens: ["home"],
             actions: [],
           },
         }),
