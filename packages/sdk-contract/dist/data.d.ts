@@ -64,4 +64,3 @@ export interface CollectionClient {
 export interface DataClient {
     collection(name: string): CollectionClient;
 }
-export {};
