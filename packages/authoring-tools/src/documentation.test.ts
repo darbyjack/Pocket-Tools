@@ -12,10 +12,12 @@ const START = "<!-- BEGIN fixture: agent-template.miniapp.js -->\n```js\n";
 const END = "\n```\n<!-- END fixture: agent-template.miniapp.js -->";
 
 test("keeps the canonical guide template identical to its executable fixture", async () => {
-  const [guide, fixture] = await Promise.all([
+  const [guideSource, fixtureSource] = await Promise.all([
     readFile(GUIDE_URL, "utf8"),
     readFile(FIXTURE_URL, "utf8"),
   ]);
+  const guide = normalizeLineEndings(guideSource);
+  const fixture = normalizeLineEndings(fixtureSource);
   const start = guide.indexOf(START);
   assert.notEqual(start, -1, "The guide is missing the fixture start marker.");
   const contentStart = start + START.length;
@@ -23,3 +25,7 @@ test("keeps the canonical guide template identical to its executable fixture", a
   assert.notEqual(end, -1, "The guide is missing the fixture end marker.");
   assert.equal(`${guide.slice(contentStart, end).trimEnd()}\n`, fixture);
 });
+
+function normalizeLineEndings(value: string): string {
+  return value.replace(/\r\n?/g, "\n");
+}
