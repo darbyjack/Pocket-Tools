@@ -19,23 +19,17 @@ pnpm mini-app inspect ./tool.miniapp.js --json
 | `RUNTIME_SOURCE_MISSING` | The Android module no longer contains an expected embedded SDK or runner source. |
 | `RUNTIME_SOURCE_INVALID` | An embedded source could not be extracted safely. |
 
-## Script and definition failures
+## Validation and inspection failures
 
 | Code | Meaning |
 | --- | --- |
 | `INVALID_SCRIPT` | The module does not export a valid mini-app definition or contains an invalid named group. |
 | `INVALID_MANIFEST` | The manifest is missing or malformed. |
 | `UNSUPPORTED_SDK_VERSION` | The script does not declare frozen `sdkVersion: 1`. |
-| `UNSUPPORTED_MODULE` | The script imported anything other than `@pocket-tools/sdk`. |
-| `VALIDATION_FAILED` | Canonical SDK definition validation failed. JSON output includes `issues` with `path` and `message`. |
-| `ASYNC_NOT_SUPPORTED` | The script used top-level await or returned a promise from a screen or action. |
-| `INVALID_BRIDGE_VALUE` | A value crossing the SDK boundary is not finite and serializable. |
-| `INVALID_UI_TREE` | A rendered UI tree contains an unsupported node, property, binding, target, size, or depth. |
-| `UNKNOWN_SCREEN` | A requested screen is not declared. |
-| `UNKNOWN_ACTION` | A requested action is not declared. |
-| `UNKNOWN_COLLECTION` | A requested collection is not declared. |
-| `RECORD_NOT_FOUND` | An update or remove operation targeted a missing record. |
-| `TIMER_NOT_FOUND` | A timer operation targeted a timer that is not active. |
+| `UNSUPPORTED_MODULE` | The script imported anything other than `@pocket-tools/sdk`, used a re-export, or used dynamic import. |
+| `VALIDATION_FAILED` | Canonical SDK definition validation failed. JSON output includes `issues` with exact `path` and `message` values. |
+| `ASYNC_NOT_SUPPORTED` | The script used top-level await or cannot be inspected synchronously. |
+| `INVALID_BRIDGE_VALUE` | Inspection produced a value that is not finite and serializable. |
 | `INVALID_RUNTIME_RESPONSE` | The embedded runner returned a malformed inspection shape. |
 
 ## Sandbox failures
@@ -47,7 +41,19 @@ pnpm mini-app inspect ./tool.miniapp.js --json
 | `RUNTIME_STACK_LIMIT` | QuickJS exceeded its stack limit. |
 | `RUNTIME_ERROR` | QuickJS rejected the script without a more specific code. |
 
-The Android host has additional native request, result, logging, and allocation containment codes. The authoring commands preserve any explicit code emitted by the same embedded runner rather than remapping it to a different SDK error.
+## Android render and action failures
+
+The Android host and later on-device preview flow may additionally return codes such as:
+
+- `INVALID_UI_TREE`
+- `UNKNOWN_SCREEN`
+- `UNKNOWN_ACTION`
+- `UNKNOWN_COLLECTION`
+- `RECORD_NOT_FOUND`
+- `TIMER_NOT_FOUND`
+- Native source, request, result, logging, and allocation containment failures
+
+Those codes are not promised as outcomes of the inspection-only CLI. The CLI preserves explicit errors emitted by the shared embedded runner rather than translating them into unrelated authoring codes.
 
 ## JSON failure shape
 
