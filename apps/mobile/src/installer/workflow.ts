@@ -1,7 +1,7 @@
 import {
   DIAGNOSTIC_APP_ID_PREFIX,
   PREVIEW_STORAGE_PREFIX,
-} from "../storage/namespaces";
+} from "../storage/namespaces.ts";
 
 export type InstallWorkflowMode = "create" | "duplicate" | "edit";
 
