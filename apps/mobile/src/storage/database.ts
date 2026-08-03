@@ -15,6 +15,7 @@ import {
 } from "../runtime/sdk-validation";
 
 const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
+const BUNDLED_SEED_KEY = "bundled-mini-apps-v1";
 
 interface SettingRow {
   readonly name: string;
@@ -31,6 +32,33 @@ interface RecordRow {
 interface TimerRow {
   readonly timer_id: string;
   readonly started_at: string;
+}
+
+interface InstalledMiniAppRow {
+  readonly app_id: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly icon: string | null;
+  readonly active_source: string;
+  readonly last_known_good_source: string;
+  readonly installed_at: string;
+  readonly updated_at: string;
+}
+
+export interface InstalledMiniApp {
+  readonly id: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly icon?: string;
+  readonly activeSource: string;
+  readonly lastKnownGoodSource: string;
+  readonly installedAt: string;
+  readonly updatedAt: string;
+}
+
+export interface BundledMiniAppSeed {
+  readonly inspection: MiniAppInspection;
+  readonly source: string;
 }
 
 export async function initializeDatabase(): Promise<void> {
@@ -64,11 +92,248 @@ export async function initializeDatabase(): Promise<void> {
       started_at TEXT NOT NULL,
       PRIMARY KEY (app_id, timer_id)
     );
+
+    CREATE TABLE IF NOT EXISTS installed_mini_apps (
+      app_id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      icon TEXT,
+      active_source TEXT NOT NULL,
+      last_known_good_source TEXT NOT NULL,
+      installed_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS app_metadata (
+      key TEXT PRIMARY KEY NOT NULL,
+      value TEXT NOT NULL
+    );
   `);
+}
+
+export async function seedBundledMiniAppsOnce(
+  seeds: readonly BundledMiniAppSeed[],
+): Promise<void> {
+  const database = await databasePromise;
+  await database.withTransactionAsync(async () => {
+    const completed = await database.getFirstAsync<{ readonly value: string }>(
+      "SELECT value FROM app_metadata WHERE key = ?",
+      BUNDLED_SEED_KEY,
+    );
+    if (completed !== null) return;
+
+    const timestamp = new Date().toISOString();
+    for (const seed of seeds) {
+      await database.runAsync(
+        `INSERT OR IGNORE INTO installed_mini_apps (
+           app_id, name, description, icon, active_source,
+           last_known_good_source, installed_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        seed.inspection.manifest.id,
+        seed.inspection.manifest.name,
+        seed.inspection.manifest.description ?? null,
+        seed.inspection.manifest.icon ?? null,
+        seed.source,
+        seed.source,
+        timestamp,
+        timestamp,
+      );
+    }
+
+    await database.runAsync(
+      "INSERT INTO app_metadata (key, value) VALUES (?, ?)",
+      BUNDLED_SEED_KEY,
+      timestamp,
+    );
+  });
+}
+
+export async function listInstalledMiniApps(): Promise<readonly InstalledMiniApp[]> {
+  const database = await databasePromise;
+  const rows = await database.getAllAsync<InstalledMiniAppRow>(
+    `SELECT app_id, name, description, icon, active_source,
+            last_known_good_source, installed_at, updated_at
+     FROM installed_mini_apps
+     ORDER BY name COLLATE NOCASE ASC, installed_at ASC`,
+  );
+  return rows.map(mapInstalledMiniApp);
+}
+
+export async function getInstalledMiniApp(
+  appId: string,
+): Promise<InstalledMiniApp | null> {
+  const database = await databasePromise;
+  const row = await database.getFirstAsync<InstalledMiniAppRow>(
+    `SELECT app_id, name, description, icon, active_source,
+            last_known_good_source, installed_at, updated_at
+     FROM installed_mini_apps
+     WHERE app_id = ?`,
+    appId,
+  );
+  return row === null ? null : mapInstalledMiniApp(row);
+}
+
+export async function installMiniApp(
+  inspection: MiniAppInspection,
+  source: string,
+): Promise<InstalledMiniApp> {
+  const database = await databasePromise;
+  const timestamp = new Date().toISOString();
+  try {
+    await database.runAsync(
+      `INSERT INTO installed_mini_apps (
+         app_id, name, description, icon, active_source,
+         last_known_good_source, installed_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      inspection.manifest.id,
+      inspection.manifest.name,
+      inspection.manifest.description ?? null,
+      inspection.manifest.icon ?? null,
+      source,
+      source,
+      timestamp,
+      timestamp,
+    );
+  } catch (cause) {
+    throw new Error(
+      `INSTALLATION_FAILED: A mini app with ID ${inspection.manifest.id} is already installed.`,
+      { cause },
+    );
+  }
+
+  const installed = await getInstalledMiniApp(inspection.manifest.id);
+  if (installed === null) {
+    throw new Error("INSTALLATION_FAILED: The installed mini app could not be reloaded.");
+  }
+  return installed;
+}
+
+export async function updateInstalledMiniApp(
+  appId: string,
+  inspection: MiniAppInspection,
+  source: string,
+): Promise<InstalledMiniApp> {
+  if (inspection.manifest.id !== appId) {
+    throw new Error(
+      `INSTALLATION_FAILED: An update cannot change manifest.id from ${appId} to ${inspection.manifest.id}. Duplicate the script to create a new app instead.`,
+    );
+  }
+
+  const database = await databasePromise;
+  const current = await getInstalledMiniApp(appId);
+  if (current === null) throw new Error(`INSTALLATION_FAILED: ${appId} is not installed.`);
+
+  const result = await database.runAsync(
+    `UPDATE installed_mini_apps
+     SET name = ?, description = ?, icon = ?, active_source = ?,
+         last_known_good_source = active_source, updated_at = ?
+     WHERE app_id = ?`,
+    inspection.manifest.name,
+    inspection.manifest.description ?? null,
+    inspection.manifest.icon ?? null,
+    source,
+    new Date().toISOString(),
+    appId,
+  );
+  if (result.changes !== 1) {
+    throw new Error(`INSTALLATION_FAILED: ${appId} is not installed.`);
+  }
+
+  const installed = await getInstalledMiniApp(appId);
+  if (installed === null) {
+    throw new Error("INSTALLATION_FAILED: The updated mini app could not be reloaded.");
+  }
+  return installed;
+}
+
+export async function rollbackInstalledMiniApp(
+  appId: string,
+  inspection: MiniAppInspection,
+): Promise<InstalledMiniApp> {
+  if (inspection.manifest.id !== appId) {
+    throw new Error("INSTALLATION_FAILED: The rollback source has a different manifest ID.");
+  }
+
+  const database = await databasePromise;
+  const result = await database.runAsync(
+    `UPDATE installed_mini_apps
+     SET name = ?, description = ?, icon = ?,
+         active_source = last_known_good_source,
+         last_known_good_source = active_source,
+         updated_at = ?
+     WHERE app_id = ?`,
+    inspection.manifest.name,
+    inspection.manifest.description ?? null,
+    inspection.manifest.icon ?? null,
+    new Date().toISOString(),
+    appId,
+  );
+  if (result.changes !== 1) {
+    throw new Error(`INSTALLATION_FAILED: ${appId} is not installed.`);
+  }
+
+  const installed = await getInstalledMiniApp(appId);
+  if (installed === null) {
+    throw new Error("INSTALLATION_FAILED: The rolled-back mini app could not be reloaded.");
+  }
+  return installed;
+}
+
+export async function deleteInstalledMiniApp(
+  appId: string,
+  deleteData: boolean,
+): Promise<void> {
+  const database = await databasePromise;
+  await database.withTransactionAsync(async () => {
+    await database.runAsync("DELETE FROM installed_mini_apps WHERE app_id = ?", appId);
+    if (deleteData) await clearAppDataInTransaction(database, appId);
+  });
+}
+
+export async function preparePreviewStorage(
+  sourceStorageId: string | null,
+  previewStorageId: string,
+): Promise<void> {
+  const database = await databasePromise;
+  await database.withTransactionAsync(async () => {
+    await clearAppDataInTransaction(database, previewStorageId);
+    if (sourceStorageId === null) return;
+
+    await database.runAsync(
+      `INSERT INTO settings (app_id, name, value_json)
+       SELECT ?, name, value_json FROM settings WHERE app_id = ?`,
+      previewStorageId,
+      sourceStorageId,
+    );
+    await database.runAsync(
+      `INSERT INTO timers (app_id, timer_id, started_at)
+       SELECT ?, timer_id, started_at FROM timers WHERE app_id = ?`,
+      previewStorageId,
+      sourceStorageId,
+    );
+    await database.runAsync(
+      `INSERT INTO records (
+         id, app_id, collection_name, data_json, created_at, updated_at
+       )
+       SELECT lower(hex(randomblob(16))), ?, collection_name, data_json,
+              created_at, updated_at
+       FROM records WHERE app_id = ?`,
+      previewStorageId,
+      sourceStorageId,
+    );
+  });
+}
+
+export async function clearAppData(storageId: string): Promise<void> {
+  const database = await databasePromise;
+  await database.withTransactionAsync(async () => {
+    await clearAppDataInTransaction(database, storageId);
+  });
 }
 
 export async function ensureSettingDefaults(
   inspection: MiniAppInspection,
+  storageId = inspection.manifest.id,
 ): Promise<void> {
   const database = await databasePromise;
   await database.withTransactionAsync(async () => {
@@ -77,7 +342,7 @@ export async function ensureSettingDefaults(
       await database.runAsync(
         `INSERT OR IGNORE INTO settings (app_id, name, value_json)
          VALUES (?, ?, ?)`,
-        inspection.manifest.id,
+        storageId,
         name,
         JSON.stringify(definition.default),
       );
@@ -87,11 +352,14 @@ export async function ensureSettingDefaults(
 
 export async function setSetting(
   inspection: MiniAppInspection,
+  storageId: string,
   name: string,
   value: SerializableValue,
 ): Promise<void> {
   const definition = inspection.settings[name];
-  if (definition === undefined) throw new Error(`VALIDATION_FAILED: settings.${name}: Unknown setting.`);
+  if (definition === undefined) {
+    throw new Error(`VALIDATION_FAILED: settings.${name}: Unknown setting.`);
+  }
   assertSettingValue(definition, value, `settings.${name}`);
 
   const database = await databasePromise;
@@ -99,7 +367,7 @@ export async function setSetting(
     `INSERT INTO settings (app_id, name, value_json)
      VALUES (?, ?, ?)
      ON CONFLICT(app_id, name) DO UPDATE SET value_json = excluded.value_json`,
-    inspection.manifest.id,
+    storageId,
     name,
     JSON.stringify(value),
   );
@@ -107,16 +375,16 @@ export async function setSetting(
 
 export async function loadRuntimeSnapshot(
   inspection: MiniAppInspection,
+  storageId: string,
   mode: RuntimeSnapshot["mode"],
   options: { readonly action?: string; readonly screen?: string } = {},
 ): Promise<RuntimeSnapshot> {
   const database = await databasePromise;
-  const appId = inspection.manifest.id;
   const now = new Date();
 
   const settingRows = await database.getAllAsync<SettingRow>(
     "SELECT name, value_json FROM settings WHERE app_id = ?",
-    appId,
+    storageId,
   );
   const settings: Record<string, SerializableValue> = {};
   for (const row of settingRows) {
@@ -134,7 +402,7 @@ export async function loadRuntimeSnapshot(
        FROM records
        WHERE app_id = ? AND collection_name = ?
        ORDER BY created_at DESC`,
-      appId,
+      storageId,
       collectionName,
     );
     records[collectionName] = rows.map((row) => {
@@ -151,7 +419,7 @@ export async function loadRuntimeSnapshot(
 
   const timerRows = await database.getAllAsync<TimerRow>(
     "SELECT timer_id, started_at FROM timers WHERE app_id = ?",
-    appId,
+    storageId,
   );
   const timers: Record<string, TimerSnapshot> = {};
   for (const row of timerRows) {
@@ -178,10 +446,10 @@ export async function loadRuntimeSnapshot(
 
 export async function applyRuntimeOperations(
   inspection: MiniAppInspection,
+  storageId: string,
   operations: readonly RuntimeOperation[],
 ): Promise<void> {
   const database = await databasePromise;
-  const appId = inspection.manifest.id;
 
   await database.withTransactionAsync(async () => {
     for (const [index, operation] of operations.entries()) {
@@ -194,7 +462,7 @@ export async function applyRuntimeOperations(
             `INSERT INTO records (
                id, app_id, collection_name, data_json, created_at, updated_at
              ) VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, ?)`,
-            appId,
+            storageId,
             operation.collection,
             JSON.stringify(operation.record),
             timestamp,
@@ -210,10 +478,12 @@ export async function applyRuntimeOperations(
             `SELECT data_json FROM records
              WHERE id = ? AND app_id = ? AND collection_name = ?`,
             operation.id,
-            appId,
+            storageId,
             operation.collection,
           );
-          if (existing === null) throw new Error(`RECORD_NOT_FOUND: ${operation.collection}.${operation.id}`);
+          if (existing === null) {
+            throw new Error(`RECORD_NOT_FOUND: ${operation.collection}.${operation.id}`);
+          }
           const merged = {
             ...(JSON.parse(existing.data_json) as Record<string, SerializableValue>),
             ...operation.changes,
@@ -225,10 +495,12 @@ export async function applyRuntimeOperations(
             JSON.stringify(merged),
             new Date().toISOString(),
             operation.id,
-            appId,
+            storageId,
             operation.collection,
           );
-          if (result.changes !== 1) throw new Error(`RECORD_NOT_FOUND: ${operation.collection}.${operation.id}`);
+          if (result.changes !== 1) {
+            throw new Error(`RECORD_NOT_FOUND: ${operation.collection}.${operation.id}`);
+          }
           break;
         }
         case "remove": {
@@ -237,17 +509,19 @@ export async function applyRuntimeOperations(
           const result = await database.runAsync(
             "DELETE FROM records WHERE id = ? AND app_id = ? AND collection_name = ?",
             operation.id,
-            appId,
+            storageId,
             operation.collection,
           );
-          if (result.changes !== 1) throw new Error(`RECORD_NOT_FOUND: ${operation.collection}.${operation.id}`);
+          if (result.changes !== 1) {
+            throw new Error(`RECORD_NOT_FOUND: ${operation.collection}.${operation.id}`);
+          }
           break;
         }
         case "timer-start":
           await database.runAsync(
             `INSERT INTO timers (app_id, timer_id, started_at)
              VALUES (?, ?, ?)`,
-            appId,
+            storageId,
             operation.timerId,
             operation.startedAt,
           );
@@ -255,17 +529,43 @@ export async function applyRuntimeOperations(
         case "timer-stop": {
           const result = await database.runAsync(
             "DELETE FROM timers WHERE app_id = ? AND timer_id = ?",
-            appId,
+            storageId,
             operation.timerId,
           );
-          if (result.changes !== 1) throw new Error(`TIMER_NOT_FOUND: ${operation.timerId}`);
+          if (result.changes !== 1) {
+            throw new Error(`TIMER_NOT_FOUND: ${operation.timerId}`);
+          }
           break;
         }
         default:
-          throw new Error(`INVALID_OPERATION: operations[${index}] has an unsupported type.`);
+          throw new Error(
+            `INVALID_OPERATION: operations[${index}] has an unsupported type.`,
+          );
       }
     }
   });
+}
+
+async function clearAppDataInTransaction(
+  database: SQLite.SQLiteDatabase,
+  storageId: string,
+): Promise<void> {
+  await database.runAsync("DELETE FROM settings WHERE app_id = ?", storageId);
+  await database.runAsync("DELETE FROM records WHERE app_id = ?", storageId);
+  await database.runAsync("DELETE FROM timers WHERE app_id = ?", storageId);
+}
+
+function mapInstalledMiniApp(row: InstalledMiniAppRow): InstalledMiniApp {
+  return {
+    id: row.app_id,
+    name: row.name,
+    ...(row.description === null ? {} : { description: row.description }),
+    ...(row.icon === null ? {} : { icon: row.icon }),
+    activeSource: row.active_source,
+    lastKnownGoodSource: row.last_known_good_source,
+    installedAt: row.installed_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 function requireCollection(
@@ -275,7 +575,9 @@ function requireCollection(
 ) {
   const definition = inspection.collections[name];
   if (definition === undefined) {
-    throw new Error(`UNKNOWN_COLLECTION: operations[${operationIndex}].collection: ${name}`);
+    throw new Error(
+      `UNKNOWN_COLLECTION: operations[${operationIndex}].collection: ${name}`,
+    );
   }
   return definition;
 }
