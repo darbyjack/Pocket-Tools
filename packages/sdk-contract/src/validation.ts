@@ -70,18 +70,6 @@ export function validateMiniAppDefinition(
     validateObjectKeys(issues, `collections.${collectionName}.fields`, fieldNames);
   }
 
-  const testNames = new Set<string>();
-  for (const [index, test] of (definition.tests ?? []).entries()) {
-    const name = test.name.trim();
-    if (name.length === 0) {
-      addIssue(issues, `tests[${index}].name`, "Test name cannot be empty.");
-    }
-    if (testNames.has(name)) {
-      addIssue(issues, `tests[${index}].name`, "Test names must be unique.");
-    }
-    testNames.add(name);
-  }
-
   return issues;
 }
 
