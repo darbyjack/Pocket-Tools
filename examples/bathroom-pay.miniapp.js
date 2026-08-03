@@ -28,7 +28,9 @@ function effectiveHourlyRate(context) {
 /** @param {import("@pocket-tools/sdk").MiniAppContext} context */
 function currentTripEarnings(context) {
   const timer = context.timers.get(TRIP_TIMER_ID);
-  return timer === null ? 0 : (timer.elapsedSeconds / 3_600) * effectiveHourlyRate(context);
+  return timer === null
+    ? 0
+    : (timer.elapsedSeconds / 3_600) * effectiveHourlyRate(context);
 }
 
 /** @param {Date} date */
@@ -36,25 +38,6 @@ function startOfDay(date) {
   const result = new Date(date);
   result.setHours(0, 0, 0, 0);
   return result;
-}
-
-/** @param {Date} date */
-function startOfWeek(date) {
-  const result = startOfDay(date);
-  const day = result.getDay();
-  const offset = day === 0 ? 6 : day - 1;
-  result.setDate(result.getDate() - offset);
-  return result;
-}
-
-/** @param {Date} date */
-function startOfMonth(date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-/** @param {Date} date */
-function startOfYear(date) {
-  return new Date(date.getFullYear(), 0, 1);
 }
 
 /**
@@ -75,36 +58,6 @@ function totalsSince(context, since) {
   };
 }
 
-/** @param {unknown} payload */
-function recordIdFromPayload(payload) {
-  if (
-    payload !== null &&
-    typeof payload === "object" &&
-    "id" in payload &&
-    typeof payload.id === "string"
-  ) {
-    return payload.id;
-  }
-  throw new Error("Expected a record payload containing a string id.");
-}
-
-/** @param {readonly import("@pocket-tools/sdk").StoredRecord[]} records */
-function toCsv(records) {
-  const header = "startedAt,endedAt,durationSeconds,grossEarnings,notes";
-  const rows = records.map((record) =>
-    [
-      record.startedAt,
-      record.endedAt,
-      record.durationSeconds,
-      record.grossEarnings,
-      record.notes ?? "",
-    ]
-      .map((value) => `"${String(value).replaceAll('"', '""')}"`)
-      .join(","),
-  );
-  return [header, ...rows].join("\n");
-}
-
 export default defineMiniApp({
   manifest: {
     id: "bathroom-pay",
@@ -112,13 +65,6 @@ export default defineMiniApp({
     description: "Track bathroom-trip time and its gross pay equivalent.",
     icon: "timer",
     sdkVersion: 1,
-    version: 1,
-    permissions: [
-      {
-        capability: "file-export",
-        reason: "Export trip history as JSON or CSV files.",
-      },
-    ],
   },
 
   settings: {
@@ -159,32 +105,19 @@ export default defineMiniApp({
   },
 
   collections: {
-    trips: collection(
-      {
-        startedAt: field.datetime(),
-        endedAt: field.datetime(),
-        durationSeconds: field.number({ min: 0 }),
-        grossEarnings: field.money({ min: 0 }),
-        effectiveHourlyRate: field.money({ min: 0 }),
-        notes: field.text({ optional: true, maxLength: 500 }),
-      },
-      {
-        indexes: [
-          { fields: ["startedAt"] },
-          { fields: ["endedAt"] },
-        ],
-      },
-    ),
+    trips: collection({
+      startedAt: field.datetime(),
+      endedAt: field.datetime(),
+      durationSeconds: field.number({ min: 0 }),
+      grossEarnings: field.money({ min: 0 }),
+      effectiveHourlyRate: field.money({ min: 0 }),
+    }),
   },
 
   screens: {
     home(context) {
       const activeTrip = context.timers.get(TRIP_TIMER_ID);
-      const now = new Date(context.now());
-      const today = totalsSince(context, startOfDay(now));
-      const week = totalsSince(context, startOfWeek(now));
-      const month = totalsSince(context, startOfMonth(now));
-      const year = totalsSince(context, startOfYear(now));
+      const today = totalsSince(context, startOfDay(new Date(context.now())));
       const trips = context.data.collection(TRIPS_COLLECTION).query({
         orderBy: [{ field: "startedAt", direction: "desc" }],
         limit: 50,
@@ -205,7 +138,6 @@ export default defineMiniApp({
               ui.button({
                 label: activeTrip === null ? "Start trip" : "End trip",
                 action: activeTrip === null ? "startTrip" : "endTrip",
-                variant: "primary",
               }),
             ],
           }),
@@ -213,24 +145,16 @@ export default defineMiniApp({
             title: "Today",
             values: [
               { label: "Trips", value: today.count, format: "number" },
-              { label: "Time", value: today.durationSeconds, format: "duration" },
-              { label: "Gross equivalent", value: today.grossEarnings, format: "money" },
-            ],
-          }),
-          ui.summary({
-            title: "Longer periods",
-            values: [
-              { label: "This week", value: week.grossEarnings, format: "money" },
-              { label: "This month", value: month.grossEarnings, format: "money" },
-              { label: "This year", value: year.grossEarnings, format: "money" },
-            ],
-          }),
-          ui.row({
-            gap: "small",
-            children: [
-              ui.button({ label: "Export JSON", action: "exportJson", variant: "secondary" }),
-              ui.button({ label: "Export CSV", action: "exportCsv", variant: "secondary" }),
-              ui.link({ label: "Add manually", screen: "manualEntry" }),
+              {
+                label: "Time",
+                value: today.durationSeconds,
+                format: "duration",
+              },
+              {
+                label: "Gross equivalent",
+                value: today.grossEarnings,
+                format: "money",
+              },
             ],
           }),
           ui.list({
@@ -240,8 +164,6 @@ export default defineMiniApp({
                 title: String(trip.startedAt),
                 subtitle: `${String(trip.durationSeconds)} seconds`,
                 trailing: `$${Number(trip.grossEarnings).toFixed(2)}`,
-                action: "deleteTrip",
-                payload: { id: trip.id },
               }),
             ),
             emptyState: ui.emptyState({
@@ -252,28 +174,11 @@ export default defineMiniApp({
         ],
       });
     },
-
-    manualEntry() {
-      return ui.page({
-        title: "Add trip",
-        children: [
-          ui.form({
-            action: "addManualTrip",
-            submitLabel: "Save trip",
-            children: [
-              ui.dateTimeInput({ name: "startedAt", label: "Started at", required: true }),
-              ui.dateTimeInput({ name: "endedAt", label: "Ended at", required: true }),
-              ui.textArea({ name: "notes", label: "Notes", required: false }),
-            ],
-          }),
-        ],
-      });
-    },
   },
 
   actions: {
     startTrip(context) {
-      context.timers.start(TRIP_TIMER_ID, { source: "live" });
+      context.timers.start(TRIP_TIMER_ID);
     },
 
     endTrip(context) {
@@ -285,53 +190,6 @@ export default defineMiniApp({
         durationSeconds: trip.durationSeconds,
         effectiveHourlyRate: rate,
         grossEarnings: (trip.durationSeconds / 3_600) * rate,
-      });
-    },
-
-    addManualTrip(context, payload) {
-      if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
-        throw new Error("Manual entry requires a form payload.");
-      }
-
-      const form = /** @type {Readonly<Record<string, import("@pocket-tools/sdk").SerializableValue>>} */ (payload);
-      const startedAt = new Date(String(form.startedAt));
-      const endedAt = new Date(String(form.endedAt));
-      const durationSeconds = Math.max(0, (endedAt.getTime() - startedAt.getTime()) / 1_000);
-      const rate = effectiveHourlyRate(context);
-
-      context.data.collection(TRIPS_COLLECTION).insert({
-        startedAt: startedAt.toISOString(),
-        endedAt: endedAt.toISOString(),
-        durationSeconds,
-        effectiveHourlyRate: rate,
-        grossEarnings: (durationSeconds / 3_600) * rate,
-        notes: String(form.notes ?? ""),
-      });
-    },
-
-    deleteTrip(context, payload) {
-      context.data.collection(TRIPS_COLLECTION).remove(recordIdFromPayload(payload));
-    },
-
-    async exportJson(context) {
-      const records = context.data.collection(TRIPS_COLLECTION).query({
-        orderBy: [{ field: "startedAt", direction: "asc" }],
-      });
-      await context.files.exportText({
-        name: "bathroom-pay-trips.json",
-        mimeType: "application/json",
-        content: JSON.stringify(records, null, 2),
-      });
-    },
-
-    async exportCsv(context) {
-      const records = context.data.collection(TRIPS_COLLECTION).query({
-        orderBy: [{ field: "startedAt", direction: "asc" }],
-      });
-      await context.files.exportText({
-        name: "bathroom-pay-trips.csv",
-        mimeType: "text/csv",
-        content: toCsv(records),
       });
     },
   },
@@ -364,19 +222,6 @@ export default defineMiniApp({
         await testContext.invoke("startTrip");
         testContext.advanceTime(30);
         testContext.render("home");
-      },
-    },
-    {
-      name: "manual entry form renders",
-      run(testContext) {
-        testContext.render("manualEntry");
-      },
-    },
-    {
-      name: "empty history exports",
-      async run(testContext) {
-        await testContext.invoke("exportJson");
-        await testContext.invoke("exportCsv");
       },
     },
   ],
