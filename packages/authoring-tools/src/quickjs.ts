@@ -58,18 +58,15 @@ export async function executeInspection(source: string): Promise<unknown> {
 }
 
 async function executeEmbeddedRuntime(source: string, request: InspectionRequest): Promise<unknown> {
-  let initialization;
-  try {
-    initialization = await Promise.all([
-      readEmbeddedRuntimeSources(),
-      quickJsModule,
-    ]);
-  } catch (caught) {
+  const initialization = await Promise.all([
+    readEmbeddedRuntimeSources(),
+    quickJsModule,
+  ]).catch((caught: unknown) => {
     if (caught instanceof RuntimeSourceError) {
       throw new AuthoringRuntimeError(caught.code, caught.message);
     }
     throw caught;
-  }
+  });
   const [{ sdk, runner }, quickJs] = initialization;
   const runtime = quickJs.newRuntime();
   runtime.setMemoryLimit(MEMORY_LIMIT_BYTES);
