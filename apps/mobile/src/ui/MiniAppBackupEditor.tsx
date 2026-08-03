@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import type { MiniAppInspection } from "../model";
 import { formatMiniAppError, inspectMiniApp } from "../runtime/quickjs";
@@ -13,6 +13,7 @@ import {
   restoreMiniAppBackup,
 } from "../storage/backup-storage";
 import type { InstalledMiniApp } from "../storage/database";
+import { ScreenScrollView } from "./ScreenScrollView";
 
 export interface MiniAppBackupEditorProps {
   readonly onCancel: () => void;
@@ -123,7 +124,11 @@ export function MiniAppBackupEditor({ onCancel, onRestored }: MiniAppBackupEdito
   }, [candidate, performRestore]);
 
   return (
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScreenScrollView
+      contentContainerStyle={styles.content}
+      keyboardAware
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.toolbar}>
         <Pressable accessibilityRole="button" onPress={onCancel} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>Cancel</Text>
@@ -178,7 +183,7 @@ export function MiniAppBackupEditor({ onCancel, onRestored }: MiniAppBackupEdito
           </Text>
         </View>
       )}
-    </ScrollView>
+    </ScreenScrollView>
   );
 }
 
