@@ -7,11 +7,13 @@ Read [AGENTS.md](AGENTS.md) before making changes.
 1. Choose an unblocked issue from the Pocket Tools wayfinder map.
 2. Claim it before beginning work.
 3. Create an `agent/<description>` branch from `main`.
-4. Keep the change limited to the smallest working slice described by the issue.
+4. Keep the change limited to the smallest working end-to-end slice described by the issue.
 5. Run `pnpm check`.
 6. Open a pull request linking the issue.
 
 Do not add host-only shortcuts for behavior that belongs in the public mini-app SDK. Bathroom Pay must remain a normal script rather than a privileged built-in feature.
+
+Do not land a standalone shell, renderer, storage framework, or runtime abstraction unless the same pull request uses it in the working product path.
 
 ## Contract changes
 
