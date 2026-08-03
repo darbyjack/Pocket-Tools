@@ -4,12 +4,12 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  SafeAreaView,
   Share,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { DIAGNOSTIC_APP_ID_PREFIX } from "./src/diagnostics/fixtures";
 import { cleanupAbandonedLifecycleDiagnostics } from "./src/diagnostics/startup";
@@ -261,10 +261,12 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
-      {content}
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style="dark" />
+        {content}
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
