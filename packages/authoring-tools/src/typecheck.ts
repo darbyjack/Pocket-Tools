@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import * as ts from "typescript";
+import * as ts from "typescript-compiler-api";
 
 const ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const DEFAULT_FILE = resolve(ROOT, "pocket-mini-app.mjs");
