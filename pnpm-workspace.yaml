@@ -3,4 +3,4 @@ packages:
   - modules/*
   - packages/*
 
-virtualStoreDirMaxLength: 32
+nodeLinker: hoisted
