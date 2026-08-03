@@ -25,7 +25,6 @@ export interface BooleanSetting extends SettingBase<"boolean", boolean> {}
 export interface NumberSetting extends SettingBase<"number", number> {
   readonly min?: number;
   readonly max?: number;
-  readonly step?: number;
 }
 
 export interface MoneySetting extends SettingBase<"money", number> {
