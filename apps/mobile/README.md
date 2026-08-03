@@ -14,9 +14,24 @@ pnpm install
 pnpm android
 ```
 
-`pnpm android` discovers every `examples/*.miniapp.js` file, regenerates the bundled JSON catalog, generates `apps/mobile/android`, downloads the pinned QuickJS-NG 0.15.1 source during CMake configuration, compiles the native module, installs the debug application, and starts Metro.
+`pnpm android` discovers every `examples/*.miniapp.js` file, regenerates the bundled JSON catalog, generates `apps/mobile/android`, downloads the pinned QuickJS-NG source during CMake configuration, compiles the native module, installs the debug application, and starts Metro.
 
 Adding another example mini app requires only another `.miniapp.js` file. It must not require a new hook, screen, renderer branch, or storage service.
+
+## Run the sandbox instrumentation suite
+
+No GitHub Actions workflow is enabled. With an Android emulator or device connected:
+
+```bash
+pnpm install
+pnpm check
+pnpm sync:mini-apps
+pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
+cd apps/mobile/android
+./gradlew :app:assembleDebug connectedDebugAndroidTest
+```
+
+The instrumentation tests exercise timeout interruption, memory pressure, module restrictions, ambient-global isolation, runtime isolation, bridge validation, promise jobs, captured-log limits, result limits, and recovery after a failed script.
 
 ## Verify process recovery
 
