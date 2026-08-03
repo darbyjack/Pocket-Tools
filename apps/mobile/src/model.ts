@@ -9,6 +9,9 @@ import type {
 } from "@pocket-tools/sdk-contract";
 
 export type {
+  ActionConfirmation,
+  ActionControl,
+  ActionIntent,
   CollectionDefinition,
   MetricNode,
   PageNode,
