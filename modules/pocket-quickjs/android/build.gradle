@@ -26,6 +26,12 @@ android {
       path 'CMakeLists.txt'
     }
   }
+
+  packagingOptions {
+    jniLibs {
+      pickFirsts += ['**/libc++_shared.so']
+    }
+  }
 }
 
 dependencies {
