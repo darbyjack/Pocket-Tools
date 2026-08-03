@@ -6,15 +6,18 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const executeFile = promisify(execFile);
+const require = createRequire(import.meta.url);
 const ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const PROJECT = resolve(ROOT, "packages/sdk-contract/tsconfig.declarations.json");
 const OUTPUT = resolve(ROOT, "packages/sdk-contract/dist");
+const TYPESCRIPT_CLI = require.resolve("typescript/bin/tsc");
 
 async function main(): Promise<void> {
   const mode = process.argv[2];
@@ -46,8 +49,8 @@ async function main(): Promise<void> {
 
 async function emitDeclarations(output: string): Promise<void> {
   await executeFile(
-    process.platform === "win32" ? "tsc.cmd" : "tsc",
-    ["--project", PROJECT, "--outDir", output],
+    process.execPath,
+    [TYPESCRIPT_CLI, "--project", PROJECT, "--outDir", output],
     { cwd: ROOT },
   );
   await rewriteDeclarationImports(output);
