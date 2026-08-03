@@ -98,13 +98,14 @@ test("validates setting defaults, bounds, visibility, and select options", () =>
   assert.ok(paths.includes("settings.dependent.visibleWhen.setting"));
 });
 
-test("validates collection fields and optional metadata", () => {
+test("validates collection fields, optional metadata, and reserved names", () => {
   const definition = {
     ...validDefinition(),
     collections: {
       empty: { fields: {} },
       invalid: {
         fields: {
+          id: { type: "text" },
           title: { type: "text", optional: "yes", minLength: 10, maxLength: 2 },
           mystery: { type: "unknown" },
         },
@@ -113,6 +114,7 @@ test("validates collection fields and optional metadata", () => {
   } as unknown as ReturnType<typeof validDefinition>;
   const paths = validateMiniAppDefinition(definition).map((issue) => issue.path);
   assert.ok(paths.includes("collections.empty.fields"));
+  assert.ok(paths.includes("collections.invalid.fields.id"));
   assert.ok(paths.includes("collections.invalid.fields.title.optional"));
   assert.ok(paths.includes("collections.invalid.fields.title"));
   assert.ok(paths.includes("collections.invalid.fields.mystery.type"));
