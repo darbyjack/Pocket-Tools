@@ -62,7 +62,8 @@ internal object PocketQuickJsBridge {
       val normalizedMessage = error.optString("message").lowercase(Locale.ROOT)
       val sandboxCode = when {
         "interrupted" in normalizedMessage -> "RUNTIME_TIMEOUT"
-        "out of memory" in normalizedMessage -> "RUNTIME_MEMORY_LIMIT"
+        "out of memory" in normalizedMessage || normalizedMessage == "[unprintable]" ->
+          "RUNTIME_MEMORY_LIMIT"
         "stack overflow" in normalizedMessage -> "RUNTIME_STACK_LIMIT"
         else -> return result
       }
