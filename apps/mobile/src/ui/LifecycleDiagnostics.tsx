@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
   getPendingTimerRecoveryCheckpoint,
@@ -9,6 +9,7 @@ import {
   runNamespaceIsolationDiagnostics,
 } from "../diagnostics/lifecycle";
 import type { DiagnosticCheck, TimerRecoveryCheckpoint } from "../diagnostics/types";
+import { ScreenScrollView } from "./ScreenScrollView";
 
 export interface LifecycleDiagnosticsProps {
   readonly onBack: () => void;
@@ -103,7 +104,7 @@ export function LifecycleDiagnostics({ onBack }: LifecycleDiagnosticsProps) {
   }, []);
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScreenScrollView contentContainerStyle={styles.content}>
       <View style={styles.headingRow}>
         <Pressable accessibilityRole="button" onPress={onBack} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>Back</Text>
@@ -228,7 +229,7 @@ export function LifecycleDiagnostics({ onBack }: LifecycleDiagnosticsProps) {
       )}
 
       <ActionButton disabled={busy} label="Reset diagnostic state" onPress={reset} />
-    </ScrollView>
+    </ScreenScrollView>
   );
 }
 
