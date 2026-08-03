@@ -16,7 +16,7 @@ permissions:
 jobs:
   checks:
     name: Checks
-    runs-on: self-hosted
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 20
 
     steps:
@@ -42,7 +42,7 @@ jobs:
   android:
     name: Android development build
     needs: checks
-    runs-on: self-hosted
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 45
 
     steps:
