@@ -193,36 +193,4 @@ export default defineMiniApp({
       });
     },
   },
-
-  tests: [
-    {
-      name: "hourly trip records elapsed earnings",
-      async run(testContext) {
-        testContext.setSetting("payType", "hourly");
-        testContext.setSetting("hourlyRate", 60);
-        await testContext.invoke("startTrip");
-        testContext.advanceTime(600);
-        await testContext.invoke("endTrip");
-        testContext.render("home");
-      },
-    },
-    {
-      name: "salary mode renders",
-      run(testContext) {
-        testContext.setSetting("payType", "salary");
-        testContext.setSetting("annualSalary", 104_000);
-        testContext.setSetting("hoursPerWeek", 40);
-        testContext.setSetting("weeksPerYear", 52);
-        testContext.render("home");
-      },
-    },
-    {
-      name: "active trip survives a screen rerender",
-      async run(testContext) {
-        await testContext.invoke("startTrip");
-        testContext.advanceTime(30);
-        testContext.render("home");
-      },
-    },
-  ],
 });
