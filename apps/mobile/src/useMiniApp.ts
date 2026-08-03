@@ -16,7 +16,6 @@ import { validatePageNode } from "./runtime/ui-validation";
 import {
   applyRuntimeOperations,
   ensureSettingDefaults,
-  initializeDatabase,
   loadRuntimeSnapshot,
   setSetting,
 } from "./storage/database";
@@ -136,7 +135,6 @@ export function useMiniApp(
     setLoading(true);
     void (async () => {
       try {
-        await initializeDatabase();
         const nextInspection = await inspectMiniApp(source);
         if (!nextInspection.screens.includes("home")) {
           throw new Error("INVALID_SCRIPT: A home screen is required.");
