@@ -19,16 +19,19 @@ def pocketToolsCmakeRoot = new File(
 )
 
 gradle.beforeProject { project ->
-  if (!pocketToolsShortCmakeStagingEnabled) {
-    return
-  }
-
   ["com.android.application", "com.android.library"].each { pluginId ->
     project.pluginManager.withPlugin(pluginId) {
       def androidExtension = project.extensions.getByName("android")
-      def moduleDirectory = project.path.replace(":", "_")
-      androidExtension.externalNativeBuild.cmake.buildStagingDirectory =
-        new File(pocketToolsCmakeRoot, moduleDirectory)
+
+      androidExtension.packagingOptions.jniLibs.pickFirsts += [
+        "**/libc++_shared.so"
+      ]
+
+      if (pocketToolsShortCmakeStagingEnabled) {
+        def moduleDirectory = project.path.replace(":", "_")
+        androidExtension.externalNativeBuild.cmake.buildStagingDirectory =
+          new File(pocketToolsCmakeRoot, moduleDirectory)
+      }
     }
   }
 }
