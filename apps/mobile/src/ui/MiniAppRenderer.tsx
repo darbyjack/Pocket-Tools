@@ -11,6 +11,11 @@ import type {
   TimerSnapshot,
   UiNode,
 } from "../model";
+import {
+  formatDateTime,
+  formatDisplayValue,
+  formatDuration,
+} from "../runtime/display-format";
 import { metricValue, timerElapsedSeconds } from "../runtime/protocol";
 
 interface MiniAppRendererProps {
@@ -89,7 +94,9 @@ function NodeView({
       return (
         <View style={styles.metric}>
           <Text style={styles.metricLabel}>{node.label}</Text>
-          <Text style={styles.metricValue}>{formatValue(value, node.format)}</Text>
+          <Text style={styles.metricValue}>
+            {formatDisplayValue(value, node.format)}
+          </Text>
         </View>
       );
     }
@@ -123,7 +130,7 @@ function NodeView({
               <View key={entry.label} style={styles.summaryEntry}>
                 <Text style={styles.summaryLabel}>{entry.label}</Text>
                 <Text style={styles.summaryValue}>
-                  {formatValue(entry.value, entry.format)}
+                  {formatDisplayValue(entry.value, entry.format)}
                 </Text>
               </View>
             ))}
@@ -160,7 +167,7 @@ function NodeView({
       return (
         <View style={styles.listItem}>
           <View style={styles.listCopy}>
-            <Text style={styles.listTitle}>{formatDate(node.title)}</Text>
+            <Text style={styles.listTitle}>{formatDateTime(node.title)}</Text>
             {node.subtitle === undefined ? null : (
               <Text style={styles.listSubtitle}>{node.subtitle}</Text>
             )}
@@ -182,37 +189,6 @@ function NodeView({
     case "page":
       return null;
   }
-}
-
-function formatValue(
-  value: string | number,
-  format: "plain" | "money" | "duration" | "number" | undefined,
-): string {
-  if (format === "money") {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 2,
-    }).format(Number(value));
-  }
-  if (format === "duration") return formatDuration(Number(value));
-  if (format === "number") return new Intl.NumberFormat().format(Number(value));
-  return String(value);
-}
-
-function formatDuration(seconds: number): string {
-  const totalSeconds = Math.max(0, Math.floor(seconds));
-  const hours = Math.floor(totalSeconds / 3_600);
-  const minutes = Math.floor((totalSeconds % 3_600) / 60);
-  const remaining = totalSeconds % 60;
-  return [hours, minutes, remaining]
-    .map((part) => String(part).padStart(2, "0"))
-    .join(":");
-}
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
 const styles = StyleSheet.create({
