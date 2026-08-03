@@ -32,7 +32,9 @@ export interface MiniAppInspection {
 export interface RuntimeSnapshot {
   readonly mode: "inspect" | "render" | "action";
   readonly screen?: string;
+  readonly screenInput?: SerializableValue;
   readonly action?: string;
+  readonly actionInput?: SerializableValue;
   readonly now: string;
   readonly settings: Readonly<Record<string, SerializableValue>>;
   readonly records: Readonly<Record<string, readonly StoredRecord[]>>;
