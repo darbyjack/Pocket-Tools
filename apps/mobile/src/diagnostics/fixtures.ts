@@ -1,3 +1,5 @@
+export { DIAGNOSTIC_APP_ID_PREFIX } from "../storage/namespaces";
+
 export function createLifecycleDiagnosticSource(
   appId: string,
   appName: string,
