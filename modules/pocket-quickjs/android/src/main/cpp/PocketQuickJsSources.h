@@ -25,6 +25,7 @@ export const setting = Object.freeze({
 });
 
 export const ui = Object.freeze({
+  action: (definition) => ({ ...definition }),
   page: (definition) => typed("page", definition),
   section: (definition) => typed("section", definition),
   row: (definition) => typed("row", definition),
@@ -71,6 +72,7 @@ inline constexpr char kRunner[] = R"POCKET_JS(
   const appIdPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
   const recordIdPattern = /^[a-f0-9]{32}$/;
   const systemFields = new Set(["id", "createdAt", "updatedAt"]);
+  const actionKeys = ["label", "action", "input", "intent", "disabled", "confirmation"];
 
   const assertSerializable = (value, path) => {
     const seen = new Set();
@@ -134,9 +136,13 @@ inline constexpr char kRunner[] = R"POCKET_JS(
   ) {
     fail("INVALID_MANIFEST", "manifest.name must contain 1 to 80 characters.");
   }
-  if (definition.manifest.sdkVersion !== 1) {
-    fail("UNSUPPORTED_SDK_VERSION", "This host supports frozen sdkVersion 1 only.");
+  const sdkVersion = definition.manifest.sdkVersion === 1
+    ? "1.0"
+    : definition.manifest.sdkVersion;
+  if (sdkVersion !== "1.0" && sdkVersion !== "1.1") {
+    fail("UNSUPPORTED_SDK_VERSION", "This host supports sdkVersion 1.0 and 1.1.");
   }
+  const supportsSdk11 = sdkVersion === "1.1";
 
   for (const groupName of ["settings", "collections", "screens", "actions"]) {
     const group = definition[groupName] ?? {};
@@ -472,6 +478,56 @@ inline constexpr char kRunner[] = R"POCKET_JS(
     },
   });
 
+  const validateActionControl = (control, path, allowType = false) => {
+    if (!isPlainObject(control)) fail("INVALID_UI_TREE", `${path} must be a plain object.`);
+    exactKeys(control, allowType ? ["type", ...actionKeys] : actionKeys, path);
+    if (typeof control.label !== "string" || control.label.length < 1 || control.label.length > 120) {
+      fail("INVALID_UI_TREE", `${path}.label must contain 1 to 120 characters.`);
+    }
+    if (!identifierPattern.test(control.action ?? "") || typeof actionDefinitions[control.action] !== "function") {
+      fail("INVALID_UI_TREE", `Unknown action target: ${String(control.action)}`);
+    }
+    if (control.input !== undefined) assertSerializable(control.input, `${path}.input`);
+    if (control.intent !== undefined && control.intent !== "default" && control.intent !== "destructive") {
+      fail("INVALID_UI_TREE", `${path}.intent must be default or destructive.`);
+    }
+    if (control.disabled !== undefined && typeof control.disabled !== "boolean") {
+      fail("INVALID_UI_TREE", `${path}.disabled must be a boolean.`);
+    }
+    if (control.confirmation !== undefined) {
+      if (!isPlainObject(control.confirmation)) {
+        fail("INVALID_UI_TREE", `${path}.confirmation must be a plain object.`);
+      }
+      exactKeys(
+        control.confirmation,
+        ["title", "message", "confirmLabel", "cancelLabel"],
+        `${path}.confirmation`,
+      );
+      const fields = [
+        ["title", 1, 120, true],
+        ["message", 0, 500, false],
+        ["confirmLabel", 1, 80, false],
+        ["cancelLabel", 1, 80, false],
+      ];
+      for (const [name, minimum, maximum, required] of fields) {
+        const value = control.confirmation[name];
+        if (value === undefined && !required) continue;
+        if (typeof value !== "string" || value.length < minimum || value.length > maximum) {
+          fail(
+            "INVALID_UI_TREE",
+            `${path}.confirmation.${name} must contain ${minimum} to ${maximum} characters.`,
+          );
+        }
+      }
+    }
+    if (
+      !supportsSdk11 &&
+      (control.intent !== undefined || control.disabled !== undefined || control.confirmation !== undefined)
+    ) {
+      fail("INVALID_UI_TREE", "Action intent, disabled state, and confirmation require SDK 1.1.");
+    }
+  };
+
   const validateUiTree = (page) => {
     const allowed = new Set([
       "page", "section", "row", "column", "heading", "text", "metric", "timer",
@@ -479,7 +535,7 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       "empty-state", "list-item", "list", "summary",
     ]);
     let count = 0;
-    const visit = (node, depth) => {
+    const visit = (node, depth, path = "page") => {
       if (!isPlainObject(node) || !allowed.has(node.type)) {
         fail("INVALID_UI_TREE", "The script returned an unsupported UI node.");
       }
@@ -487,11 +543,20 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       if (count > 512 || depth > 16) {
         fail("INVALID_UI_TREE", "The rendered UI tree exceeds host limits.");
       }
-      if (node.type === "button" && typeof actionDefinitions[node.action] !== "function") {
-        fail("INVALID_UI_TREE", `Unknown action target: ${String(node.action)}`);
+      if (node.type === "button") {
+        validateActionControl(node, path, true);
       }
       if (node.type === "navigation" && typeof screenDefinitions[node.screen] !== "function") {
         fail("INVALID_UI_TREE", `Unknown screen target: ${String(node.screen)}`);
+      }
+      if (node.type === "list-item" && node.actions !== undefined) {
+        if (!supportsSdk11) fail("INVALID_UI_TREE", "List-item actions require SDK 1.1.");
+        if (!Array.isArray(node.actions) || node.actions.length < 1 || node.actions.length > 3) {
+          fail("INVALID_UI_TREE", "List items may contain between 1 and 3 actions.");
+        }
+        for (let index = 0; index < node.actions.length; index += 1) {
+          validateActionControl(node.actions[index], `${path}.actions[${index}]`);
+        }
       }
       if (["text-input", "number-input", "toggle", "select"].includes(node.type)) {
         const setting = settingDefinitions[node.setting];
@@ -509,12 +574,16 @@ inline constexpr char kRunner[] = R"POCKET_JS(
         }
       }
       if (Array.isArray(node.children)) {
-        for (const child of node.children) visit(child, depth + 1);
+        for (let index = 0; index < node.children.length; index += 1) {
+          visit(node.children[index], depth + 1, `${path}.children[${index}]`);
+        }
       }
       if (Array.isArray(node.items)) {
-        for (const item of node.items) visit(item, depth + 1);
+        for (let index = 0; index < node.items.length; index += 1) {
+          visit(node.items[index], depth + 1, `${path}.items[${index}]`);
+        }
       }
-      if (node.emptyState !== undefined) visit(node.emptyState, depth + 1);
+      if (node.emptyState !== undefined) visit(node.emptyState, depth + 1, `${path}.emptyState`);
     };
     visit(page, 0);
     if (page.type !== "page") fail("INVALID_UI_TREE", "A screen must return one page node.");
@@ -522,7 +591,7 @@ inline constexpr char kRunner[] = R"POCKET_JS(
   };
 
   const inspection = {
-    manifest: definition.manifest,
+    manifest: { ...definition.manifest, sdkVersion },
     settings: settingDefinitions,
     collections: collectionDefinitions,
     screens: Object.keys(screenDefinitions),
