@@ -39,7 +39,8 @@ export async function runNamespaceIsolationDiagnostics(): Promise<readonly Diagn
   const checks: DiagnosticCheck[] = [];
 
   try {
-    await Promise.all([cleanupDiagnosticApp(appA.id), cleanupDiagnosticApp(appB.id)]);
+    await cleanupDiagnosticApp(appA.id);
+    await cleanupDiagnosticApp(appB.id);
     await installDiagnosticApp(appA);
     await installDiagnosticApp(appB);
 
@@ -130,7 +131,8 @@ export async function runNamespaceIsolationDiagnostics(): Promise<readonly Diagn
       failed("diagnostic-suite", "Lifecycle diagnostic suite failed", errorMessage(caught)),
     );
   } finally {
-    await Promise.allSettled([cleanupDiagnosticApp(appA.id), cleanupDiagnosticApp(appB.id)]);
+    await cleanupDiagnosticApp(appA.id).catch(() => undefined);
+    await cleanupDiagnosticApp(appB.id).catch(() => undefined);
   }
 
   return checks;
