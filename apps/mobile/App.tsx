@@ -1,111 +1,255 @@
 import { StatusBar } from "expo-status-bar";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Pressable,
+  Alert,
   SafeAreaView,
-  ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
 import bundledMiniApps from "./src/generated/bundled-mini-apps.json";
-import { MiniAppRenderer } from "./src/ui/MiniAppRenderer";
-import { useMiniApp } from "./src/useMiniApp";
+import { inspectMiniApp } from "./src/runtime/quickjs";
+import {
+  deleteInstalledMiniApp,
+  initializeDatabase,
+  listInstalledMiniApps,
+  rollbackInstalledMiniApp,
+  seedBundledMiniAppsOnce,
+  type InstalledMiniApp,
+} from "./src/storage/database";
+import {
+  MiniAppEditor,
+  type MiniAppEditorMode,
+} from "./src/ui/MiniAppEditor";
+import { MiniAppLibrary } from "./src/ui/MiniAppLibrary";
+import { InstalledMiniAppRunner } from "./src/ui/InstalledMiniAppRunner";
+
+type Route =
+  | { readonly name: "library" }
+  | { readonly name: "run"; readonly appId: string }
+  | {
+      readonly name: "editor";
+      readonly mode: MiniAppEditorMode;
+      readonly appId: string | null;
+    };
 
 export default function App() {
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(
-    bundledMiniApps[0]?.fileName ?? null,
+  const [apps, setApps] = useState<readonly InstalledMiniApp[]>([]);
+  const [route, setRoute] = useState<Route>({ name: "library" });
+  const [loading, setLoading] = useState(true);
+  const [startupError, setStartupError] = useState<string | null>(null);
+
+  const refreshApps = useCallback(async () => {
+    const installed = await listInstalledMiniApps();
+    setApps(installed);
+    return installed;
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        await initializeDatabase();
+        const seeds = await Promise.all(
+          bundledMiniApps.map(async (entry) => ({
+            inspection: await inspectMiniApp(entry.source),
+            source: entry.source,
+          })),
+        );
+        await seedBundledMiniAppsOnce(seeds);
+        const installed = await listInstalledMiniApps();
+        if (!cancelled) setApps(installed);
+      } catch (caught) {
+        if (!cancelled) {
+          setStartupError(caught instanceof Error ? caught.message : String(caught));
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const exportSource = useCallback(async (app: InstalledMiniApp) => {
+    try {
+      await Share.share({
+        title: `${app.name}.miniapp.js`,
+        message: app.activeSource,
+      });
+    } catch (caught) {
+      Alert.alert(
+        "Export failed",
+        caught instanceof Error ? caught.message : String(caught),
+      );
+    }
+  }, []);
+
+  const removeApp = useCallback(
+    (app: InstalledMiniApp) => {
+      const remove = async (deleteData: boolean) => {
+        try {
+          await deleteInstalledMiniApp(app.id, deleteData);
+          await refreshApps();
+          setRoute({ name: "library" });
+        } catch (caught) {
+          Alert.alert(
+            "Remove failed",
+            caught instanceof Error ? caught.message : String(caught),
+          );
+        }
+      };
+
+      Alert.alert(
+        `Remove ${app.name}?`,
+        "You can keep its isolated settings, records, and timers for a later reinstall, or remove all of its data now.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove app",
+            style: "destructive",
+            onPress: () => void remove(false),
+          },
+          {
+            text: "Remove app and data",
+            style: "destructive",
+            onPress: () => void remove(true),
+          },
+        ],
+      );
+    },
+    [refreshApps],
   );
-  const selectedMiniApp = useMemo(
-    () =>
-      bundledMiniApps.find(
-        (miniApp) => miniApp.fileName === selectedFileName,
-      ) ?? null,
-    [selectedFileName],
+
+  const rollback = useCallback(
+    (app: InstalledMiniApp) => {
+      Alert.alert(
+        `Roll back ${app.name}?`,
+        "The current source and last-known-good source will be swapped. App data is not changed.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Roll back",
+            onPress: () => {
+              void (async () => {
+                try {
+                  const inspection = await inspectMiniApp(
+                    app.lastKnownGoodSource,
+                  );
+                  await rollbackInstalledMiniApp(app.id, inspection);
+                  await refreshApps();
+                  setRoute({ name: "run", appId: app.id });
+                } catch (caught) {
+                  Alert.alert(
+                    "Rollback failed",
+                    caught instanceof Error ? caught.message : String(caught),
+                  );
+                }
+              })();
+            },
+          },
+        ],
+      );
+    },
+    [refreshApps],
   );
-  const {
-    error,
-    inspection,
-    loading,
-    page,
-    snapshot,
-    invokeAction,
-    navigate,
-    updateSetting,
-  } = useMiniApp(selectedMiniApp?.source ?? null);
+
+  const handleSaved = useCallback(
+    async (saved: InstalledMiniApp) => {
+      await refreshApps();
+      setRoute({ name: "run", appId: saved.id });
+    },
+    [refreshApps],
+  );
+
+  const selectedApp =
+    route.name === "library"
+      ? null
+      : apps.find((app) => app.id === route.appId) ?? null;
+
+  let content;
+  if (loading) {
+    content = (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" />
+        <Text style={styles.loadingText}>Loading installed mini apps…</Text>
+      </View>
+    );
+  } else if (startupError !== null) {
+    content = (
+      <View accessibilityRole="alert" style={styles.startupError}>
+        <Text style={styles.startupErrorTitle}>Pocket Tools could not start</Text>
+        <Text selectable style={styles.startupErrorText}>
+          {startupError}
+        </Text>
+      </View>
+    );
+  } else if (route.name === "library") {
+    content = (
+      <MiniAppLibrary
+        apps={apps}
+        onCreate={() =>
+          setRoute({ name: "editor", mode: "create", appId: null })
+        }
+        onDelete={removeApp}
+        onDuplicate={(app) =>
+          setRoute({ name: "editor", mode: "duplicate", appId: app.id })
+        }
+        onEdit={(app) =>
+          setRoute({ name: "editor", mode: "edit", appId: app.id })
+        }
+        onExport={(app) => void exportSource(app)}
+        onOpen={(app) => setRoute({ name: "run", appId: app.id })}
+      />
+    );
+  } else if (route.name === "editor") {
+    content = (
+      <MiniAppEditor
+        installed={selectedApp}
+        key={`${route.mode}:${route.appId ?? "new"}`}
+        mode={route.mode}
+        onCancel={() => setRoute({ name: "library" })}
+        onSaved={(saved) => void handleSaved(saved)}
+      />
+    );
+  } else if (selectedApp === null) {
+    content = (
+      <View style={styles.startupError}>
+        <Text style={styles.startupErrorTitle}>Mini app not found</Text>
+        <Text style={styles.startupErrorText}>
+          Return to the library and select an installed script.
+        </Text>
+      </View>
+    );
+  } else {
+    content = (
+      <InstalledMiniAppRunner
+        app={selectedApp}
+        onBack={() => setRoute({ name: "library" })}
+        onDuplicate={() =>
+          setRoute({
+            name: "editor",
+            mode: "duplicate",
+            appId: selectedApp.id,
+          })
+        }
+        onEdit={() =>
+          setRoute({ name: "editor", mode: "edit", appId: selectedApp.id })
+        }
+        onExport={() => void exportSource(selectedApp)}
+        onRollback={() => rollback(selectedApp)}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
-      <ScrollView contentContainerStyle={styles.content}>
-        {bundledMiniApps.length > 1 ? (
-          <View style={styles.library}>
-            <Text style={styles.libraryTitle}>Mini apps</Text>
-            <View style={styles.libraryRow}>
-              {bundledMiniApps.map((miniApp) => {
-                const selected = miniApp.fileName === selectedFileName;
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    key={miniApp.fileName}
-                    onPress={() => setSelectedFileName(miniApp.fileName)}
-                    style={[
-                      styles.libraryButton,
-                      selected ? styles.libraryButtonSelected : null,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.libraryButtonText,
-                        selected ? styles.libraryButtonTextSelected : null,
-                      ]}
-                    >
-                      {miniApp.fileName.replace(/\.miniapp\.js$/, "")}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        ) : null}
-
-        {selectedMiniApp === null ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No mini apps are available</Text>
-            <Text style={styles.emptyText}>
-              Add a script to the bundled mini-app catalog.
-            </Text>
-          </View>
-        ) : null}
-
-        {loading ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" />
-            <Text style={styles.loadingText}>Starting the mini-app runtime…</Text>
-          </View>
-        ) : null}
-
-        {error === null ? null : (
-          <View accessibilityRole="alert" style={styles.errorCard}>
-            <Text style={styles.errorTitle}>Pocket Tools could not continue</Text>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {page !== null && snapshot !== null && inspection !== null ? (
-          <MiniAppRenderer
-            page={page}
-            settings={inspection.settings}
-            settingValues={snapshot.settings}
-            timers={snapshot.timers}
-            onAction={invokeAction}
-            onNavigate={navigate}
-            onSettingChange={updateSetting}
-          />
-        ) : null}
-      </ScrollView>
+      {content}
     </SafeAreaView>
   );
 }
@@ -115,86 +259,34 @@ const styles = StyleSheet.create({
     backgroundColor: "#eef1f5",
     flex: 1,
   },
-  content: {
-    gap: 16,
-    padding: 18,
-    paddingBottom: 40,
-  },
-  library: {
-    gap: 8,
-  },
-  libraryTitle: {
-    color: "#344054",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  libraryRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  libraryButton: {
-    backgroundColor: "#ffffff",
-    borderColor: "#d0d5dd",
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  libraryButtonSelected: {
-    backgroundColor: "#172033",
-    borderColor: "#172033",
-  },
-  libraryButtonText: {
-    color: "#344054",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  libraryButtonTextSelected: {
-    color: "#ffffff",
-  },
   centered: {
     alignItems: "center",
+    flex: 1,
     gap: 12,
     justifyContent: "center",
-    minHeight: 300,
+    padding: 24,
   },
   loadingText: {
     color: "#475467",
     fontSize: 15,
   },
-  errorCard: {
+  startupError: {
     backgroundColor: "#fff1f0",
     borderColor: "#fda29b",
     borderRadius: 16,
     borderWidth: 1,
-    gap: 5,
+    gap: 6,
+    margin: 18,
     padding: 16,
   },
-  errorTitle: {
+  startupErrorTitle: {
     color: "#912018",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  errorText: {
-    color: "#b42318",
-    fontSize: 14,
-  },
-  emptyCard: {
-    alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 18,
-    gap: 5,
-    padding: 24,
-  },
-  emptyTitle: {
-    color: "#344054",
     fontSize: 17,
-    fontWeight: "700",
+    fontWeight: "800",
   },
-  emptyText: {
-    color: "#667085",
-    fontSize: 14,
-    textAlign: "center",
+  startupErrorText: {
+    color: "#b42318",
+    fontFamily: "monospace",
+    fontSize: 13,
   },
 });
