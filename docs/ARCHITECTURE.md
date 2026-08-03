@@ -62,6 +62,21 @@ The QuickJS module loader resolves only host-provided virtual modules. External 
 
 An API is not added until a working mini app needs it.
 
+## First implementation slice
+
+The next pull request must implement one narrow but complete path:
+
+1. Launch the Android host.
+2. Load the bundled Bathroom Pay script through QuickJS-NG.
+3. Validate the script against the public contract.
+4. Render the home screen with native components.
+5. Read settings.
+6. Start, recover, and stop the durable timer.
+7. Persist and list completed trips.
+8. Show today's totals.
+
+That work may be internally modular, but it must land as one functioning vertical slice. Standalone shells, renderers, storage frameworks, or runtime abstractions that do not produce the working path are not separate milestones.
+
 ## Execution lifecycle
 
 1. The user pastes source into the editor.
