@@ -30,8 +30,14 @@ interface MiniAppRendererProps {
   readonly settings: Readonly<Record<string, SettingDefinition>>;
   readonly settingValues: Readonly<Record<string, SerializableValue>>;
   readonly timers: Readonly<Record<string, TimerSnapshot>>;
-  readonly onAction: (action: string) => Promise<void>;
-  readonly onNavigate: (screen: string) => Promise<void>;
+  readonly onAction: (
+    action: string,
+    input?: SerializableValue,
+  ) => Promise<void>;
+  readonly onNavigate: (
+    screen: string,
+    input?: SerializableValue,
+  ) => Promise<void>;
   readonly onSettingChange: (
     name: string,
     value: SerializableValue,
@@ -86,8 +92,14 @@ interface NodeViewProps {
   readonly settingValues: Readonly<Record<string, SerializableValue>>;
   readonly timers: Readonly<Record<string, TimerSnapshot>>;
   readonly nowMilliseconds: number;
-  readonly onAction: (action: string) => Promise<void>;
-  readonly onNavigate: (screen: string) => Promise<void>;
+  readonly onAction: (
+    action: string,
+    input?: SerializableValue,
+  ) => Promise<void>;
+  readonly onNavigate: (
+    screen: string,
+    input?: SerializableValue,
+  ) => Promise<void>;
   readonly onSettingChange: (
     name: string,
     value: SerializableValue,
@@ -202,7 +214,7 @@ function NodeView(props: NodeViewProps) {
       return (
         <Pressable
           accessibilityRole="button"
-          onPress={() => void onAction(node.action)}
+          onPress={() => void onAction(node.action, node.input)}
           style={styles.primaryButton}
         >
           <Text style={styles.primaryButtonText}>{node.label}</Text>
@@ -212,7 +224,7 @@ function NodeView(props: NodeViewProps) {
       return (
         <Pressable
           accessibilityRole="button"
-          onPress={() => void onNavigate(node.screen)}
+          onPress={() => void onNavigate(node.screen, node.input)}
           style={styles.secondaryButton}
         >
           <Text style={styles.secondaryButtonText}>{node.label}</Text>
