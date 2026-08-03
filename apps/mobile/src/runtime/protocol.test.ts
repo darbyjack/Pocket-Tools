@@ -98,3 +98,34 @@ test("rejects malformed native responses", () => {
       error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
   );
 });
+
+test("rejects invalid UI in an otherwise valid native response", () => {
+  assert.throws(
+    () =>
+      parseRuntimeResponse(
+        JSON.stringify({
+          ok: true,
+          value: {
+            operations: [],
+            page: {
+              type: "page",
+              title: "Unsafe",
+              children: [
+                {
+                  type: "metric",
+                  label: "Amount",
+                  value: 10,
+                  format: "money",
+                  style: { backgroundColor: "red" },
+                },
+              ],
+            },
+          },
+          logs: [],
+          logsTruncated: false,
+        }),
+      ),
+    (error: unknown) =>
+      error instanceof MiniAppRuntimeError && error.code === "INVALID_UI_TREE",
+  );
+});
