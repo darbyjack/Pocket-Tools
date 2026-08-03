@@ -3,7 +3,6 @@ import type { SerializableValue } from "./values.ts";
 interface FieldBase<TType extends string> {
   readonly type: TType;
   readonly optional?: boolean;
-  readonly default?: SerializableValue;
 }
 
 export interface TextField extends FieldBase<"text"> {
@@ -16,22 +15,13 @@ export interface NumberField extends FieldBase<"number"> {
 }
 
 export interface MoneyField extends FieldBase<"money"> {
-  readonly currency?: string;
   readonly min?: number;
   readonly max?: number;
 }
 
-export interface BooleanField extends FieldBase<"boolean"> {}
 export interface DateTimeField extends FieldBase<"datetime"> {}
-export interface JsonField extends FieldBase<"json"> {}
 
-export type FieldDefinition =
-  | TextField
-  | NumberField
-  | MoneyField
-  | BooleanField
-  | DateTimeField
-  | JsonField;
+export type FieldDefinition = TextField | NumberField | MoneyField | DateTimeField;
 
 export const field = {
   text(definition: Omit<TextField, "type"> = {}): TextField {
@@ -43,39 +33,24 @@ export const field = {
   money(definition: Omit<MoneyField, "type"> = {}): MoneyField {
     return { type: "money", ...definition };
   },
-  boolean(definition: Omit<BooleanField, "type"> = {}): BooleanField {
-    return { type: "boolean", ...definition };
-  },
   datetime(definition: Omit<DateTimeField, "type"> = {}): DateTimeField {
     return { type: "datetime", ...definition };
   },
-  json(definition: Omit<JsonField, "type"> = {}): JsonField {
-    return { type: "json", ...definition };
-  },
 } as const;
-
-export interface CollectionIndex {
-  readonly fields: readonly string[];
-  readonly unique?: boolean;
-}
 
 export interface CollectionDefinition {
   readonly fields: Readonly<Record<string, FieldDefinition>>;
-  readonly indexes?: readonly CollectionIndex[];
 }
 
 export function collection(
   fields: Readonly<Record<string, FieldDefinition>>,
-  options: Omit<CollectionDefinition, "fields"> = {},
 ): CollectionDefinition {
-  return { fields, ...options };
+  return { fields };
 }
-
-export type QueryOperator = "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "in";
 
 export interface QueryFilter {
   readonly field: string;
-  readonly operator: QueryOperator;
+  readonly operator: "gte";
   readonly value: SerializableValue;
 }
 
@@ -88,7 +63,6 @@ export interface CollectionQuery {
   readonly where?: readonly QueryFilter[];
   readonly orderBy?: readonly QueryOrder[];
   readonly limit?: number;
-  readonly offset?: number;
 }
 
 export interface StoredRecord {
@@ -100,18 +74,11 @@ export interface StoredRecord {
 
 export interface CollectionClient {
   insert(record: Readonly<Record<string, SerializableValue>>): StoredRecord;
-  get(id: string): StoredRecord | null;
-  update(id: string, changes: Readonly<Record<string, SerializableValue>>): StoredRecord;
-  remove(id: string): void;
   query(query?: CollectionQuery): readonly StoredRecord[];
   count(query?: CollectionQuery): number;
   sum(fieldName: string, query?: CollectionQuery): number;
-  average(fieldName: string, query?: CollectionQuery): number | null;
-  minimum(fieldName: string, query?: CollectionQuery): number | null;
-  maximum(fieldName: string, query?: CollectionQuery): number | null;
 }
 
 export interface DataClient {
   collection(name: string): CollectionClient;
-  transaction<TResult extends SerializableValue>(callback: () => TResult): TResult;
 }
