@@ -5,7 +5,10 @@ import {
 } from "quickjs-emscripten-core";
 
 import { findImportViolation } from "./imports.ts";
-import { readEmbeddedRuntimeSources } from "./runtime-sources.ts";
+import {
+  readEmbeddedRuntimeSources,
+  RuntimeSourceError,
+} from "./runtime-sources.ts";
 
 const SDK_MODULE = "@pocket-tools/sdk";
 const MINI_APP_MODULE = "pocket-mini-app.mjs";
@@ -55,10 +58,19 @@ export async function executeInspection(source: string): Promise<unknown> {
 }
 
 async function executeEmbeddedRuntime(source: string, request: InspectionRequest): Promise<unknown> {
-  const [{ sdk, runner }, quickJs] = await Promise.all([
-    readEmbeddedRuntimeSources(),
-    quickJsModule,
-  ]);
+  let initialization;
+  try {
+    initialization = await Promise.all([
+      readEmbeddedRuntimeSources(),
+      quickJsModule,
+    ]);
+  } catch (caught) {
+    if (caught instanceof RuntimeSourceError) {
+      throw new AuthoringRuntimeError(caught.code, caught.message);
+    }
+    throw caught;
+  }
+  const [{ sdk, runner }, quickJs] = initialization;
   const runtime = quickJs.newRuntime();
   runtime.setMemoryLimit(MEMORY_LIMIT_BYTES);
   runtime.setMaxStackSize(STACK_LIMIT_BYTES);
