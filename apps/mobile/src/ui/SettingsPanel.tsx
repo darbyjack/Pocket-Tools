@@ -24,10 +24,13 @@ export function SettingsPanel({
   values,
   onChange,
 }: SettingsPanelProps) {
+  const entries = Object.entries(definitions);
+  if (entries.length === 0) return null;
+
   return (
     <View style={styles.panel}>
-      <Text style={styles.title}>Pay settings</Text>
-      {Object.entries(definitions).map(([name, definition]) =>
+      <Text style={styles.title}>Settings</Text>
+      {entries.map(([name, definition]) =>
         settingIsVisible(definition, values) ? (
           <SettingControl
             key={name}
@@ -133,6 +136,7 @@ function NumberSetting({
       <Text style={styles.label}>{definition.label}</Text>
       <TextInput
         accessibilityLabel={definition.label}
+        accessibilityHint="Enter a numeric value"
         inputMode="decimal"
         onBlur={commit}
         onChangeText={setDraft}

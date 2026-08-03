@@ -5,6 +5,7 @@ import type {
   SettingDefinition,
   TimerSnapshot,
 } from "../model.ts";
+import { validatePageNode } from "./ui-validation.ts";
 
 const LOG_LEVELS = new Set(["log", "info", "warn", "error"]);
 
@@ -91,7 +92,20 @@ export function parseRuntimeResponse(json: string): RuntimeSuccess {
     );
   }
 
-  return parsed as unknown as RuntimeSuccess;
+  const success = parsed as unknown as RuntimeSuccess;
+  if (success.value.page !== undefined) {
+    try {
+      validatePageNode(success.value.page);
+    } catch (cause) {
+      throw new MiniAppRuntimeError(
+        "INVALID_UI_TREE",
+        cause instanceof Error ? cause.message : "The script returned invalid UI output.",
+        { cause, logs, logsTruncated: parsed.logsTruncated },
+      );
+    }
+  }
+
+  return success;
 }
 
 function parseLogs(value: unknown): readonly RuntimeLogEntry[] {
