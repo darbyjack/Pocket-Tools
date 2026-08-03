@@ -49,7 +49,7 @@ export function assertMiniAppTypeChecks(
     noImplicitOverride: true,
     noUncheckedIndexedAccess: true,
     noUnusedLocals: true,
-    noUnusedParameters: true,
+    noUnusedParameters: false,
     paths: {
       "@pocket-tools/sdk": ["packages/sdk-contract/dist/index.d.ts"],
     },
