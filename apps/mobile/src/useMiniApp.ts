@@ -11,6 +11,7 @@ import {
   invokeMiniAppAction,
   renderMiniApp,
 } from "./runtime/quickjs";
+import { validatePageNode } from "./runtime/ui-validation";
 import {
   applyRuntimeOperations,
   ensureSettingDefaults,
@@ -24,8 +25,10 @@ export interface MiniAppState {
   readonly inspection: MiniAppInspection | null;
   readonly loading: boolean;
   readonly page: PageNode | null;
+  readonly screen: string;
   readonly snapshot: RuntimeSnapshot | null;
   readonly invokeAction: (action: string) => Promise<void>;
+  readonly navigate: (screen: string) => Promise<void>;
   readonly updateSetting: (name: string, value: SerializableValue) => Promise<void>;
 }
 
@@ -37,21 +40,27 @@ interface RenderedMiniApp {
 export function useMiniApp(source: string | null): MiniAppState {
   const [inspection, setInspection] = useState<MiniAppInspection | null>(null);
   const [page, setPage] = useState<PageNode | null>(null);
+  const [screen, setScreen] = useState("home");
   const [snapshot, setSnapshot] = useState<RuntimeSnapshot | null>(null);
   const [loading, setLoading] = useState(source !== null);
   const [error, setError] = useState<string | null>(null);
 
   const render = useCallback(
-    async (currentInspection: MiniAppInspection): Promise<RenderedMiniApp> => {
-      if (source === null) {
-        throw new Error("No mini-app script is selected.");
+    async (
+      currentInspection: MiniAppInspection,
+      targetScreen: string,
+    ): Promise<RenderedMiniApp> => {
+      if (source === null) throw new Error("No mini-app script is selected.");
+      if (!currentInspection.screens.includes(targetScreen)) {
+        throw new Error(`UNKNOWN_SCREEN: ${targetScreen}`);
       }
 
-      const nextSnapshot = await loadRuntimeSnapshot(currentInspection, "render");
+      const nextSnapshot = await loadRuntimeSnapshot(currentInspection, "render", {
+        screen: targetScreen,
+      });
       const response = await renderMiniApp(source, nextSnapshot);
-      if (response.value.page === undefined) {
-        throw new Error("QuickJS did not return a page.");
-      }
+      if (response.value.page === undefined) throw new Error("QuickJS did not return a page.");
+      validatePageNode(response.value.page, currentInspection);
 
       return {
         page: response.value.page,
@@ -62,8 +71,8 @@ export function useMiniApp(source: string | null): MiniAppState {
   );
 
   const refresh = useCallback(
-    async (currentInspection: MiniAppInspection) => {
-      const rendered = await render(currentInspection);
+    async (currentInspection: MiniAppInspection, targetScreen: string) => {
+      const rendered = await render(currentInspection, targetScreen);
       setSnapshot(rendered.snapshot);
       setPage(rendered.page);
     },
@@ -75,6 +84,7 @@ export function useMiniApp(source: string | null): MiniAppState {
 
     setInspection(null);
     setPage(null);
+    setScreen("home");
     setSnapshot(null);
     setError(null);
 
@@ -90,17 +100,18 @@ export function useMiniApp(source: string | null): MiniAppState {
       try {
         await initializeDatabase();
         const nextInspection = await inspectMiniApp(source);
+        if (!nextInspection.screens.includes("home")) {
+          throw new Error("INVALID_SCRIPT: A home screen is required.");
+        }
         await ensureSettingDefaults(nextInspection);
-        const rendered = await render(nextInspection);
+        const rendered = await render(nextInspection, "home");
 
         if (cancelled) return;
         setInspection(nextInspection);
         setSnapshot(rendered.snapshot);
         setPage(rendered.page);
       } catch (caught) {
-        if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : String(caught));
-        }
+        if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -117,17 +128,33 @@ export function useMiniApp(source: string | null): MiniAppState {
       setError(null);
 
       try {
-        const actionSnapshot = await loadRuntimeSnapshot(inspection, "action", {
-          action,
-        });
+        if (!inspection.actions.includes(action)) throw new Error(`UNKNOWN_ACTION: ${action}`);
+        const actionSnapshot = await loadRuntimeSnapshot(inspection, "action", { action });
         const response = await invokeMiniAppAction(source, actionSnapshot);
         await applyRuntimeOperations(inspection, response.value.operations);
-        await refresh(inspection);
+        await refresh(inspection, screen);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : String(caught));
       }
     },
-    [inspection, refresh, source],
+    [inspection, refresh, screen, source],
+  );
+
+  const navigate = useCallback(
+    async (targetScreen: string) => {
+      if (inspection === null) return;
+      setError(null);
+
+      try {
+        const rendered = await render(inspection, targetScreen);
+        setScreen(targetScreen);
+        setSnapshot(rendered.snapshot);
+        setPage(rendered.page);
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : String(caught));
+      }
+    },
+    [inspection, render],
   );
 
   const updateSetting = useCallback(
@@ -136,13 +163,13 @@ export function useMiniApp(source: string | null): MiniAppState {
       setError(null);
 
       try {
-        await setSetting(inspection.manifest.id, name, value);
-        await refresh(inspection);
+        await setSetting(inspection, name, value);
+        await refresh(inspection, screen);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : String(caught));
       }
     },
-    [inspection, refresh],
+    [inspection, refresh, screen],
   );
 
   return {
@@ -150,8 +177,10 @@ export function useMiniApp(source: string | null): MiniAppState {
     inspection,
     loading,
     page,
+    screen,
     snapshot,
     invokeAction,
+    navigate,
     updateSetting,
   };
 }
