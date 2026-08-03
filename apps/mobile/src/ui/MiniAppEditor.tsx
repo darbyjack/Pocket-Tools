@@ -126,10 +126,7 @@ export function MiniAppEditor({
     try {
       const inspection = await validateCandidate(source);
       const storageId = createPreviewStorageId();
-      await preparePreviewStorage(
-        mode === "edit" && installed !== null ? installed.id : null,
-        storageId,
-      );
+      await preparePreviewStorage(inspection.manifest.id, storageId);
       if (previousPreview !== null) {
         await clearAppData(previousPreview.storageId);
       }
@@ -137,9 +134,7 @@ export function MiniAppEditor({
       setCandidate({ inspection, source });
       setPreview(nextPreview);
       setMessage(
-        mode === "edit"
-          ? "Preview is using a disposable copy of the installed app data."
-          : "Preview is using a new disposable data namespace.",
+        `Preview is using a disposable copy of retained state for ${inspection.manifest.id}.`,
       );
     } catch (caught) {
       setPreview(null);
@@ -148,7 +143,7 @@ export function MiniAppEditor({
     } finally {
       setBusy(false);
     }
-  }, [installed, mode, preview, source, validateCandidate]);
+  }, [preview, source, validateCandidate]);
 
   const handlePreviewReady = useCallback(
     (inspection: MiniAppInspection) => {
@@ -246,7 +241,7 @@ export function MiniAppEditor({
       {mode === "duplicate" ? (
         <View style={styles.notice}>
           <Text style={styles.noticeText}>
-            Change manifest.id before installing. A duplicate cannot reuse the
+            Change manifest.id before previewing. A duplicate cannot reuse the
             original app’s permanent storage identity.
           </Text>
         </View>
@@ -258,7 +253,6 @@ export function MiniAppEditor({
         multiline
         onChangeText={invalidateSource}
         placeholder="Paste one Pocket Tools SDK v1 JavaScript module"
-        spellCheck={false}
         style={styles.editor}
         textAlignVertical="top"
         value={source}
