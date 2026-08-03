@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { DIAGNOSTIC_APP_ID_PREFIX } from "../storage/namespaces.ts";
 import {
   assertCandidateIdentity,
   createPreviewStorageId,
@@ -27,10 +28,34 @@ test("a duplicate must use a new permanent manifest ID", () => {
   );
 });
 
+test("host diagnostic manifest IDs are reserved", () => {
+  assert.throws(
+    () =>
+      assertCandidateIdentity(
+        "create",
+        null,
+        `${DIAGNOSTIC_APP_ID_PREFIX}manual`,
+      ),
+    /reserved for host diagnostics/,
+  );
+  assert.doesNotThrow(() =>
+    assertCandidateIdentity("create", null, "lifecycle-helper"),
+  );
+});
+
 test("only the exact inspected and previewed source can be persisted", () => {
-  assert.equal(isCurrentSourceApproved("source-v2", "source-v2", "source-v2"), true);
-  assert.equal(isCurrentSourceApproved("source-v2", "source-v1", "source-v2"), false);
-  assert.equal(isCurrentSourceApproved("source-v2", "source-v2", "source-v1"), false);
+  assert.equal(
+    isCurrentSourceApproved("source-v2", "source-v2", "source-v2"),
+    true,
+  );
+  assert.equal(
+    isCurrentSourceApproved("source-v2", "source-v1", "source-v2"),
+    false,
+  );
+  assert.equal(
+    isCurrentSourceApproved("source-v2", "source-v2", "source-v1"),
+    false,
+  );
   assert.equal(isCurrentSourceApproved("source-v2", null, null), false);
 });
 
