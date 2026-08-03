@@ -25,10 +25,9 @@
     "types": [
       "node"
     ],
-    "baseUrl": ".",
     "paths": {
       "@pocket-tools/sdk": [
-        "packages/sdk-contract/src/index.ts"
+        "./packages/sdk-contract/src/index.ts"
       ]
     }
   },
