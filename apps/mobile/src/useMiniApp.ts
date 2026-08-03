@@ -7,6 +7,7 @@ import type {
   SerializableValue,
 } from "./model";
 import {
+  formatMiniAppError,
   inspectMiniApp,
   invokeMiniAppAction,
   renderMiniApp,
@@ -151,9 +152,7 @@ export function useMiniApp(
         setSnapshot(rendered.snapshot);
         setPage(rendered.page);
       } catch (caught) {
-        if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : String(caught));
-        }
+        if (!cancelled) setError(formatMiniAppError(caught));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -192,7 +191,7 @@ export function useMiniApp(
         );
         await refresh(inspection, screen, screenInput);
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : String(caught));
+        setError(formatMiniAppError(caught));
       }
     },
     [inspection, refresh, screen, screenInput, source, storageIdFor],
@@ -210,7 +209,7 @@ export function useMiniApp(
         setSnapshot(rendered.snapshot);
         setPage(rendered.page);
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : String(caught));
+        setError(formatMiniAppError(caught));
       }
     },
     [inspection, render],
@@ -225,7 +224,7 @@ export function useMiniApp(
         await setSetting(inspection, storageIdFor(inspection), name, value);
         await refresh(inspection, screen, screenInput);
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : String(caught));
+        setError(formatMiniAppError(caught));
       }
     },
     [inspection, refresh, screen, screenInput, storageIdFor],
