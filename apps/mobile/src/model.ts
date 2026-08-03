@@ -1,13 +1,11 @@
 import type {
   CollectionDefinition,
-  MetricNode,
   MiniAppManifest,
   PageNode,
   SerializableValue,
   SettingDefinition,
   StoredRecord,
   TimerSnapshot,
-  UiNode,
 } from "@pocket-tools/sdk-contract";
 
 export type {
