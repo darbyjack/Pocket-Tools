@@ -763,6 +763,11 @@ std::string runInternal(
     return failureJson(limits, "REQUEST_LIMIT_EXCEEDED", "The runtime request exceeds the host limit.");
   }
 
+  RuntimeState state{
+      .limits = limits,
+      .deadline = std::chrono::steady_clock::now() +
+          std::chrono::milliseconds(limits.executionTimeoutMilliseconds),
+  };
   RuntimeOwner runtime(JS_NewRuntime());
   if (runtime.get() == nullptr) {
     return failureJson(limits, "RUNTIME_MEMORY_LIMIT", "Unable to create the QuickJS runtime.");
@@ -773,11 +778,6 @@ std::string runInternal(
   JS_SetCanBlock(runtime.get(), false);
   JS_SetModuleLoaderFunc2(runtime.get(), nullptr, moduleLoader, nullptr, nullptr);
 
-  RuntimeState state{
-      .limits = limits,
-      .deadline = std::chrono::steady_clock::now() +
-          std::chrono::milliseconds(limits.executionTimeoutMilliseconds),
-  };
   state.logs.reserve(std::min<std::uint32_t>(limits.maximumLogEntries, 64));
   JS_SetRuntimeOpaque(runtime.get(), &state);
   JS_SetInterruptHandler(runtime.get(), interruptHandler, &state);
