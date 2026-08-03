@@ -1,6 +1,6 @@
 import type { FieldDefinition } from "./data.ts";
 import type { MiniAppDefinition } from "./core.ts";
-import { SDK_VERSION } from "./core.ts";
+import { normalizeSdkVersion, SDK_VERSION, SUPPORTED_SDK_VERSIONS } from "./core.ts";
 import type { SelectValue } from "./settings.ts";
 
 export interface ValidationIssue {
@@ -72,11 +72,13 @@ function validateManifest(value: unknown, issues: ValidationIssue[]): void {
   validateString(manifest.name, "manifest.name", 1, 80, issues);
   validateOptionalString(manifest.description, "manifest.description", 0, 500, issues);
   validateOptionalString(manifest.icon, "manifest.icon", 1, 80, issues);
-  if (manifest.sdkVersion !== SDK_VERSION) {
+  if (normalizeSdkVersion(manifest.sdkVersion) === null) {
     addIssue(
       issues,
       "manifest.sdkVersion",
-      `SDK version ${String(manifest.sdkVersion)} is not supported; use ${SDK_VERSION}.`,
+      `SDK version ${String(manifest.sdkVersion)} is not supported; use ${SUPPORTED_SDK_VERSIONS.join(
+        " or ",
+      )}. The latest version is ${SDK_VERSION}.`,
     );
   }
 }
