@@ -19,7 +19,8 @@ Expo / React Native host
   │    ├─ isolated collection records
   │    └─ durable timers
   └─ local Expo native module
-       └─ fresh bounded QuickJS-NG runtime per invocation
+       ├─ bounded JNI adapter
+       └─ fresh QuickJS-NG runtime and context per invocation
 ```
 
 A mini app never receives a React Native component, native module, SQLite handle, filesystem path, process environment, authentication token, or another mini app's state.
@@ -56,7 +57,25 @@ React Native does not expose native functions directly to an untrusted runtime. 
 - Active timer snapshots
 - Requested mode, screen, or action
 
+The native runner passes the exported definition and host snapshot to a runtime-owned function as arguments. Host state is not installed on writable global properties.
+
 QuickJS returns a validated page and/or a list of requested operations. The host validates and applies writes transactionally.
+
+## Sandbox lifecycle
+
+Each inspection, render, or action request follows one lifecycle:
+
+1. Validate trusted host limits and input sizes.
+2. Create one QuickJS runtime and context.
+3. Install only the virtual SDK module and bounded console implementation.
+4. Compile and evaluate the mini-app module.
+5. Drain queued promise jobs and reject unhandled promise failures.
+6. Invoke the requested synchronous screen or action.
+7. Validate the UI, operations, and every bridge value.
+8. Serialize a bounded response containing structured logs or an error.
+9. Dispose the context and runtime before returning to React Native.
+
+The execution state outlives the QuickJS runtime during teardown so native callback pointers never refer to expired stack state.
 
 ## Rendering model
 
@@ -78,13 +97,15 @@ The synchronizer discovers scripts by filename pattern. Adding another example s
 
 ## Failure model
 
-Each runtime invocation has independent memory, stack, source, input, UI, and execution-time bounds. Script failures return structured errors to React Native. The runtime is disposed after the request, so a failed script does not poison later requests or terminate the host process.
+Each invocation has independent source, request, result, memory, stack, execution-time, log, UI-node, and UI-depth bounds. Blocking waits are disabled. Pending microtasks are drained under the same deadline.
+
+Script failures, native allocation failures, malformed native responses, and unhandled promise rejections become structured errors. React Native preserves the error code, script stack, captured logs, and truncation state. A failed invocation cannot poison the next runtime.
 
 ## Repository shape
 
 ```text
 apps/mobile/                    Expo Android host and generic renderer
-modules/pocket-quickjs/         Android QuickJS-NG Expo native module
+modules/pocket-quickjs/         Android QuickJS-NG sandbox and Expo module
 packages/sdk-contract/          current public authoring contract
 examples/                       reference mini-app scripts
 scripts/                        generic bundled-script synchronization

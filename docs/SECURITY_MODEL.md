@@ -21,44 +21,65 @@ Untrusted:
 - Script manifests and schemas
 - Script-generated UI trees
 - Script-requested operations
+- Script console output
 
 ## Core invariants
 
 1. Scripts execute in QuickJS-NG, not the React Native JavaScript runtime.
 2. Every invocation receives a fresh runtime and context.
 3. The module loader resolves only `@pocket-tools/sdk`.
-4. Cross-boundary values are JSON-compatible finite values.
+4. Cross-boundary values are finite JSON-compatible values made from plain objects and arrays.
 5. Native objects and host references never enter the script runtime.
-6. SQLite namespaces are selected by the host, not the script.
-7. Requested writes are applied only after successful execution and host validation.
-8. Running timers do not imply running script code.
-9. A runtime failure cannot terminate or corrupt the React Native host.
+6. Host state is passed to the runner as function arguments, not writable globals.
+7. SQLite namespaces are selected by the host, not the script.
+8. Requested writes are applied only after successful execution and host validation.
+9. Running timers do not imply running script code.
+10. Runtime, native-allocation, and response-decoding failures become structured errors rather than crossing JNI as exceptions.
 
 ## Current host services
 
-The Bathroom Pay slice exposes only:
+The current script-driven slice exposes only:
 
 - Declared setting values
-- Isolated record insertion and current queries/aggregates
+- Isolated record insertion and current queries and aggregates
 - Durable start/get/stop timers
 - Current host time
 - Native rendering of the current UI nodes
 
 No capability or permission layer exists yet because this slice has no sensitive file, network, notification, location, or secret access.
 
-## Runtime bounds
+## Runtime isolation
 
-The Android native module currently enforces:
+Each inspection, render, or action request creates a new QuickJS runtime and context. The runtime is disposed before the request returns.
 
-- 512 KiB maximum source
+The script cannot observe state left in `globalThis` by an earlier invocation. It does not receive React Native, Expo, Node.js, filesystem, SQLite, process-environment, or host-request globals.
+
+The QuickJS module loader rejects external packages, relative paths, absolute paths, remote URLs, and dynamic imports that resolve outside the virtual SDK module.
+
+## Runtime limits
+
+The host currently supplies these defaults:
+
+- 512 KiB maximum script source
 - 2 MiB maximum host request
+- 2 MiB maximum serialized result
 - 32 MiB QuickJS heap
 - 512 KiB QuickJS stack
 - 250 ms execution deadline
-- 512 UI nodes
-- UI depth of 16
+- 100 captured console entries
+- 64 KiB captured console text
+- 512 rendered UI nodes
+- 16 levels of UI-tree depth
 
-The deadline uses QuickJS's interrupt handler. Memory and stack bounds use QuickJS runtime controls. These values are implementation limits, not SDK promises, and must be checked on Android hardware before the draft pull request is made ready.
+The native module validates every configuration again and refuses values outside hard safety ceilings. These values are implementation defaults, not SDK compatibility promises. They remain adjustable by trusted host code so Android benchmarking and focused tests do not require recompiling the native runtime.
+
+The deadline uses QuickJS's interrupt handler and is also checked while draining pending promise jobs. Memory and stack bounds use QuickJS runtime controls. Source, request, result, and log bounds are enforced before values return to React Native.
+
+## Promise and blocking behavior
+
+QuickJS cannot block its worker through `Atomics.wait`. The host drains pending QuickJS jobs after module evaluation and after a screen or action call so queued microtasks complete deterministically.
+
+Unhandled promise rejections become `UNHANDLED_PROMISE_REJECTION`. Screens and actions themselves remain synchronous in the current SDK; returning a promise produces `ASYNC_NOT_SUPPORTED`.
 
 ## Bridge validation
 
@@ -69,22 +90,17 @@ Allowed values are:
 - strings
 - booleans
 - arrays containing allowed values
-- plain objects with string keys and allowed values
+- plain objects with safe string keys and allowed values
 
-Dates cross the boundary as ISO 8601 strings. Native handles, functions, symbols, bigints, cyclic objects, and class instances do not cross.
+Dates cross the boundary as ISO 8601 strings. `undefined`, native handles, functions, symbols, bigints, cyclic objects, class instances, unsafe prototype keys, non-finite numbers, and excessively deep or large object graphs are rejected.
 
-## Source restrictions
+The runtime validates inspection data, script-requested records, operation lists, and rendered UI before native JSON serialization. React Native validates the native response envelope, log records, success payload, and structured failure payload before using it.
 
-Installed-source support is not implemented yet, but the active runtime already rejects:
+## Console logging
 
-- Imports other than `@pocket-tools/sdk`
-- Dynamic import resolution
-- Relative or absolute filesystem imports
-- Package registry modules
-- Remote URLs
-- React Native or Expo globals
+The sandbox provides `console.log`, `console.info`, `console.warn`, and `console.error`. Messages are converted to strings inside QuickJS and returned as bounded log records with the runtime response.
 
-There is no WebView or React Native `eval` fallback.
+When entry or byte limits are reached, additional output is discarded and `logsTruncated` is set. Console output never writes directly into host state or Android services.
 
 ## Data isolation
 
@@ -94,7 +110,24 @@ An action produces a serializable operation list. SQLite applies the list in one
 
 ## Failure handling
 
-Syntax, module, validation, timeout, memory, unknown action, unknown collection, timer, and UI failures are converted to runtime errors shown by the host. The runtime and context are always disposed after the request.
+Failures use stable machine-readable codes, including distinct source, request, result, timeout, memory, stack, module, bridge, promise, and native-runtime failures. Messages and script stacks are bounded before crossing JNI.
+
+The React Native host preserves the error code, script stack, captured logs, and log truncation state in `MiniAppRuntimeError`. A failed invocation does not poison the next runtime.
+
+## Manual verification
+
+No GitHub Actions workflow is enabled. After generating the Android project, run the repository checks and connected Android instrumentation tests manually:
+
+```bash
+pnpm install
+pnpm check
+pnpm sync:mini-apps
+pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
+cd apps/mobile/android
+./gradlew :app:assembleDebug connectedDebugAndroidTest
+```
+
+The instrumentation suite covers infinite loops, allocation pressure, unsupported modules, ambient-global isolation, runtime-to-runtime isolation, malformed bridge values, promise jobs, unhandled rejections, log limits, result limits, and recovery after failure.
 
 ## Deferred work
 

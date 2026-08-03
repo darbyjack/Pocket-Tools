@@ -11,9 +11,11 @@ For each inspection, render, or action request:
 1. React Native loads current settings, records, and active timers from Expo SQLite.
 2. The native Expo module creates a fresh bounded QuickJS-NG runtime.
 3. QuickJS loads the selected script as an ES module and resolves only `@pocket-tools/sdk` through the native module loader.
-4. A runtime-owned context exposes current host state and records requested writes as serializable operations.
-5. The host validates and applies those operations in one SQLite transaction scoped to the script manifest ID.
-6. React Native renders the returned declarative UI tree.
+4. The runner receives the exported definition and host snapshot as function arguments.
+5. A runtime-owned context records requested writes as serializable operations.
+6. Pending promise jobs are drained under the execution deadline.
+7. The host validates and applies successful operations in one SQLite transaction scoped to the script manifest ID.
+8. React Native renders the returned declarative UI tree.
 
 Adding another example script does not require host-code changes. The generated catalog and generic selector make it available automatically.
 
@@ -40,17 +42,48 @@ These operations are generic and scoped by each mini app's manifest and declared
 
 The local Expo module compiles QuickJS-NG 0.15.1 from a pinned upstream commit with the Android NDK. No WebView, React Native `eval`, or host JavaScript runtime fallback exists.
 
-Each invocation creates and disposes one runtime. Initial enforced bounds are:
+Each invocation creates and disposes one runtime. Current default bounds are:
 
 - 512 KiB script source
 - 2 MiB host request snapshot
+- 2 MiB serialized result
 - 32 MiB QuickJS heap
 - 512 KiB QuickJS stack
 - 250 ms execution deadline
+- 100 console entries
+- 64 KiB console output
 - 512 rendered nodes
 - 16 levels of UI-tree depth
 
-No GitHub Actions workflow is enabled yet. Repository checks and Android builds are manual until CI is deliberately introduced later. Device-level process-recovery behavior still requires validation on an Android device or emulator.
+Trusted host code may provide narrower or benchmarked limits within native hard ceilings. Scripts cannot alter these values.
+
+## Manual sandbox verification
+
+No GitHub Actions workflow is enabled. Run the source checks, native build, and connected instrumentation tests manually:
+
+```bash
+corepack enable
+pnpm install
+pnpm check
+pnpm sync:mini-apps
+pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
+cd apps/mobile/android
+./gradlew :app:assembleDebug connectedDebugAndroidTest
+```
+
+The Android instrumentation suite checks:
+
+- Infinite-loop interruption
+- Allocation-pressure containment
+- Unsupported-module rejection
+- Absence of React Native, Expo, Node, and host-request globals
+- Runtime isolation between invocations
+- Plain serializable bridge enforcement
+- Promise-job draining and unhandled rejection reporting
+- Console and result limits
+- Successful execution after a prior runtime failure
+
+Device-level timer process-recovery behavior remains a separate manual product check.
 
 ## Deliberate exclusions
 

@@ -64,12 +64,24 @@ export interface RuntimeValue {
   readonly operations: readonly RuntimeOperation[];
 }
 
-export interface RuntimeSuccess {
+export type RuntimeLogLevel = "log" | "info" | "warn" | "error";
+
+export interface RuntimeLogEntry {
+  readonly level: RuntimeLogLevel;
+  readonly message: string;
+}
+
+interface RuntimeEnvelope {
+  readonly logs: readonly RuntimeLogEntry[];
+  readonly logsTruncated: boolean;
+}
+
+export interface RuntimeSuccess extends RuntimeEnvelope {
   readonly ok: true;
   readonly value: RuntimeValue;
 }
 
-export interface RuntimeFailure {
+export interface RuntimeFailure extends RuntimeEnvelope {
   readonly ok: false;
   readonly error: {
     readonly code: string;
