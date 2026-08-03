@@ -5,6 +5,10 @@ import * as ts from "typescript-compiler-api";
 
 const ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const DEFAULT_FILE = resolve(ROOT, "pocket-mini-app.mjs");
+const SDK_DECLARATIONS = resolve(
+  ROOT,
+  "packages/sdk-contract/dist/index.d.ts",
+);
 
 export interface AuthoringTypecheckIssue {
   readonly code: number;
@@ -51,9 +55,8 @@ export function assertMiniAppTypeChecks(
     noUnusedLocals: true,
     noUnusedParameters: false,
     paths: {
-      "@pocket-tools/sdk": ["packages/sdk-contract/dist/index.d.ts"],
+      "@pocket-tools/sdk": [SDK_DECLARATIONS],
     },
-    baseUrl: ROOT,
     skipLibCheck: true,
     strict: true,
     target: ts.ScriptTarget.ESNext,
