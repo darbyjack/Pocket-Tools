@@ -7,7 +7,6 @@ FetchContent_Declare(
   quickjs
   GIT_REPOSITORY https://github.com/quickjs-ng/quickjs.git
   GIT_TAG fd0a0210b7be00957751871e7e01b8291268fc29
-  GIT_SHALLOW TRUE
 )
 FetchContent_GetProperties(quickjs)
 if(NOT quickjs_POPULATED)
