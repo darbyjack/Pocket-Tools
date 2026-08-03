@@ -5,9 +5,11 @@ import { loadTimerRecoveryCheckpoint } from "./checkpoint";
 export async function cleanupAbandonedLifecycleDiagnostics(): Promise<void> {
   const checkpoint = await loadTimerRecoveryCheckpoint();
   const installed = await listInstalledMiniApps();
-  await Promise.all(
-    installed
-      .filter((app) => isDiagnosticAppId(app.id) && app.id !== checkpoint?.appId)
-      .map((app) => deleteInstalledMiniApp(app.id, true)),
+  const abandoned = installed.filter(
+    (app) => isDiagnosticAppId(app.id) && app.id !== checkpoint?.appId,
   );
+
+  for (const app of abandoned) {
+    await deleteInstalledMiniApp(app.id, true);
+  }
 }
