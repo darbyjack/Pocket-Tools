@@ -4,7 +4,7 @@
 
 An agent should be able to read the SDK documentation and return one JavaScript module that passes the host validator and executes inside Pocket Tools.
 
-The current surface is intentionally limited to the working script-driven slice.
+The current surface is intentionally limited to the working script-driven slices.
 
 ## Required script shape
 
@@ -26,7 +26,9 @@ The current setting definitions are:
 - `setting.money`
 - `setting.number`
 
-Conditional visibility uses a declarative equality rule. The host renders and persists these settings.
+Conditional visibility uses a declarative equality rule. The host renders and persists these settings under the mini-app manifest ID.
+
+Settings may represent durable tool inputs when retaining the last value is useful. Tip Splitter uses money and number settings for bill amount, tip percentage, and party size. Those inputs survive relaunch without adding calculator-specific host state.
 
 ## Collections
 
@@ -52,6 +54,19 @@ Current nodes:
 - Summary
 - List, list item, and empty state
 
+The native response boundary validates every node before React Native renders it. Validation includes:
+
+- Exact property allowlists for each node type
+- Required and bounded strings
+- Lower camelCase timer and action identifiers
+- Finite numeric values for money, duration, and number formats
+- List child-type rules
+- A maximum of 512 nodes
+- A maximum tree depth of 16
+- No nested page nodes
+
+Unknown properties are rejected rather than ignored. Scripts cannot pass React Native style objects or arbitrary native component properties through the UI tree.
+
 A metric may declare:
 
 ```js
@@ -63,11 +78,15 @@ liveTimer: {
 
 The host then updates the displayed value from the durable timer without re-running the script every second.
 
+Money, number, duration, and date-time output are formatted by the host. The current MVP uses deterministic `en-US` formatting and USD for the money format; scripts do not construct locale-specific formatted currency for metric or summary values.
+
 Returning a promise from a screen is not supported by the current SDK. Queued microtasks created during module evaluation are drained before the screen is invoked.
 
 ## Actions
 
-Buttons name an action. The host invokes the matching handler with a snapshot-backed context. The action may request current collection inserts and timer changes. The host applies the resulting operation list transactionally.
+Buttons name an action using a lower camelCase identifier. The host invokes the matching registered handler with a snapshot-backed context. Unknown actions fail through the runtime bridge rather than invoking arbitrary host functions.
+
+An action may request current collection inserts and timer changes. The host applies the resulting operation list transactionally.
 
 Actions must complete synchronously. Returning a promise produces an `ASYNC_NOT_SUPPORTED` runtime error.
 
@@ -90,7 +109,7 @@ Console output is diagnostic data only. It does not provide access to Android lo
 
 ## Runtime failure behavior
 
-The host reports machine-readable error codes for source, request, result, timeout, memory, stack, unsupported module, bridge, promise, validation, and native-runtime failures.
+The host reports machine-readable error codes for source, request, result, timeout, memory, stack, unsupported module, bridge, promise, validation, UI, and native-runtime failures.
 
 A runtime failure may include a bounded script stack and captured logs. Every invocation uses a new QuickJS runtime, so a failed script cannot alter the next invocation's global state.
 
