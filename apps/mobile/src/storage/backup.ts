@@ -1,6 +1,6 @@
-import type { MiniAppInspection, SerializableValue } from "../model";
-import { assertRecordInput, assertSettingValue } from "../runtime/sdk-validation";
-import { isDiagnosticAppId, isPreviewStorageId } from "./namespaces";
+import type { MiniAppInspection, SerializableValue } from "../model.ts";
+import { assertRecordInput, assertSettingValue } from "../runtime/sdk-validation.ts";
+import { isDiagnosticAppId, isPreviewStorageId } from "./namespaces.ts";
 
 export const MINI_APP_BACKUP_FORMAT = "pocket-tools-mini-app";
 export const MINI_APP_BACKUP_VERSION = 1;
