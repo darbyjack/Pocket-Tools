@@ -15,6 +15,8 @@ import { DIAGNOSTIC_APP_ID_PREFIX } from "./src/diagnostics/fixtures";
 import { cleanupAbandonedLifecycleDiagnostics } from "./src/diagnostics/startup";
 import bundledMiniApps from "./src/generated/bundled-mini-apps.json";
 import { inspectMiniApp } from "./src/runtime/quickjs";
+import { stringifyMiniAppBackup } from "./src/storage/backup";
+import { createMiniAppBackup } from "./src/storage/backup-storage";
 import {
   deleteInstalledMiniApp,
   initializeDatabase,
@@ -25,11 +27,13 @@ import {
 } from "./src/storage/database";
 import { InstalledMiniAppRunner } from "./src/ui/InstalledMiniAppRunner";
 import { LifecycleDiagnostics } from "./src/ui/LifecycleDiagnostics";
+import { MiniAppBackupEditor } from "./src/ui/MiniAppBackupEditor";
 import { MiniAppEditor, type MiniAppEditorMode } from "./src/ui/MiniAppEditor";
 import { MiniAppLibrary } from "./src/ui/MiniAppLibrary";
 
 type Route =
   | { readonly name: "library" }
+  | { readonly name: "backup" }
   | { readonly name: "diagnostics" }
   | { readonly name: "run"; readonly appId: string }
   | {
@@ -86,6 +90,18 @@ export default function App() {
       });
     } catch (caught) {
       Alert.alert("Export failed", caught instanceof Error ? caught.message : String(caught));
+    }
+  }, []);
+
+  const exportBackup = useCallback(async (app: InstalledMiniApp) => {
+    try {
+      const backup = await createMiniAppBackup(app.id);
+      await Share.share({
+        title: `${app.name}.pocket-tools-backup.json`,
+        message: stringifyMiniAppBackup(backup),
+      });
+    } catch (caught) {
+      Alert.alert("Backup failed", caught instanceof Error ? caught.message : String(caught));
     }
   }, []);
 
@@ -196,6 +212,14 @@ export default function App() {
         onEdit={(app) => setRoute({ name: "editor", mode: "edit", appId: app.id })}
         onExport={(app) => void exportSource(app)}
         onOpen={(app) => setRoute({ name: "run", appId: app.id })}
+        onRestore={() => setRoute({ name: "backup" })}
+      />
+    );
+  } else if (route.name === "backup") {
+    content = (
+      <MiniAppBackupEditor
+        onCancel={() => setRoute({ name: "library" })}
+        onRestored={(restored) => void handleSaved(restored)}
       />
     );
   } else if (route.name === "diagnostics") {
@@ -238,6 +262,7 @@ export default function App() {
       <InstalledMiniAppRunner
         app={selectedApp}
         onBack={() => setRoute({ name: "library" })}
+        onBackup={() => void exportBackup(selectedApp)}
         onDuplicate={() =>
           setRoute({
             name: "editor",
