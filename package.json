@@ -8,13 +8,13 @@
     "node": ">=24.16.0"
   },
   "scripts": {
-    "android": "pnpm sync:examples && pnpm --dir apps/mobile android",
-    "check": "pnpm sync:examples:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "android": "pnpm sync:mini-apps && pnpm --dir apps/mobile android",
+    "check": "pnpm sync:mini-apps:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint --deny-warnings .",
-    "sync:examples": "node scripts/sync-example-source.mjs",
-    "sync:examples:check": "node scripts/sync-example-source.mjs --check",
+    "sync:mini-apps": "node scripts/sync-bundled-mini-apps.mjs",
+    "sync:mini-apps:check": "node scripts/sync-bundled-mini-apps.mjs --check",
     "test": "node --experimental-strip-types --test packages/sdk-contract/src/*.test.ts apps/mobile/src/runtime/*.test.ts",
     "typecheck": "tsc --noEmit && pnpm --dir apps/mobile typecheck && pnpm --dir modules/pocket-quickjs typecheck"
   },
