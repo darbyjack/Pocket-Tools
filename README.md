@@ -68,4 +68,4 @@ The host rejects external imports, ambient native access, unsupported SDK identi
 
 ## Repository roadmap
 
-Implementation is tracked through the child tickets of the wayfinder map. Work is delivered through focused branches and pull requests, one frontier ticket at a time.
+Implementation is tracked through the child tickets of the wayfinder map. Work is delivered through focused branches and pull requests, one frontier ticket at a time. The next frontier is the first complete Android Bathroom Pay slice, not another standalone infrastructure layer.
