@@ -13,4 +13,5 @@ export interface TimerRecoveryCheckpoint {
   readonly source: string;
   readonly startedAt: string;
   readonly preparedAt: string;
+  readonly launchId: string;
 }
