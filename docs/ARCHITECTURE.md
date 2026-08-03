@@ -2,28 +2,29 @@
 
 ## Purpose
 
-Pocket Tools is an Android-first host for small personal utilities authored as single JavaScript modules. The host owns native UI, persistence, permissions, lifecycle behavior, and failure containment. A mini app owns only its declarative definition and business logic.
+Pocket Tools is an Android-first host for personal utilities authored as single JavaScript modules. The host owns native UI, persistence, permissions, lifecycle behavior, and failure containment. A mini app owns its declarative definition and business logic.
 
-The MVP is successful when an agent can produce one script from the published SDK documentation and that script can be pasted, validated, previewed, permission-reviewed, installed, and used without rebuilding the host.
+The first product milestone is a working Android slice that can load and run Bathroom Pay through the public SDK. The SDK must not grow beyond that slice until it works end to end.
 
-## System boundaries
+## Long-term boundaries
 
 ```text
 React Native host
   ├─ mini-app library and editor
-  ├─ installer and version manager
+  ├─ installer
   ├─ native UI renderer
   ├─ SQLite-backed host services
   │    ├─ settings
   │    ├─ isolated collections
-  │    ├─ durable timers
-  │    └─ source/version history
+  │    └─ durable timers
   ├─ permission broker
   └─ QuickJS-NG runtime manager
-       └─ one isolated runtime per active mini app
+       └─ isolated runtime per active mini app
 ```
 
 A mini app never receives a React Native component, native module, SQLite handle, filesystem path, process environment, authentication token, or another mini app's state.
+
+These boundaries are intended to remain stable. Temporary execution paths that bypass QuickJS or privileged built-in versions of Bathroom Pay are not acceptable because they would need to be replaced later.
 
 ## Script format
 
@@ -37,7 +38,6 @@ export default defineMiniApp({
     id: "example-tool",
     name: "Example Tool",
     sdkVersion: 1,
-    version: 1,
   },
   screens: {
     home() {
@@ -47,81 +47,60 @@ export default defineMiniApp({
 });
 ```
 
-The QuickJS module loader resolves only host-provided virtual modules. External package imports, dynamic imports, network-loaded code, and relative filesystem imports are rejected in installed scripts.
+The QuickJS module loader resolves only host-provided virtual modules. External packages, dynamic imports, network-loaded code, and filesystem imports are rejected.
 
 ## Canonical contract
 
-`packages/sdk-contract` is the source of truth for:
+`packages/sdk-contract` is the source of truth for the currently implemented mini-app surface:
 
-- Manifest and SDK versioning
-- Capability declarations
-- Settings and collection schemas
-- Host service interfaces
-- Declarative UI nodes
-- Screen and action handlers
-- Migrations and embedded tests
+- Manifest and the current SDK identifier
+- Bathroom Pay settings and collection primitives
+- Start/get/stop timers
+- The UI nodes used by the first Bathroom Pay slice
+- Screens, actions, and deterministic embedded tests
 - Serializable bridge values
-- Validation and structured errors
-- Default safety limits
+- Definition validation and structured errors
 
-Host implementations, CLI validation, generated declarations, documentation examples, and fixture scripts must derive from or test against this contract.
+An API is not added until a working mini app needs it.
 
 ## Execution lifecycle
 
 1. The user pastes source into the editor.
-2. The installer parses it as a JavaScript module and rejects unsupported imports.
-3. The runtime evaluates it in installation mode with no durable capabilities.
-4. The host validates the exported definition, schemas, permissions, migrations, tests, and SDK version.
-5. The host displays requested capabilities.
-6. The script is previewed against temporary settings and collections.
-7. Embedded tests run against a deterministic harness.
-8. Installation and migrations execute transactionally.
-9. The previous active source and data version remain recoverable until activation succeeds.
-10. At runtime, the host creates a bounded QuickJS context only when a screen or action needs script execution.
+2. The installer rejects unsupported imports.
+3. QuickJS evaluates the script without ambient native access.
+4. The host validates the exported definition and SDK identifier.
+5. The script is previewed against temporary state.
+6. Embedded tests run against a deterministic harness.
+7. The host installs the validated source and initializes its current schema.
+8. At runtime, the host creates a bounded QuickJS context only when a screen or action needs execution.
+
+A failed install leaves existing installed state untouched. This is transactional integrity, not backward-compatibility support.
 
 ## Rendering model
 
-Scripts return declarative UI trees. The host validates each tree and maps supported nodes to owned React Native components. This keeps styling, accessibility, navigation, form handling, formatting, and native behavior under host control.
-
-Scripts cannot retain component references or mutate rendered nodes. A screen rerenders after an action or relevant host-state change.
+Scripts return declarative UI trees. The host validates each tree and maps supported nodes to owned React Native components. Scripts cannot retain component references or mutate rendered nodes.
 
 ## Persistence model
 
-The host database contains separate namespaces for:
+The host scopes settings, collection records, timers, and permission grants by mini-app ID. Scripts use host-managed service calls and never construct SQL. Preview state is isolated from installed state.
 
-- Host metadata and source versions
-- Per-mini-app settings
-- Per-mini-app collection schemas and records
-- Per-mini-app timers
-- Permission grants
-- Installation and migration state
-
-Scripts use host-managed service calls. They never construct SQL. Preview databases are isolated from installed data.
+The project does not provide script schema migrations or compatibility layers. During pre-release development, obsolete schema paths are removed and development data may be reset.
 
 ## Timer model
 
-Timers are durable host records based on timestamps and accumulated duration. A running timer does not keep the host process or QuickJS runtime alive. Visible timers update in React Native while the screen is active; authoritative elapsed time is recalculated by the host.
+Timers are durable host records based on timestamps. A running timer does not keep the host process or QuickJS runtime alive. Visible timers update in React Native while the screen is open; authoritative elapsed time is calculated by the host.
 
-## Compatibility
+## Change policy
 
-- `sdkVersion` identifies the host contract required by the script.
-- `manifest.version` identifies the script and data-schema version.
-- Host patch releases cannot break an existing SDK major version.
-- Breaking SDK changes require a new major version.
-- Script migrations are keyed by target script version and run transactionally.
-- SDK migration and script-data migration are separate concerns.
+Pocket Tools supports one current SDK contract during development. Scripts targeting another SDK identifier are rejected. Breaking changes replace the obsolete API directly, with documentation, examples, and tests updated in the same pull request.
 
 ## Repository shape
 
 ```text
-apps/mobile/                 Expo host application (later phase)
-packages/sdk-contract/       canonical public contract
-packages/runtime-core/       runtime orchestration (later phase)
-packages/script-validator/   source and definition validation (later phase)
-packages/ui-renderer/        native renderer (later phase)
-packages/data-service/       settings and collections (later phase)
-packages/timer-service/      durable timers (later phase)
-packages/test-harness/       deterministic script tests (later phase)
-examples/                    complete mini-app scripts
-docs/                        architecture and SDK documentation
+packages/sdk-contract/  current public contract and validator
+examples/               complete scripts that exercise the contract
+docs/                   current architecture and product requirements
+apps/mobile/            Android host, added by the first end-to-end implementation slice
 ```
+
+Additional packages are created only when real code needs a separate concern.
