@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "Pocket Tools",
+    "slug": "pocket-tools",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": ["expo-dev-client"],
+    "android": {
+      "package": "com.darbyjack.pockettools"
+    }
+  }
+}
