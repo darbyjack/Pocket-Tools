@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@pocket-tools/quickjs-runtime": "workspace:*",
+    "@pocket-tools/sdk-contract": "workspace:*",
     "expo": "~57.0.9",
     "expo-dev-client": "~57.0.10",
     "expo-modules-core": "~57.0.8",
