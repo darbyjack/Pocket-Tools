@@ -10,6 +10,8 @@ android {
   namespace 'com.darbyjack.pockettools.quickjs'
 
   defaultConfig {
+    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+
     externalNativeBuild {
       cmake {
         arguments '-DANDROID_STL=c++_shared'
@@ -27,4 +29,9 @@ android {
   packagingOptions {
     excludes += ['**/libc++_shared.so']
   }
+}
+
+dependencies {
+  androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+  androidTestImplementation 'androidx.test:runner:1.7.0'
 }
