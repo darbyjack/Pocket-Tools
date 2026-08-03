@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 
+import { DIAGNOSTIC_APP_ID_PREFIX } from "./src/diagnostics/fixtures";
 import bundledMiniApps from "./src/generated/bundled-mini-apps.json";
 import { inspectMiniApp } from "./src/runtime/quickjs";
 import {
@@ -26,15 +27,17 @@ import {
   seedBundledMiniAppsOnce,
   type InstalledMiniApp,
 } from "./src/storage/database";
+import { InstalledMiniAppRunner } from "./src/ui/InstalledMiniAppRunner";
+import { LifecycleDiagnostics } from "./src/ui/LifecycleDiagnostics";
 import {
   MiniAppEditor,
   type MiniAppEditorMode,
 } from "./src/ui/MiniAppEditor";
 import { MiniAppLibrary } from "./src/ui/MiniAppLibrary";
-import { InstalledMiniAppRunner } from "./src/ui/InstalledMiniAppRunner";
 
 type Route =
   | { readonly name: "library" }
+  | { readonly name: "diagnostics" }
   | { readonly name: "run"; readonly appId: string }
   | {
       readonly name: "editor";
@@ -49,7 +52,7 @@ export default function App() {
   const [startupError, setStartupError] = useState<string | null>(null);
 
   const refreshApps = useCallback(async () => {
-    const installed = await listInstalledMiniApps();
+    const installed = visibleInstalledApps(await listInstalledMiniApps());
     setApps(installed);
     return installed;
   }, []);
@@ -66,11 +69,13 @@ export default function App() {
           })),
         );
         await seedBundledMiniAppsOnce(seeds);
-        const installed = await listInstalledMiniApps();
+        const installed = visibleInstalledApps(await listInstalledMiniApps());
         if (!cancelled) setApps(installed);
       } catch (caught) {
         if (!cancelled) {
-          setStartupError(caught instanceof Error ? caught.message : String(caught));
+          setStartupError(
+            caught instanceof Error ? caught.message : String(caught),
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -173,9 +178,9 @@ export default function App() {
   );
 
   const selectedApp =
-    route.name === "library"
-      ? null
-      : apps.find((app) => app.id === route.appId) ?? null;
+    route.name === "run" || route.name === "editor"
+      ? apps.find((app) => app.id === route.appId) ?? null
+      : null;
   const routeRequiresMissingApp =
     route.name === "run" ||
     (route.name === "editor" && route.mode !== "create");
@@ -191,7 +196,9 @@ export default function App() {
   } else if (startupError !== null) {
     content = (
       <View accessibilityRole="alert" style={styles.startupError}>
-        <Text style={styles.startupErrorTitle}>Pocket Tools could not start</Text>
+        <Text style={styles.startupErrorTitle}>
+          Pocket Tools could not start
+        </Text>
         <Text selectable style={styles.startupErrorText}>
           {startupError}
         </Text>
@@ -205,6 +212,7 @@ export default function App() {
           setRoute({ name: "editor", mode: "create", appId: null })
         }
         onDelete={removeApp}
+        onDiagnostics={() => setRoute({ name: "diagnostics" })}
         onDuplicate={(app) =>
           setRoute({ name: "editor", mode: "duplicate", appId: app.id })
         }
@@ -213,6 +221,15 @@ export default function App() {
         }
         onExport={(app) => void exportSource(app)}
         onOpen={(app) => setRoute({ name: "run", appId: app.id })}
+      />
+    );
+  } else if (route.name === "diagnostics") {
+    content = (
+      <LifecycleDiagnostics
+        onBack={() => {
+          void refreshApps();
+          setRoute({ name: "library" });
+        }}
       />
     );
   } else if (routeRequiresMissingApp && selectedApp === null) {
@@ -254,7 +271,11 @@ export default function App() {
           })
         }
         onEdit={() =>
-          setRoute({ name: "editor", mode: "edit", appId: selectedApp.id })
+          setRoute({
+            name: "editor",
+            mode: "edit",
+            appId: selectedApp.id,
+          })
         }
         onExport={() => void exportSource(selectedApp)}
         onRollback={() => rollback(selectedApp)}
@@ -269,6 +290,14 @@ export default function App() {
       <StatusBar style="dark" />
       {content}
     </SafeAreaView>
+  );
+}
+
+function visibleInstalledApps(
+  installed: readonly InstalledMiniApp[],
+): readonly InstalledMiniApp[] {
+  return installed.filter(
+    (app) => !app.id.startsWith(DIAGNOSTIC_APP_ID_PREFIX),
   );
 }
 
