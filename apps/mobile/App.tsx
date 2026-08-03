@@ -17,6 +17,7 @@ import {
 } from "react-native";
 
 import { DIAGNOSTIC_APP_ID_PREFIX } from "./src/diagnostics/fixtures";
+import { cleanupAbandonedLifecycleDiagnostics } from "./src/diagnostics/startup";
 import bundledMiniApps from "./src/generated/bundled-mini-apps.json";
 import { inspectMiniApp } from "./src/runtime/quickjs";
 import {
@@ -62,6 +63,7 @@ export default function App() {
     void (async () => {
       try {
         await initializeDatabase();
+        await cleanupAbandonedLifecycleDiagnostics();
         const seeds = await Promise.all(
           bundledMiniApps.map(async (entry) => ({
             inspection: await inspectMiniApp(entry.source),
