@@ -2,114 +2,125 @@
 
 ## Purpose
 
-Pocket Tools is an Android-first host for personal utilities authored as single JavaScript modules. The host owns native UI, persistence, lifecycle behavior, and failure containment. A mini app owns its declarative definition and business logic.
+Pocket Tools is an Android-first Expo host for personal utilities authored as single JavaScript modules. The host owns native UI, persistence, navigation, lifecycle recovery, validation, and failure containment. A mini app owns only its declarative definition and business logic.
 
-The current product is one complete script-driven Android slice using Bathroom Pay as the reference script. New SDK surface must be justified by the next working product layer.
+Bathroom Pay and Tip Splitter are reference scripts, not host features. No additional example app is required to extend the platform.
 
 ## Implemented boundaries
 
 ```text
 Expo / React Native host
-  ├─ bundled mini-app catalog and selection
-  ├─ generic script lifecycle hook
-  ├─ declarative native UI renderer
-  ├─ generic settings renderer
+  ├─ temporary bundled development catalog
+  ├─ generic source lifecycle hook
+  ├─ host-owned active-screen navigation
+  ├─ strict response and UI validation
+  ├─ declarative native renderer
+  │    └─ settings-bound native controls
   ├─ Expo SQLite host state
-  │    ├─ per-mini-app settings
-  │    ├─ isolated collection records
-  │    └─ durable timers
+  │    ├─ per-mini-app validated settings
+  │    ├─ schema-validated isolated records
+  │    └─ durable start/get/stop timers
   └─ local Expo native module
        ├─ bounded JNI adapter
+       ├─ frozen executable @pocket-tools/sdk module
        └─ fresh QuickJS-NG runtime and context per invocation
 ```
 
-A mini app never receives a React Native component, native module, SQLite handle, filesystem path, process environment, authentication token, or another mini app's state.
+A script never receives a React Native component, native module, SQLite handle, filesystem path, process environment, authentication token, or another mini app's state.
 
-The host contains no Bathroom Pay-specific execution, storage, rendering, or lifecycle code. Bathroom Pay is data: one script passed through the same path as any other mini app.
-
-## Script format
+## Script and module format
 
 A mini app is one ES module. It imports the virtual `@pocket-tools/sdk` module and default-exports the result of `defineMiniApp(...)`.
 
-The QuickJS module loader resolves only that host-provided module. External packages, dynamic imports, remote code, and filesystem imports are rejected.
+The QuickJS module loader resolves only that host-provided module. External packages, relative imports, dynamic remote code, Node modules, and filesystem imports are rejected.
 
-## Canonical contract
+## Frozen canonical contract
 
-`packages/sdk-contract` is the source of truth for the implemented mini-app surface:
+`packages/sdk-contract` is the public source of truth for SDK v1:
 
-- Manifest and current SDK identifier
-- Current generic setting and collection definitions
-- Start/get/stop timers
-- Current declarative UI nodes
-- Screens and actions
+- Manifest and frozen SDK identifier
+- Text, boolean, number, money, and select settings
+- Text, boolean, number, money, and datetime collection fields
+- Insert, get, update, remove, query, count, and sum
+- Equality and range filters, sorting, offset, and limit
+- Synchronous screens and actions
+- Host-owned screen navigation
+- Declarative layout, copy, input, interaction, display, list, summary, and timer nodes
+- Start/get/stop durable timers
 - Serializable bridge values
-- Definition validation and structured errors
+- Definition and value validation
 
-The runtime module contains the matching executable SDK surface required inside QuickJS. Contract changes must update the TypeScript contract, runtime module, reference scripts, documentation, and tests together.
+`PocketQuickJsSources.h` contains the matching executable builders and runtime client behavior available inside QuickJS. Contract changes must update the TypeScript contract, executable SDK, response model, host validators, renderer, SQLite adapter, reference scripts, documentation, and tests together.
+
+After the SDK-freeze work merges, additions to the public surface require an explicit post-MVP version decision. They are not added opportunistically to v1.
 
 ## Runtime request model
 
-React Native does not expose native functions directly to an untrusted runtime. It sends QuickJS a serializable snapshot containing:
+React Native sends QuickJS a serializable snapshot containing:
 
 - Current host time
-- Current settings
-- Collection records
+- Current validated setting values
+- Current collection records
 - Active timer snapshots
-- Requested mode, screen, or action
+- Requested inspection, screen, or action
 
-The native runner passes the exported definition and host snapshot to a runtime-owned function as arguments. Host state is not installed on writable global properties.
+The native runner passes the exported definition and host snapshot to a runtime-owned function as arguments. Host state is never installed on writable globals.
 
-QuickJS returns a validated page and/or a list of requested operations. The host validates and applies writes transactionally.
+QuickJS returns a page and/or explicit operations. React Native validates the native response shape. The active inspection then validates UI setting bindings, action targets, and navigation targets. SQLite independently validates every setting and record value before applying operations transactionally.
 
-## Sandbox lifecycle
+## Runtime lifecycle
 
-Each inspection, render, or action request follows one lifecycle:
+Each inspection, render, or action request:
 
-1. Validate trusted host limits and input sizes.
-2. Create one QuickJS runtime and context.
-3. Install only the virtual SDK module and bounded console implementation.
-4. Compile and evaluate the mini-app module.
-5. Drain queued promise jobs and reject unhandled promise failures.
-6. Invoke the requested synchronous screen or action.
-7. Validate the UI, operations, and every bridge value.
-8. Serialize a bounded response containing structured logs or an error.
-9. Dispose the context and runtime before returning to React Native.
+1. Validates trusted host limits and input sizes.
+2. Creates one QuickJS runtime and context.
+3. Installs only the frozen virtual SDK module and bounded console.
+4. Compiles and evaluates the mini-app source.
+5. Drains queued promise jobs and rejects unhandled promise failures.
+6. Invokes the requested synchronous screen or action.
+7. Validates bridge values, query inputs, UI targets, and operation output.
+8. Serializes a bounded structured response.
+9. Disposes the context and runtime before returning to React Native.
 
-The execution state outlives the QuickJS runtime during teardown so native callback pointers never refer to expired stack state.
+The execution state outlives QuickJS teardown so native callback pointers never refer to expired stack state.
 
-## Rendering model
+## Rendering and navigation
 
-Scripts return declarative UI trees. The host validates node types and tree limits before mapping them to owned React Native components.
+Scripts return serialized UI trees. The host validates exact node properties, value types, settings bindings, action names, screen names, node count, and depth before mapping nodes to owned React Native components.
 
-Timers and `liveTimer` metrics update in React Native from durable timestamps. The script is not re-executed every second.
+Settings-bound controls request validated host writes; scripts never receive mutable controls or host references. The host rerenders the current screen after setting updates and actions. `ui.navigation` changes the host-owned active screen and rerenders from a fresh snapshot.
+
+Timers and `liveTimer` metrics update from durable timestamps in React Native. The script is not re-executed every second.
 
 ## Persistence model
 
-Expo SQLite stores settings, records, and active timers under the calling mini-app ID. Scripts cannot provide or override this namespace and never construct SQL.
+Expo SQLite stores settings, records, and active timers under the inspected manifest ID. Scripts cannot provide or override the namespace and never construct SQL.
 
-The pre-release project does not provide schema migrations or compatibility paths. Obsolete development schemas are removed directly and development app data may be reset.
+Record IDs and `createdAt`/`updatedAt` metadata are host-owned. Collection writes are schema validated both in QuickJS and again before SQLite mutation. An action's operation list is applied in one transaction; any failure rolls back the complete action.
 
-## Bundled scripts
+The pre-release project deliberately has no schema migrations, deprecated aliases, or compatibility paths. Development data may be reset when the current pre-release schema changes.
 
-During the first vertical slice, `examples/*.miniapp.js` files are synchronized into a generated JSON catalog bundled with the Expo application. The catalog is seed data only; it does not create app-specific host code.
+## Temporary bundled source path
 
-The synchronizer discovers scripts by filename pattern. Adding another example script does not require changes to the host hook, renderer, storage service, or QuickJS module. Runtime script installation and editing will replace the bundled-only development flow in a later layer.
+`examples/*.miniapp.js` files are synchronized into a generated JSON catalog for development. This is seed data only and does not create app-specific host code.
+
+The on-device installer phase will replace this bundled-only entry path with an installed-script library, paste editor, isolated preview, transactional install/update, rollback, export, and deletion. The runtime, renderer, and storage boundaries remain the same.
 
 ## Failure model
 
-Each invocation has independent source, request, result, memory, stack, execution-time, log, UI-node, and UI-depth bounds. Blocking waits are disabled. Pending microtasks are drained under the same deadline.
+Each invocation has independent source, request, result, memory, stack, execution-time, log, UI-node, and UI-depth limits. Blocking waits are disabled and pending jobs are drained under the same deadline.
 
-Script failures, native allocation failures, malformed native responses, and unhandled promise rejections become structured errors. React Native preserves the error code, script stack, captured logs, and truncation state. A failed invocation cannot poison the next runtime.
+Malformed definitions, settings, records, queries, operations, inspections, UI trees, native responses, and promise failures become structured errors. A failed invocation cannot retain globals, partially apply an action, or poison the next runtime.
 
 ## Repository shape
 
 ```text
-apps/mobile/                    Expo Android host and generic renderer
-modules/pocket-quickjs/         Android QuickJS-NG sandbox and Expo module
-packages/sdk-contract/          current public authoring contract
-examples/                       reference mini-app scripts
-scripts/                        generic bundled-script synchronization
-docs/                           current architecture and requirements
+apps/mobile/                    Expo Android host, validators, renderer, SQLite adapter
+modules/pocket-quickjs/         Android QuickJS-NG sandbox and executable SDK
+packages/sdk-contract/          frozen public SDK v1 TypeScript contract
+examples/                       existing reference mini-app scripts
+scripts/                        temporary bundled-source synchronization
+docs/                           architecture, security, SDK, and build documentation
 ```
 
-Additional packages are created only when working code needs a separate concern.
+Additional packages are created only when a working product layer needs a separate concern.
