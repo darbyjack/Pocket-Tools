@@ -44,7 +44,6 @@ Conditional visibility uses a declarative equality rule.
 
 The current field definitions are:
 
-- `field.text`
 - `field.number`
 - `field.money`
 - `field.datetime`
