@@ -2,50 +2,29 @@ package com.darbyjack.pockettools.quickjs
 
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.records.Field
+import expo.modules.kotlin.records.Record
 
 class PocketQuickJsModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("PocketQuickJs")
 
-    AsyncFunction("run") {
-      source: String,
-      requestJson: String,
-      maximumSourceBytes: Int,
-      maximumRequestBytes: Int,
-      maximumResultBytes: Int,
-      runtimeMemoryBytes: Int,
-      runtimeStackBytes: Int,
-      executionTimeoutMilliseconds: Int,
-      maximumLogEntries: Int,
-      maximumLogBytes: Int ->
-      PocketQuickJsBridge.run(
-        source,
-        requestJson,
-        SandboxLimits(
-          maximumSourceBytes = maximumSourceBytes,
-          maximumRequestBytes = maximumRequestBytes,
-          maximumResultBytes = maximumResultBytes,
-          runtimeMemoryBytes = runtimeMemoryBytes,
-          runtimeStackBytes = runtimeStackBytes,
-          executionTimeoutMilliseconds = executionTimeoutMilliseconds,
-          maximumLogEntries = maximumLogEntries,
-          maximumLogBytes = maximumLogBytes,
-        ),
-      )
+    AsyncFunction("run") { source: String, requestJson: String, limits: SandboxLimits ->
+      PocketQuickJsBridge.run(source, requestJson, limits)
     }
   }
 }
 
-internal data class SandboxLimits(
-  val maximumSourceBytes: Int = 512 * 1024,
-  val maximumRequestBytes: Int = 2 * 1024 * 1024,
-  val maximumResultBytes: Int = 2 * 1024 * 1024,
-  val runtimeMemoryBytes: Int = 32 * 1024 * 1024,
-  val runtimeStackBytes: Int = 512 * 1024,
-  val executionTimeoutMilliseconds: Int = 250,
-  val maximumLogEntries: Int = 100,
-  val maximumLogBytes: Int = 64 * 1024,
-)
+internal class SandboxLimits(
+  @Field val maximumSourceBytes: Int = 512 * 1024,
+  @Field val maximumRequestBytes: Int = 2 * 1024 * 1024,
+  @Field val maximumResultBytes: Int = 2 * 1024 * 1024,
+  @Field val runtimeMemoryBytes: Int = 32 * 1024 * 1024,
+  @Field val runtimeStackBytes: Int = 512 * 1024,
+  @Field val executionTimeoutMilliseconds: Int = 250,
+  @Field val maximumLogEntries: Int = 100,
+  @Field val maximumLogBytes: Int = 64 * 1024,
+) : Record
 
 internal object PocketQuickJsBridge {
   init {
