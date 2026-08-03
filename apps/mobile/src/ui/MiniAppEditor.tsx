@@ -9,8 +9,13 @@ import {
 } from "react-native";
 
 import { NEW_MINI_APP_TEMPLATE } from "../installer/template";
+import {
+  assertCandidateIdentity,
+  createPreviewStorageId,
+  isCurrentSourceApproved,
+} from "../installer/workflow";
 import type { MiniAppInspection } from "../model";
-import { inspectMiniApp } from "../runtime/quickjs";
+import { formatMiniAppError, inspectMiniApp } from "../runtime/quickjs";
 import {
   clearAppData,
   installMiniApp,
@@ -65,15 +70,11 @@ export function MiniAppEditor({
   const validateCandidate = useCallback(
     async (currentSource: string): Promise<MiniAppInspection> => {
       const inspection = await inspectMiniApp(currentSource);
-      if (
-        mode === "edit" &&
-        installed !== null &&
-        inspection.manifest.id !== installed.id
-      ) {
-        throw new Error(
-          `INSTALLATION_FAILED: An update cannot change manifest.id from ${installed.id} to ${inspection.manifest.id}. Use Duplicate to create a new app.`,
-        );
-      }
+      assertCandidateIdentity(
+        mode,
+        installed?.id ?? null,
+        inspection.manifest.id,
+      );
       return inspection;
     },
     [installed, mode],
@@ -108,7 +109,7 @@ export function MiniAppEditor({
       );
     } catch (caught) {
       setCandidate(null);
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(formatMiniAppError(caught));
     } finally {
       setBusy(false);
     }
@@ -143,7 +144,7 @@ export function MiniAppEditor({
     } catch (caught) {
       setPreview(null);
       setCandidate(null);
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(formatMiniAppError(caught));
     } finally {
       setBusy(false);
     }
@@ -169,11 +170,16 @@ export function MiniAppEditor({
 
   const handleSave = useCallback(async () => {
     if (
-      candidate === null ||
-      candidate.source !== source ||
-      previewReadySource !== source
+      !isCurrentSourceApproved(
+        source,
+        candidate?.source ?? null,
+        previewReadySource,
+      ) ||
+      candidate === null
     ) {
-      setError("INSTALLATION_FAILED: Preview the current source successfully before installing it.");
+      setError(
+        "INSTALLATION_FAILED: Preview the current source successfully before installing it.",
+      );
       return;
     }
 
@@ -191,7 +197,7 @@ export function MiniAppEditor({
       if (preview !== null) await clearAppData(preview.storageId);
       onSaved(saved);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(formatMiniAppError(caught));
     } finally {
       setBusy(false);
     }
@@ -206,9 +212,11 @@ export function MiniAppEditor({
         : "Install a mini-app script";
   const canSave =
     !busy &&
-    candidate !== null &&
-    candidate.source === source &&
-    previewReadySource === source;
+    isCurrentSourceApproved(
+      source,
+      candidate?.source ?? null,
+      previewReadySource,
+    );
 
   return (
     <ScrollView
@@ -346,10 +354,6 @@ function EditorButton({
       </Text>
     </Pressable>
   );
-}
-
-function createPreviewStorageId(): string {
-  return `__preview__${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
 }
 
 const styles = StyleSheet.create({
