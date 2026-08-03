@@ -135,7 +135,7 @@ function parseInspection(value: unknown): MiniAppInspection {
     collections: value.collections,
     screens: Object.fromEntries(screens.map((name) => [name, () => dummyPage])),
     actions: Object.fromEntries(actions.map((name) => [name, () => undefined])),
-  } as Parameters<typeof validateMiniAppDefinition>[0];
+  } as unknown as Parameters<typeof validateMiniAppDefinition>[0];
   const issues = validateMiniAppDefinition(definition);
   if (issues.length > 0) {
     throw new MiniAppRuntimeError(
