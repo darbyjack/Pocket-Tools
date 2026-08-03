@@ -25,14 +25,6 @@ function effectiveHourlyRate(context) {
   return paidHours > 0 ? annualSalary / paidHours : 0;
 }
 
-/** @param {import("@pocket-tools/sdk").MiniAppContext} context */
-function currentTripEarnings(context) {
-  const timer = context.timers.get(TRIP_TIMER_ID);
-  return timer === null
-    ? 0
-    : (timer.elapsedSeconds / 3_600) * effectiveHourlyRate(context);
-}
-
 /** @param {Date} date */
 function startOfDay(date) {
   const result = new Date(date);
@@ -132,8 +124,16 @@ export default defineMiniApp({
               ui.timer({ timerId: TRIP_TIMER_ID, emptyValue: "00:00:00" }),
               ui.metric({
                 label: "Gross earnings equivalent",
-                value: currentTripEarnings(context),
+                value: 0,
                 format: "money",
+                ...(activeTrip === null
+                  ? {}
+                  : {
+                      liveTimer: {
+                        timerId: TRIP_TIMER_ID,
+                        ratePerHour: effectiveHourlyRate(context),
+                      },
+                    }),
               }),
               ui.button({
                 label: activeTrip === null ? "Start trip" : "End trip",
