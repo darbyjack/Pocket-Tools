@@ -6,10 +6,7 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "plugins": [
-      "expo-dev-client",
-      "./plugins/with-short-cmake-staging.cjs"
-    ],
+    "plugins": ["expo-dev-client", "./plugins/with-short-cmake-staging.cjs"],
     "android": {
       "package": "com.darbyjack.pockettools"
     }
