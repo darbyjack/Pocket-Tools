@@ -44,7 +44,7 @@ export interface MiniAppBackupV1 {
   readonly timers: readonly MiniAppBackupTimer[];
 }
 
-export function parseMiniAppBackup(input: string | unknown): MiniAppBackupV1 {
+export function parseMiniAppBackup(input: unknown): MiniAppBackupV1 {
   let value: unknown = input;
   if (typeof input === "string") {
     try {
@@ -127,18 +127,23 @@ export function validateMiniAppBackupForRestore(
   }
 
   for (const setting of parsed.settings) {
-    const definition = activeInspection.settings[setting.name];
+    const definition =
+      activeInspection.settings[setting.name] ?? lastKnownGoodInspection.settings[setting.name];
     if (definition === undefined) {
-      throw backupError(`backup.settings.${setting.name} is not declared by the active source.`);
+      throw backupError(
+        `backup.settings.${setting.name} is not declared by either saved source.`,
+      );
     }
     assertSettingValue(definition, setting.value, `backup.settings.${setting.name}`);
   }
 
   for (const record of parsed.records) {
-    const definition = activeInspection.collections[record.collection];
+    const definition =
+      activeInspection.collections[record.collection] ??
+      lastKnownGoodInspection.collections[record.collection];
     if (definition === undefined) {
       throw backupError(
-        `backup.records.${record.id} uses undeclared collection ${record.collection}.`,
+        `backup.records.${record.id} uses collection ${record.collection}, which is not declared by either saved source.`,
       );
     }
     assertRecordInput(definition, record.data, `backup.records.${record.id}.data`);
@@ -242,8 +247,9 @@ function readOptionalString(
   path: string,
 ): string | undefined {
   if (!(key in object)) return undefined;
-  if (typeof object[key] !== "string") throw backupError(`${path} must be a string.`);
-  return object[key];
+  const value = object[key];
+  if (typeof value !== "string") throw backupError(`${path} must be a string.`);
+  return value;
 }
 
 function requireAppId(value: unknown, path: string): string {
@@ -331,5 +337,6 @@ function assertUnique<T>(
 }
 
 function backupError(message: string, cause?: unknown): Error {
-  return new Error(`BACKUP_INVALID: ${message}`, cause === undefined ? undefined : { cause });
+  const fullMessage = `BACKUP_INVALID: ${message}`;
+  return cause === undefined ? new Error(fullMessage) : new Error(fullMessage, { cause });
 }
