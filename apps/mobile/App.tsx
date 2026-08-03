@@ -1,8 +1,14 @@
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
+  Pressable,
   SafeAreaView,
   Share,
   StyleSheet,
@@ -170,8 +176,11 @@ export default function App() {
     route.name === "library"
       ? null
       : apps.find((app) => app.id === route.appId) ?? null;
+  const routeRequiresMissingApp =
+    route.name === "run" ||
+    (route.name === "editor" && route.mode !== "create");
 
-  let content;
+  let content: ReactNode;
   if (loading) {
     content = (
       <View style={styles.centered}>
@@ -206,6 +215,22 @@ export default function App() {
         onOpen={(app) => setRoute({ name: "run", appId: app.id })}
       />
     );
+  } else if (routeRequiresMissingApp && selectedApp === null) {
+    content = (
+      <View style={styles.startupError}>
+        <Text style={styles.startupErrorTitle}>Mini app not found</Text>
+        <Text style={styles.startupErrorText}>
+          The installation was removed or is no longer available.
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setRoute({ name: "library" })}
+          style={styles.returnButton}
+        >
+          <Text style={styles.returnButtonText}>Return to library</Text>
+        </Pressable>
+      </View>
+    );
   } else if (route.name === "editor") {
     content = (
       <MiniAppEditor
@@ -216,16 +241,7 @@ export default function App() {
         onSaved={(saved) => void handleSaved(saved)}
       />
     );
-  } else if (selectedApp === null) {
-    content = (
-      <View style={styles.startupError}>
-        <Text style={styles.startupErrorTitle}>Mini app not found</Text>
-        <Text style={styles.startupErrorText}>
-          Return to the library and select an installed script.
-        </Text>
-      </View>
-    );
-  } else {
+  } else if (selectedApp !== null) {
     content = (
       <InstalledMiniAppRunner
         app={selectedApp}
@@ -244,6 +260,8 @@ export default function App() {
         onRollback={() => rollback(selectedApp)}
       />
     );
+  } else {
+    content = null;
   }
 
   return (
@@ -275,7 +293,7 @@ const styles = StyleSheet.create({
     borderColor: "#fda29b",
     borderRadius: 16,
     borderWidth: 1,
-    gap: 6,
+    gap: 10,
     margin: 18,
     padding: 16,
   },
@@ -288,5 +306,17 @@ const styles = StyleSheet.create({
     color: "#b42318",
     fontFamily: "monospace",
     fontSize: 13,
+  },
+  returnButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#912018",
+    borderRadius: 10,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+  },
+  returnButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });
