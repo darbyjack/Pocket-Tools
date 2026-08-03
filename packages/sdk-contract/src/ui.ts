@@ -1,3 +1,5 @@
+import type { SerializableValue } from "./values.ts";
+
 interface UiNodeBase<TType extends string> {
   readonly type: TType;
 }
@@ -62,11 +64,13 @@ export interface SelectInputNode extends SettingInputNode<"select"> {}
 export interface ButtonNode extends UiNodeBase<"button"> {
   readonly label: string;
   readonly action: string;
+  readonly input?: SerializableValue;
 }
 
 export interface NavigationNode extends UiNodeBase<"navigation"> {
   readonly label: string;
   readonly screen: string;
+  readonly input?: SerializableValue;
 }
 
 export interface EmptyStateNode extends UiNodeBase<"empty-state"> {
