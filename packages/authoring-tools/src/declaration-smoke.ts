@@ -11,7 +11,7 @@ export const declarationSmokeMiniApp = defineMiniApp({
   manifest: {
     id: "declaration-smoke",
     name: "Declaration Smoke",
-    sdkVersion: 1,
+    sdkVersion: "1.1",
   },
   settings: {
     label: setting.text({ label: "Label", default: "Example" }),
@@ -26,6 +26,7 @@ export const declarationSmokeMiniApp = defineMiniApp({
   },
   screens: {
     home(context) {
+      const entries = context.data.collection("entries").query();
       return ui.page({
         title: String(context.settings.get("label")),
         children: [
@@ -35,6 +36,23 @@ export const declarationSmokeMiniApp = defineMiniApp({
             label: "Save",
             action: "save",
             input: { source: "smoke" },
+            disabled: false,
+          }),
+          ui.list({
+            items: entries.map((entry) =>
+              ui.listItem({
+                title: String(entry.label),
+                actions: [
+                  ui.action({
+                    label: "Delete",
+                    action: "remove",
+                    input: entry.id,
+                    intent: "destructive",
+                    confirmation: { title: "Delete entry?" },
+                  }),
+                ],
+              }),
+            ),
           }),
         ],
       });
@@ -47,6 +65,10 @@ export const declarationSmokeMiniApp = defineMiniApp({
         enabled: Boolean(context.settings.get("enabled")),
         amount: isSerializableObject(input) && input.source === "smoke" ? 1 : null,
       });
+    },
+    remove(context, input) {
+      if (typeof input !== "string") throw new Error("A record ID is required.");
+      context.data.collection("entries").remove(input);
     },
   },
 });
