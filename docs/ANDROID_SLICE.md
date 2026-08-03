@@ -50,7 +50,7 @@ Each invocation creates and disposes one runtime. Initial enforced bounds are:
 - 512 rendered nodes
 - 16 levels of UI-tree depth
 
-The GitHub workflow runs checks and the Android development build on `ubuntu-latest`. Device-level process-recovery behavior still requires validation on an Android device or emulator.
+No GitHub Actions workflow is enabled yet. Repository checks and Android builds are manual until CI is deliberately introduced later. Device-level process-recovery behavior still requires validation on an Android device or emulator.
 
 ## Deliberate exclusions
 
