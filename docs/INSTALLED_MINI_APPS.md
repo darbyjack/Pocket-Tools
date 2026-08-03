@@ -27,7 +27,7 @@ Each installed script stores:
 - Installation timestamp
 - Last update timestamp
 
-The manifest ID is the permanent namespace for installed settings, records, and timers. Editing an installed script cannot change it. To create a separate app, duplicate the source and change the manifest ID before installing.
+The manifest ID is the permanent namespace for installed settings, records, and timers. Editing an installed script cannot change it. To create a separate app, duplicate the source and change the manifest ID before previewing or installing.
 
 ## Paste and validation
 
@@ -37,19 +37,25 @@ Validation errors preserve the runtime error code, script stack, and bounded con
 
 ## Isolated preview
 
-Preview never uses the installed app namespace directly.
+Preview never writes to the installed or retained manifest namespace directly.
 
-For a new or duplicated script, Pocket Tools creates an empty temporary namespace. For an update, it clones the installed app's current settings, records, and timers into a temporary namespace. Record IDs are regenerated inside the clone because record IDs are host-owned and no SDK v1 field can reference another record.
+Pocket Tools clones any settings, records, and timers already retained under the candidate manifest ID into a temporary namespace. A completely new manifest ID therefore starts empty. An update or reinstall with retained data previews against a disposable copy of that existing state. Record IDs are regenerated inside the clone because record IDs are host-owned and no SDK v1 field can reference another record.
 
-All preview setting changes, record operations, and timers are written only to that disposable namespace. Preview data is cleared when the source changes, a new preview starts, the editor closes, or installation succeeds. Stale preview namespaces are safe to remove at startup.
+All preview setting changes, record operations, and timers are written only to that disposable namespace. Preview data is cleared when the source changes, a new preview starts, the editor closes, or installation succeeds. Stale preview namespaces are removed at application startup.
 
 The install or update button remains disabled until the exact current source completes its first native render. Changing even one character invalidates the approval.
 
+## Final retained-state render gate
+
+Immediately before persistence, Pocket Tools performs another read-only home-screen render using the exact retained manifest namespace rather than cloned record IDs. Missing new setting values are supplied from declared defaults only in memory.
+
+This final gate catches candidate schema, retained-data, or record-ID-dependent failures without writing settings, records, timers, or source. A failure leaves the existing installation and retained data unchanged.
+
 ## Install and update
 
-A new install writes its source and manifest metadata in one SQLite statement after preview passes.
+A new install writes its source and manifest metadata in one SQLite statement after isolated preview and the retained-state render gate pass.
 
-An update does not modify the installed source during validation or preview. After the candidate renders successfully against a cloned copy of current state, Pocket Tools atomically:
+An update does not modify the installed source during validation or preview. After both render gates succeed, Pocket Tools atomically:
 
 1. Moves the current active source to `last_known_good_source`.
 2. Stores the candidate as the new active source.
@@ -59,7 +65,7 @@ Validation, preview, or first-render failure therefore leaves the current instal
 
 ## Rollback
 
-After an update, the runner exposes `Roll back`. Pocket Tools validates the saved last-known-good source, then swaps it with the active source. Settings, records, and timers are not changed.
+After an update, the runner exposes `Roll back`. Pocket Tools validates the saved last-known-good source, then explicitly swaps it with the active source. Settings, records, and timers are not changed.
 
 The swap is reversible, so rolling back again returns to the newer source.
 
@@ -67,7 +73,7 @@ The swap is reversible, so rolling back again returns to the newer source.
 
 `Export` uses the Android share sheet to send the active source as text.
 
-`Duplicate` opens the active source in the editor but does not copy installed state. The user or authoring agent must assign a new manifest ID before installation.
+`Duplicate` opens the active source in the editor but does not copy installed state. The user or authoring agent must assign a new manifest ID before validation and preview can pass.
 
 ## Removal
 
@@ -98,6 +104,6 @@ Before this phase is considered device-verified, exercise the following on an em
 5. Edit and preview an update against cloned current state.
 6. Introduce a validation or first-render failure and verify the active source remains unchanged.
 7. Apply a valid update, roll it back, and verify app data remains intact.
-8. Export and duplicate the source.
-9. Remove the app while keeping data, reinstall the same ID, and verify recovery.
+8. Export and duplicate the source; verify duplicate validation requires a new manifest ID.
+9. Remove the app while keeping data, reinstall the same ID, and verify preview and recovery use retained state.
 10. Remove the app and data, reinstall the same ID, and verify a clean state.
