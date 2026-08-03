@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Pocket Tools is an Android-first host for personal utilities authored as single JavaScript modules. The host owns native UI, persistence, permissions, lifecycle behavior, and failure containment. A mini app owns its declarative definition and business logic.
+Pocket Tools is an Android-first host for personal utilities authored as single JavaScript modules. The host owns native UI, persistence, lifecycle behavior, and failure containment. A mini app owns its declarative definition and business logic.
 
 The first product milestone is a working Android slice that can load and run Bathroom Pay through the public SDK. The SDK must not grow beyond that slice until it works end to end.
 
@@ -17,7 +17,6 @@ React Native host
   │    ├─ settings
   │    ├─ isolated collections
   │    └─ durable timers
-  ├─ permission broker
   └─ QuickJS-NG runtime manager
        └─ isolated runtime per active mini app
 ```
@@ -82,7 +81,7 @@ Scripts return declarative UI trees. The host validates each tree and maps suppo
 
 ## Persistence model
 
-The host scopes settings, collection records, timers, and permission grants by mini-app ID. Scripts use host-managed service calls and never construct SQL. Preview state is isolated from installed state.
+The host scopes settings, collection records, and timers by mini-app ID. Scripts use host-managed service calls and never construct SQL. Preview state is isolated from installed state.
 
 The project does not provide script schema migrations or compatibility layers. During pre-release development, obsolete schema paths are removed and development data may be reset.
 
