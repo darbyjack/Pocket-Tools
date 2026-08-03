@@ -8,6 +8,8 @@ import {
 
 import type {
   PageNode,
+  SerializableValue,
+  SettingDefinition,
   TimerSnapshot,
   UiNode,
 } from "../model";
@@ -16,18 +18,40 @@ import {
   formatDisplayValue,
   formatDuration,
 } from "../runtime/display-format";
-import { metricValue, timerElapsedSeconds } from "../runtime/protocol";
+import {
+  metricValue,
+  settingIsVisible,
+  timerElapsedSeconds,
+} from "../runtime/protocol";
+import { SettingControl } from "./SettingControl";
 
 interface MiniAppRendererProps {
   readonly page: PageNode;
+  readonly settings: Readonly<Record<string, SettingDefinition>>;
+  readonly settingValues: Readonly<Record<string, SerializableValue>>;
   readonly timers: Readonly<Record<string, TimerSnapshot>>;
-  readonly onAction: (action: string) => Promise<void>;
+  readonly onAction: (
+    action: string,
+    input?: SerializableValue,
+  ) => Promise<void>;
+  readonly onNavigate: (
+    screen: string,
+    input?: SerializableValue,
+  ) => Promise<void>;
+  readonly onSettingChange: (
+    name: string,
+    value: SerializableValue,
+  ) => Promise<void>;
 }
 
 export function MiniAppRenderer({
   page,
+  settings,
+  settingValues,
   timers,
   onAction,
+  onNavigate,
+  onSettingChange,
 }: MiniAppRendererProps) {
   const nowMilliseconds = useClock(Object.keys(timers).length > 0);
 
@@ -38,9 +62,13 @@ export function MiniAppRenderer({
         <NodeView
           key={`${node.type}-${index}`}
           node={node}
+          settings={settings}
+          settingValues={settingValues}
           timers={timers}
           nowMilliseconds={nowMilliseconds}
           onAction={onAction}
+          onNavigate={onNavigate}
+          onSettingChange={onSettingChange}
         />
       ))}
     </View>
@@ -60,17 +88,51 @@ function useClock(active: boolean): number {
 
 interface NodeViewProps {
   readonly node: UiNode;
+  readonly settings: Readonly<Record<string, SettingDefinition>>;
+  readonly settingValues: Readonly<Record<string, SerializableValue>>;
   readonly timers: Readonly<Record<string, TimerSnapshot>>;
   readonly nowMilliseconds: number;
-  readonly onAction: (action: string) => Promise<void>;
+  readonly onAction: (
+    action: string,
+    input?: SerializableValue,
+  ) => Promise<void>;
+  readonly onNavigate: (
+    screen: string,
+    input?: SerializableValue,
+  ) => Promise<void>;
+  readonly onSettingChange: (
+    name: string,
+    value: SerializableValue,
+  ) => Promise<void>;
 }
 
-function NodeView({
-  node,
-  timers,
-  nowMilliseconds,
-  onAction,
-}: NodeViewProps) {
+function NodeView(props: NodeViewProps) {
+  const {
+    node,
+    settings,
+    settingValues,
+    timers,
+    nowMilliseconds,
+    onAction,
+    onNavigate,
+    onSettingChange,
+  } = props;
+
+  const renderChildren = (children: readonly UiNode[]) =>
+    children.map((child, index) => (
+      <NodeView
+        key={`${child.type}-${index}`}
+        node={child}
+        settings={settings}
+        settingValues={settingValues}
+        timers={timers}
+        nowMilliseconds={nowMilliseconds}
+        onAction={onAction}
+        onNavigate={onNavigate}
+        onSettingChange={onSettingChange}
+      />
+    ));
+
   switch (node.type) {
     case "section":
       return (
@@ -78,17 +140,30 @@ function NodeView({
           {node.title === undefined ? null : (
             <Text style={styles.cardTitle}>{node.title}</Text>
           )}
-          {node.children.map((child, index) => (
-            <NodeView
-              key={`${child.type}-${index}`}
-              node={child}
-              timers={timers}
-              nowMilliseconds={nowMilliseconds}
-              onAction={onAction}
-            />
-          ))}
+          {renderChildren(node.children)}
         </View>
       );
+    case "row":
+      return <View style={styles.row}>{renderChildren(node.children)}</View>;
+    case "column":
+      return <View style={styles.column}>{renderChildren(node.children)}</View>;
+    case "heading":
+      return (
+        <Text
+          accessibilityRole="header"
+          style={
+            node.level === 1
+              ? styles.headingOne
+              : node.level === 3
+                ? styles.headingThree
+                : styles.headingTwo
+          }
+        >
+          {node.text}
+        </Text>
+      );
+    case "text":
+      return <Text style={styles.bodyText}>{node.text}</Text>;
     case "metric": {
       const value = metricValue(node, timers, nowMilliseconds);
       return (
@@ -111,14 +186,48 @@ function NodeView({
         </Text>
       );
     }
+    case "text-input":
+    case "number-input":
+    case "toggle":
+    case "select": {
+      const definition = settings[node.setting];
+      if (
+        definition === undefined ||
+        !settingIsVisible(definition, settingValues)
+      ) {
+        return null;
+      }
+      return (
+        <SettingControl
+          name={node.setting}
+          definition={definition}
+          value={settingValues[node.setting] ?? definition.default}
+          {...(node.label === undefined ? {} : { label: node.label })}
+          {...(node.type !== "text-input" || node.placeholder === undefined
+            ? {}
+            : { placeholder: node.placeholder })}
+          onChange={onSettingChange}
+        />
+      );
+    }
     case "button":
       return (
         <Pressable
           accessibilityRole="button"
-          onPress={() => void onAction(node.action)}
+          onPress={() => void onAction(node.action, node.input)}
           style={styles.primaryButton}
         >
           <Text style={styles.primaryButtonText}>{node.label}</Text>
+        </Pressable>
+      );
+    case "navigation":
+      return (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => void onNavigate(node.screen, node.input)}
+          style={styles.secondaryButton}
+        >
+          <Text style={styles.secondaryButtonText}>{node.label}</Text>
         </Pressable>
       );
     case "summary":
@@ -144,20 +253,13 @@ function NodeView({
             <Text style={styles.cardTitle}>{node.title}</Text>
           )}
           {node.items.length === 0 && node.emptyState !== undefined ? (
-            <NodeView
-              node={node.emptyState}
-              timers={timers}
-              nowMilliseconds={nowMilliseconds}
-              onAction={onAction}
-            />
+            <NodeView {...props} node={node.emptyState} />
           ) : (
             node.items.map((item, index) => (
               <NodeView
+                {...props}
                 key={`${item.title}-${index}`}
                 node={item}
-                timers={timers}
-                nowMilliseconds={nowMilliseconds}
-                onAction={onAction}
               />
             ))
           )}
@@ -211,6 +313,34 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
   },
+  row: {
+    alignItems: "stretch",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  column: {
+    gap: 12,
+  },
+  headingOne: {
+    color: "#101828",
+    fontSize: 28,
+    fontWeight: "800",
+  },
+  headingTwo: {
+    color: "#172033",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  headingThree: {
+    color: "#344054",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  bodyText: {
+    color: "#344054",
+    fontSize: 16,
+  },
   timer: {
     color: "#101828",
     fontSize: 38,
@@ -221,6 +351,7 @@ const styles = StyleSheet.create({
   },
   metric: {
     alignItems: "center",
+    flexGrow: 1,
     gap: 4,
   },
   metricLabel: {
@@ -245,15 +376,31 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700",
   },
+  secondaryButton: {
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderColor: "#98a2b3",
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  secondaryButtonText: {
+    color: "#344054",
+    fontSize: 17,
+    fontWeight: "700",
+  },
   summaryRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   summaryEntry: {
     backgroundColor: "#f3f5f8",
     borderRadius: 12,
-    flex: 1,
+    flexGrow: 1,
     gap: 4,
+    minWidth: 96,
     padding: 12,
   },
   summaryLabel: {

@@ -110,14 +110,13 @@ export default defineMiniApp({
     home(context) {
       const activeTrip = context.timers.get(TRIP_TIMER_ID);
       const today = totalsSince(context, startOfDay(new Date(context.now())));
-      const trips = context.data.collection(TRIPS_COLLECTION).query({
-        orderBy: [{ field: "startedAt", direction: "desc" }],
-        limit: 50,
-      });
 
       return ui.page({
         title: "Bathroom Pay",
         children: [
+          ui.text({
+            text: "Track a trip with a host-managed timer that remains correct after the app closes.",
+          }),
           ui.section({
             title: "Current trip",
             children: [
@@ -157,6 +156,26 @@ export default defineMiniApp({
               },
             ],
           }),
+          ui.row({
+            children: [
+              ui.navigation({ label: "History", screen: "history" }),
+              ui.navigation({ label: "Pay settings", screen: "settings" }),
+            ],
+          }),
+        ],
+      });
+    },
+
+    history(context) {
+      const trips = context.data.collection(TRIPS_COLLECTION).query({
+        orderBy: [{ field: "startedAt", direction: "desc" }],
+        limit: 50,
+      });
+
+      return ui.page({
+        title: "Trip history",
+        children: [
+          ui.navigation({ label: "Back to timer", screen: "home" }),
           ui.list({
             title: "Recent trips",
             items: trips.map((trip) =>
@@ -170,6 +189,24 @@ export default defineMiniApp({
               title: "No trips yet",
               description: "Start a trip to begin tracking.",
             }),
+          }),
+        ],
+      });
+    },
+
+    settings() {
+      return ui.page({
+        title: "Pay settings",
+        children: [
+          ui.navigation({ label: "Back to timer", screen: "home" }),
+          ui.section({
+            children: [
+              ui.select({ setting: "payType" }),
+              ui.numberInput({ setting: "hourlyRate" }),
+              ui.numberInput({ setting: "annualSalary" }),
+              ui.numberInput({ setting: "hoursPerWeek" }),
+              ui.numberInput({ setting: "weeksPerYear" }),
+            ],
           }),
         ],
       });

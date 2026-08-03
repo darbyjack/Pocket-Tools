@@ -2,7 +2,7 @@
 
 ## Security objective
 
-A mini-app script may compute values and use narrowly defined host services without gaining ambient authority over the phone, host application, other scripts, or user data.
+A mini-app script may compute values and use the frozen offline SDK without gaining ambient authority over the phone, host application, another script, or host-owned services.
 
 Every script is untrusted, including scripts produced by an agent or written by the device owner.
 
@@ -11,54 +11,58 @@ Every script is untrusted, including scripts produced by an agent or written by 
 Trusted:
 
 - Signed Pocket Tools host code
-- The current SDK contract
-- The native QuickJS module
-- Host-owned SQLite and React Native services
+- The frozen SDK v1 TypeScript contract
+- The matching embedded QuickJS SDK and runner
+- Host-owned React Native and SQLite services
 
 Untrusted:
 
 - Mini-app source
-- Script manifests and schemas
-- Script-generated UI trees
+- Script manifests and definitions
+- Script-generated queries and UI trees
 - Script-requested operations
 - Script console output
 
 ## Core invariants
 
 1. Scripts execute in QuickJS-NG, not the React Native JavaScript runtime.
-2. Every invocation receives a fresh runtime and context.
+2. Every inspection, render, and action receives a fresh runtime and context.
 3. The module loader resolves only `@pocket-tools/sdk`.
 4. Cross-boundary values are finite JSON-compatible values made from plain objects and arrays.
 5. Native objects and host references never enter the script runtime.
-6. Host state is passed to the runner as function arguments, not writable globals.
-7. SQLite namespaces are selected by the host, not the script.
-8. Requested writes are applied only after successful execution and host validation.
-9. Running timers do not imply running script code.
-10. Runtime, native-allocation, and response-decoding failures become structured errors rather than crossing JNI as exceptions.
+6. Host state is passed as function arguments, not writable globals.
+7. SQLite namespaces are selected from the inspected manifest ID by trusted host code.
+8. Settings, records, queries, operation lists, action targets, screen targets, and UI trees are validated before use.
+9. SQLite independently validates every persisted setting and record write.
+10. One action's writes are applied in one transaction or not at all.
+11. Running timers do not imply running script code.
+12. Runtime, allocation, response-decoding, and validation failures become structured errors.
 
-## Current host services
+## Frozen host authority
 
-The current script-driven slice exposes only:
+SDK v1 exposes only:
 
-- Declared setting values
-- Isolated record insertion and current queries and aggregates
+- Declared isolated settings
+- Declared isolated collection records
+- Validated insert, get, update, remove, query, count, and sum behavior
 - Durable start/get/stop timers
 - Current host time
-- Native rendering of the current UI nodes
+- Host-owned screen navigation
+- Native rendering of the frozen declarative UI nodes
 
-No capability or permission layer exists yet because this slice has no sensitive file, network, notification, location, or secret access.
+No capability or permission framework exists because SDK v1 has no file, network, notification, location, secret, or custom-native authority to grant.
 
 ## Runtime isolation
 
-Each inspection, render, or action request creates a new QuickJS runtime and context. The runtime is disposed before the request returns.
+Each request creates a new QuickJS runtime and context and disposes them before returning.
 
-The script cannot observe state left in `globalThis` by an earlier invocation. It does not receive React Native, Expo, Node.js, filesystem, SQLite, process-environment, or host-request globals.
+Scripts cannot observe globals left by an earlier invocation. They do not receive React Native, Expo, Node.js, filesystem, SQLite, process environment, authentication, or host-request globals.
 
-The QuickJS module loader rejects external packages, relative paths, absolute paths, remote URLs, and dynamic imports that resolve outside the virtual SDK module.
+The module loader rejects external packages, relative and absolute paths, remote URLs, Node modules, and imports outside the virtual SDK module.
 
 ## Runtime limits
 
-The host currently supplies these defaults:
+Current trusted-host defaults are:
 
 - 512 KiB maximum script source
 - 2 MiB maximum host request
@@ -71,19 +75,19 @@ The host currently supplies these defaults:
 - 512 rendered UI nodes
 - 16 levels of UI-tree depth
 
-The native module validates every configuration again and refuses values outside hard safety ceilings. These values are implementation defaults, not SDK compatibility promises. They remain adjustable by trusted host code so Android benchmarking and focused tests do not require recompiling the native runtime.
+The native module validates configuration values against hard ceilings. These defaults are implementation limits, not future compatibility promises, and remain adjustable for Android benchmarking.
 
-The deadline uses QuickJS's interrupt handler and is also checked while draining pending promise jobs. Memory and stack bounds use QuickJS runtime controls. Source, request, result, and log bounds are enforced before values return to React Native.
+QuickJS's interrupt handler enforces the deadline during script execution and pending-job draining. Memory and stack limits use QuickJS runtime controls. Source, request, result, log, UI-node, and UI-depth bounds are enforced before output is used by React Native.
 
 ## Promise and blocking behavior
 
-QuickJS cannot block its worker through `Atomics.wait`. The host drains pending QuickJS jobs after module evaluation and after a screen or action call so queued microtasks complete deterministically.
+Blocking waits are disabled. The host drains pending jobs after module evaluation and after screen/action execution.
 
-Unhandled promise rejections become `UNHANDLED_PROMISE_REJECTION`. Screens and actions themselves remain synchronous in the current SDK; returning a promise produces `ASYNC_NOT_SUPPORTED`.
+Unhandled promise rejections become `UNHANDLED_PROMISE_REJECTION`. Screens and actions are synchronous; returning a promise produces `ASYNC_NOT_SUPPORTED`.
 
-## Bridge validation
+## Bridge and response validation
 
-Allowed values are:
+Allowed bridge values are:
 
 - `null`
 - finite numbers
@@ -92,31 +96,49 @@ Allowed values are:
 - arrays containing allowed values
 - plain objects with safe string keys and allowed values
 
-Dates cross the boundary as ISO 8601 strings. `undefined`, native handles, functions, symbols, bigints, cyclic objects, class instances, unsafe prototype keys, non-finite numbers, and excessively deep or large object graphs are rejected.
+Dates cross as strings. `undefined`, native handles, functions, symbols, bigints, cycles, class instances, unsafe prototype keys, non-finite numbers, and excessively complex object graphs are rejected.
 
-The runtime validates inspection data, script-requested records, operation lists, and rendered UI before native JSON serialization. React Native validates the native response envelope, log records, success payload, and structured failure payload before using it.
+QuickJS validates runtime inputs, collection/query use, requested operations, targets, and broad UI structure. React Native then validates the response envelope, logs, inspection definitions, exact operation shapes, exact UI properties, setting bindings, action targets, and navigation targets.
+
+## Settings and data isolation
+
+The host loads and writes state under the inspected manifest ID. A script cannot provide another namespace or construct SQL.
+
+Settings are checked against their declared type, options, text bounds, and numeric bounds before persistence and again when loaded.
+
+Collection fields are required unless explicitly optional. Unknown fields, host-owned `id`/`createdAt`/`updatedAt` properties, invalid types, non-finite values, invalid dates, and bound violations are rejected.
+
+Query filters are typed. Text and boolean values support equality only. Number, money, and datetime fields support equality and ranges. Only optional fields may compare to `null`. Query fields, ordering, offset, limit, and sum targets are validated in QuickJS.
+
+Insert, update, and remove operations cross the boundary explicitly. SQLite rechecks the declared collection, record ID, exact fields, required values, and merged update before mutating state. All operations from one action execute in one transaction.
+
+## UI and interaction validation
+
+Scripts never pass React Native components, style objects, event handlers, or native props.
+
+The host accepts only the frozen node set and exact properties. Settings-bound controls must reference a declared compatible setting. Buttons must reference declared actions. Navigation nodes must reference declared screens. Invalid or oversized trees fail before rendering.
+
+The host owns active-screen state and rerendering after navigation, settings changes, and actions.
+
+## Timers
+
+Timer IDs are lower camelCase names scoped by manifest ID. A timer stores a UTC start timestamp. The host reconstructs elapsed time after relaunch without keeping QuickJS or the React Native process alive.
+
+SDK v1 does not expose pause, resume, arbitrary metadata, notifications, or background JavaScript.
 
 ## Console logging
 
-The sandbox provides `console.log`, `console.info`, `console.warn`, and `console.error`. Messages are converted to strings inside QuickJS and returned as bounded log records with the runtime response.
-
-When entry or byte limits are reached, additional output is discarded and `logsTruncated` is set. Console output never writes directly into host state or Android services.
-
-## Data isolation
-
-The host loads and writes state under the inspected manifest ID. Collection operations are checked against declared collections. Raw SQL is unavailable to scripts.
-
-An action produces a serializable operation list. SQLite applies the list in one transaction; any failure rolls back the entire action.
+The sandbox provides bounded `console.log`, `console.info`, `console.warn`, and `console.error`. Captured messages return as diagnostic records only and never write directly to Android services or persisted state.
 
 ## Failure handling
 
-Failures use stable machine-readable codes, including distinct source, request, result, timeout, memory, stack, module, bridge, promise, and native-runtime failures. Messages and script stacks are bounded before crossing JNI.
+Failures use machine-readable codes for invalid source, definitions, settings, records, queries, operations, actions, screens, timers, UI, bridge values, unsupported modules, promises, runtime limits, native allocation, and malformed native responses.
 
-The React Native host preserves the error code, script stack, captured logs, and log truncation state in `MiniAppRuntimeError`. A failed invocation does not poison the next runtime.
+`MiniAppRuntimeError` preserves the code, bounded script stack, captured logs, and truncation state. A failed invocation cannot retain global state, partially apply an action, or poison the next invocation.
 
 ## Manual verification
 
-No GitHub Actions workflow is enabled. After generating the Android project, run the repository checks and connected Android instrumentation tests manually:
+No GitHub Actions workflow is enabled. Run repository checks and Android instrumentation manually:
 
 ```bash
 pnpm install
@@ -127,8 +149,8 @@ cd apps/mobile/android
 ./gradlew :app:assembleDebug connectedDebugAndroidTest
 ```
 
-The instrumentation suite covers infinite loops, allocation pressure, unsupported modules, ambient-global isolation, runtime-to-runtime isolation, malformed bridge values, promise jobs, unhandled rejections, log limits, result limits, and recovery after failure.
+The Android suite covers sandbox containment, runtime recovery, frozen SDK builders, inspection metadata, multiple screens, native input nodes, typed filters, offset/limit behavior, and explicit insert/update/remove operations.
 
-## Deferred work
+## Deferred capabilities
 
-File access, network access, secret storage, location, notifications, public script distribution, remote updates, and background jobs require concrete product requirements and separate threat modeling. They are not represented by placeholder APIs.
+Network, files, secrets, location, notifications, public distribution, remote installation, cloud synchronization, custom native components, arbitrary background jobs, schema migrations, and compatibility shims require separately approved post-MVP designs. SDK v1 contains no placeholder authority for them.

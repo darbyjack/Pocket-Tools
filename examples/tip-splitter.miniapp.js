@@ -60,12 +60,29 @@ export default defineMiniApp({
         title: "Tip Splitter",
         children: [
           ui.section({
-            title: "Total",
+            title: "Inputs",
             children: [
-              ui.metric({
-                label: "Bill plus tip",
-                value: totalAmount,
-                format: "money",
+              ui.numberInput({ setting: "billAmount" }),
+              ui.numberInput({ setting: "tipPercent" }),
+              ui.numberInput({ setting: "partySize" }),
+            ],
+          }),
+          ui.section({
+            title: "Result",
+            children: [
+              ui.row({
+                children: [
+                  ui.metric({
+                    label: "Bill plus tip",
+                    value: totalAmount,
+                    format: "money",
+                  }),
+                  ui.metric({
+                    label: "Per person",
+                    value: perPerson,
+                    format: "money",
+                  }),
+                ],
               }),
               ui.summary({
                 title: "Breakdown",
@@ -77,27 +94,7 @@ export default defineMiniApp({
                     value: `${tipPercent}%`,
                     format: "plain",
                   },
-                ],
-              }),
-            ],
-          }),
-          ui.section({
-            title: "Split",
-            children: [
-              ui.metric({
-                label: "Per person",
-                value: perPerson,
-                format: "money",
-              }),
-              ui.summary({
-                title: "Party",
-                values: [
                   { label: "People", value: partySize, format: "number" },
-                  {
-                    label: "Total",
-                    value: totalAmount,
-                    format: "money",
-                  },
                 ],
               }),
             ],

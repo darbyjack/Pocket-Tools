@@ -9,6 +9,15 @@ import {
   timerElapsedSeconds,
 } from "./protocol.ts";
 
+function success(value: Record<string, unknown>) {
+  return JSON.stringify({
+    ok: true,
+    value: { operations: [], ...value },
+    logs: [],
+    logsTruncated: false,
+  });
+}
+
 test("reconstructs a durable timer from its start timestamp", () => {
   assert.equal(
     timerElapsedSeconds(
@@ -57,6 +66,49 @@ test("uses declarative setting visibility", () => {
   assert.equal(settingIsVisible(definition, { payType: "salary" }), false);
 });
 
+test("parses a frozen SDK inspection and CRUD operations", () => {
+  const response = parseRuntimeResponse(
+    JSON.stringify({
+      ok: true,
+      value: {
+        inspection: {
+          manifest: { id: "example-tool", name: "Example Tool", sdkVersion: 1 },
+          settings: {
+            title: { type: "text", label: "Title", default: "Example" },
+          },
+          collections: {
+            entries: {
+              fields: {
+                title: { type: "text" },
+                complete: { type: "boolean" },
+              },
+            },
+          },
+          screens: ["home", "details"],
+          actions: ["save"],
+        },
+        operations: [
+          {
+            type: "update",
+            collection: "entries",
+            id: "0123456789abcdef0123456789abcdef",
+            changes: { complete: true },
+          },
+          {
+            type: "remove",
+            collection: "entries",
+            id: "fedcba9876543210fedcba9876543210",
+          },
+        ],
+      },
+      logs: [],
+      logsTruncated: false,
+    }),
+  );
+  assert.deepEqual(response.value.inspection?.screens, ["home", "details"]);
+  assert.equal(response.value.operations.length, 2);
+});
+
 test("preserves structured sandbox errors and captured logs", () => {
   assert.throws(
     () =>
@@ -82,17 +134,47 @@ test("preserves structured sandbox errors and captured logs", () => {
   );
 });
 
-test("rejects malformed native responses", () => {
+test("rejects malformed envelopes, inspections, and operations", () => {
   assert.throws(
     () => parseRuntimeResponse("not-json"),
     (error: unknown) =>
       error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
   );
-
   assert.throws(
     () =>
       parseRuntimeResponse(
         JSON.stringify({ ok: true, value: { operations: [] }, logs: [], logsTruncated: "no" }),
+      ),
+    (error: unknown) =>
+      error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
+  );
+  assert.throws(
+    () =>
+      parseRuntimeResponse(
+        success({
+          inspection: {
+            manifest: { id: "bad", name: "Bad", sdkVersion: 1 },
+            settings: {},
+            collections: {},
+            screens: ["missingHome"],
+            actions: [],
+          },
+        }),
+      ),
+    (error: unknown) =>
+      error instanceof MiniAppRuntimeError && error.code === "VALIDATION_FAILED",
+  );
+  assert.throws(
+    () =>
+      parseRuntimeResponse(
+        JSON.stringify({
+          ok: true,
+          value: {
+            operations: [{ type: "remove", collection: "entries", id: "id", extra: true }],
+          },
+          logs: [],
+          logsTruncated: false,
+        }),
       ),
     (error: unknown) =>
       error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
@@ -103,26 +185,20 @@ test("rejects invalid UI in an otherwise valid native response", () => {
   assert.throws(
     () =>
       parseRuntimeResponse(
-        JSON.stringify({
-          ok: true,
-          value: {
-            operations: [],
-            page: {
-              type: "page",
-              title: "Unsafe",
-              children: [
-                {
-                  type: "metric",
-                  label: "Amount",
-                  value: 10,
-                  format: "money",
-                  style: { backgroundColor: "red" },
-                },
-              ],
-            },
+        success({
+          page: {
+            type: "page",
+            title: "Unsafe",
+            children: [
+              {
+                type: "metric",
+                label: "Amount",
+                value: 10,
+                format: "money",
+                style: { backgroundColor: "red" },
+              },
+            ],
           },
-          logs: [],
-          logsTruncated: false,
         }),
       ),
     (error: unknown) =>

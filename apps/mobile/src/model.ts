@@ -11,6 +11,7 @@ import type {
 } from "@pocket-tools/sdk-contract";
 
 export type {
+  CollectionDefinition,
   MetricNode,
   PageNode,
   SerializableValue,
@@ -24,12 +25,16 @@ export interface MiniAppInspection {
   readonly manifest: MiniAppManifest;
   readonly settings: Readonly<Record<string, SettingDefinition>>;
   readonly collections: Readonly<Record<string, CollectionDefinition>>;
+  readonly screens: readonly string[];
+  readonly actions: readonly string[];
 }
 
 export interface RuntimeSnapshot {
   readonly mode: "inspect" | "render" | "action";
   readonly screen?: string;
+  readonly screenInput?: SerializableValue;
   readonly action?: string;
+  readonly actionInput?: SerializableValue;
   readonly now: string;
   readonly settings: Readonly<Record<string, SerializableValue>>;
   readonly records: Readonly<Record<string, readonly StoredRecord[]>>;
@@ -40,6 +45,19 @@ export interface InsertOperation {
   readonly type: "insert";
   readonly collection: string;
   readonly record: Readonly<Record<string, SerializableValue>>;
+}
+
+export interface UpdateOperation {
+  readonly type: "update";
+  readonly collection: string;
+  readonly id: string;
+  readonly changes: Readonly<Record<string, SerializableValue>>;
+}
+
+export interface RemoveOperation {
+  readonly type: "remove";
+  readonly collection: string;
+  readonly id: string;
 }
 
 export interface TimerStartOperation {
@@ -55,6 +73,8 @@ export interface TimerStopOperation {
 
 export type RuntimeOperation =
   | InsertOperation
+  | UpdateOperation
+  | RemoveOperation
   | TimerStartOperation
   | TimerStopOperation;
 

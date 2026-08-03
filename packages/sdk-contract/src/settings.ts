@@ -1,8 +1,10 @@
-import type { SerializablePrimitive, SerializableValue } from "./values.ts";
+import type { SerializableValue } from "./values.ts";
+
+export type SelectValue = string | number | boolean;
 
 export interface VisibilityRule {
   readonly setting: string;
-  readonly equals: SerializablePrimitive;
+  readonly equals: SelectValue;
 }
 
 interface SettingBase<TType extends string, TValue extends SerializableValue> {
@@ -13,10 +15,16 @@ interface SettingBase<TType extends string, TValue extends SerializableValue> {
   readonly visibleWhen?: VisibilityRule;
 }
 
+export interface TextSetting extends SettingBase<"text", string> {
+  readonly minLength?: number;
+  readonly maxLength?: number;
+}
+
+export interface BooleanSetting extends SettingBase<"boolean", boolean> {}
+
 export interface NumberSetting extends SettingBase<"number", number> {
   readonly min?: number;
   readonly max?: number;
-  readonly step?: number;
 }
 
 export interface MoneySetting extends SettingBase<"money", number> {
@@ -26,16 +34,27 @@ export interface MoneySetting extends SettingBase<"money", number> {
 
 export interface SelectOption {
   readonly label: string;
-  readonly value: SerializablePrimitive;
+  readonly value: SelectValue;
 }
 
-export interface SelectSetting extends SettingBase<"select", SerializablePrimitive> {
+export interface SelectSetting extends SettingBase<"select", SelectValue> {
   readonly options: readonly SelectOption[];
 }
 
-export type SettingDefinition = NumberSetting | MoneySetting | SelectSetting;
+export type SettingDefinition =
+  | TextSetting
+  | BooleanSetting
+  | NumberSetting
+  | MoneySetting
+  | SelectSetting;
 
 export const setting = {
+  text(definition: Omit<TextSetting, "type">): TextSetting {
+    return { type: "text", ...definition };
+  },
+  boolean(definition: Omit<BooleanSetting, "type">): BooleanSetting {
+    return { type: "boolean", ...definition };
+  },
   number(definition: Omit<NumberSetting, "type">): NumberSetting {
     return { type: "number", ...definition };
   },

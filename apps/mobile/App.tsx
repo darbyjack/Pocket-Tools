@@ -12,7 +12,6 @@ import {
 
 import bundledMiniApps from "./src/generated/bundled-mini-apps.json";
 import { MiniAppRenderer } from "./src/ui/MiniAppRenderer";
-import { SettingsPanel } from "./src/ui/SettingsPanel";
 import { useMiniApp } from "./src/useMiniApp";
 
 export default function App() {
@@ -33,6 +32,7 @@ export default function App() {
     page,
     snapshot,
     invokeAction,
+    navigate,
     updateSetting,
   } = useMiniApp(selectedMiniApp?.source ?? null);
 
@@ -94,19 +94,15 @@ export default function App() {
           </View>
         )}
 
-        {inspection !== null && snapshot !== null ? (
-          <SettingsPanel
-            definitions={inspection.settings}
-            values={snapshot.settings}
-            onChange={updateSetting}
-          />
-        ) : null}
-
-        {page !== null && snapshot !== null ? (
+        {page !== null && snapshot !== null && inspection !== null ? (
           <MiniAppRenderer
             page={page}
+            settings={inspection.settings}
+            settingValues={snapshot.settings}
             timers={snapshot.timers}
             onAction={invokeAction}
+            onNavigate={navigate}
+            onSettingChange={updateSetting}
           />
         ) : null}
       </ScrollView>

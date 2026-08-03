@@ -2,6 +2,7 @@ import type { CollectionDefinition, DataClient } from "./data.ts";
 import type { SettingDefinition, SettingsClient } from "./settings.ts";
 import type { TimerClient } from "./timers.ts";
 import type { PageNode } from "./ui.ts";
+import type { SerializableValue } from "./values.ts";
 
 export const SDK_VERSION = 1 as const;
 
@@ -20,9 +21,15 @@ export interface MiniAppContext {
   readonly now: () => string;
 }
 
-export type ScreenRenderer = (context: MiniAppContext) => PageNode;
+export type ScreenRenderer = (
+  context: MiniAppContext,
+  input: SerializableValue | undefined,
+) => PageNode;
 
-export type ActionHandler = (context: MiniAppContext) => void;
+export type ActionHandler = (
+  context: MiniAppContext,
+  input: SerializableValue | undefined,
+) => void;
 
 export interface MiniAppDefinition {
   readonly manifest: MiniAppManifest;

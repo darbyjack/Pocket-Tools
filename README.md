@@ -1,38 +1,55 @@
 # Pocket Tools
 
-Pocket Tools is an Android-first host for small, scriptable personal utilities. A mini app is one JavaScript module that uses a small host-owned SDK and renders through native components.
+Pocket Tools is an Android-first Expo host for small personal utilities authored as one JavaScript mini-app module. Scripts execute inside isolated QuickJS-NG runtimes, describe native UI declaratively, and use host-owned SQLite settings, records, and durable timers.
 
-The current reference scripts are:
+The existing reference scripts are sufficient to exercise the platform:
 
-- **Bathroom Pay**, which exercises durable timers, records, aggregates, actions, and conditional settings.
-- **Tip Splitter**, which exercises a complete calculator built from durable script-declared inputs and native metric and summary output.
+- **Bathroom Pay** uses multiple screens, navigation, conditional settings, actions, records, aggregates, and a durable timer.
+- **Tip Splitter** uses script-owned native input nodes, layout, host formatting, and deterministic rerendering.
 
-Their business logic lives only under `examples/*.miniapp.js`; the host contains no Bathroom Pay or Tip Splitter runtime, storage, rendering, or hook code.
+Their business logic lives only under `examples/*.miniapp.js`; the host contains no mini-app-specific runtime, storage, rendering, or hook code.
 
 ## Development rules
 
-Read [AGENTS.md](AGENTS.md) before changing the project. The SDK contains only the settings, storage, timer, and UI primitives required by current working mini apps. New APIs are added only when the next end-to-end layer needs them.
+Read [AGENTS.md](AGENTS.md) before changing the project. SDK v1 is frozen for the MVP after issue #6 merges. New public SDK surface requires an explicit post-MVP version decision rather than an incidental v1 addition.
 
-## Current phase
+No GitHub Actions workflow is enabled. Repository checks and Android builds are run manually until CI is deliberately introduced later.
 
-The Android application connects a generic mini-app path:
+## Current host path
 
 ```text
-examples/*.miniapp.js
-  → generated bundled-script data catalog
-  → generic useMiniApp(source) host path
-  → isolated QuickJS-NG runtime
-  → serialized UI and operation results
-  → strict host UI validation
-  → React Native renderer
-  → Expo SQLite settings, records, and timers
+single-file mini-app source
+  → generic inspection and definition validation
+  → fresh bounded QuickJS-NG runtime
+  → frozen virtual @pocket-tools/sdk module
+  → serialized UI, interaction input, and explicit operation results
+  → React Native response and target validation
+  → host-owned native renderer and active-screen state
+  → schema-validated Expo SQLite settings, records, and timers
 ```
 
-The bundled catalog is temporary seed data for development. Adding another `examples/*.miniapp.js` file requires no host-code changes; the synchronizer discovers it automatically. Script installation and the copy-and-paste editor are later product layers.
-
-The host validates every supported UI node against an exact property allowlist before rendering. Unknown properties, unsupported nodes, invalid action identifiers, non-finite formatted values, nested pages, and oversized trees are rejected.
+The generated bundled catalog is temporary development seed data. The later installer layer will replace the bundled-only entry path with paste, preview, install, edit, update, rollback, export, and deletion entirely on Android.
 
 The canonical delivery map is [Wayfinder: Deliver the Pocket Tools Android MVP](https://github.com/darbyjack/Pocket-Tools/issues/1).
+
+## Frozen offline SDK v1
+
+SDK v1 supports:
+
+- Text, boolean, number, money, and select settings
+- Text, boolean, number, money, and datetime collection fields
+- Insert, get, update, remove, query, count, and sum
+- Typed equality and range filters, sorting, offset, and limit
+- Multiple synchronous screens and actions
+- Finite serializable input for record-targeted buttons and navigation
+- Host-owned navigation and deterministic rerendering
+- Native page, section, row, column, heading, text, input, toggle, select, button, metric, timer, summary, list, and empty-state nodes
+- Durable start/get/stop timers
+- Host-owned plain, number, USD money, duration, and date-time formatting
+
+SDK v1 intentionally excludes network, files, location, notifications, secrets, custom native modules, arbitrary background JavaScript, migrations, and compatibility shims.
+
+See [Frozen Offline Mini App SDK v1](docs/SDK_OVERVIEW.md) for the complete contract.
 
 ## Requirements
 
@@ -48,7 +65,7 @@ pnpm check
 pnpm android
 ```
 
-`pnpm android` synchronizes every `examples/*.miniapp.js` script into the generated data catalog and runs the Android development build. Expo Go cannot run Pocket Tools because the app contains a custom native QuickJS module.
+`pnpm android` synchronizes `examples/*.miniapp.js` into the generated development catalog and starts the Android development build. Expo Go cannot run Pocket Tools because the app contains a custom native QuickJS module.
 
 Individual checks:
 
@@ -60,11 +77,7 @@ pnpm typecheck
 pnpm test
 ```
 
-No GitHub Actions workflow is enabled yet. Repository checks and Android builds are run manually until CI is deliberately introduced later.
-
-## Mini-app shape
-
-Installed scripts import only the host-provided virtual SDK module:
+## Minimal mini-app shape
 
 ```js
 import { defineMiniApp, ui } from "@pocket-tools/sdk";
@@ -77,19 +90,22 @@ export default defineMiniApp({
   },
   screens: {
     home() {
-      return ui.page({ title: "Example Tool", children: [] });
+      return ui.page({
+        title: "Example Tool",
+        children: [ui.text({ text: "Hello from a script." })],
+      });
     },
   },
 });
 ```
 
-The host rejects unsupported imports, ambient native access, unsupported SDK identifiers, invalid bridge values, and invalid UI output.
+The host rejects unsupported imports, ambient native access, unknown SDK properties, malformed definitions, invalid settings and records, invalid operation lists, undeclared actions/screens, invalid interaction and bridge values, and invalid UI output.
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [First Android mini-app slice](docs/ANDROID_SLICE.md)
+- [Frozen SDK v1](docs/SDK_OVERVIEW.md)
 - [Security model](docs/SECURITY_MODEL.md)
-- [SDK v1 overview](docs/SDK_OVERVIEW.md)
+- [Android slice](docs/ANDROID_SLICE.md)
 - [Bathroom Pay requirements](docs/BATHROOM_PAY_REQUIREMENTS.md)
 - [Mobile build instructions](apps/mobile/README.md)
