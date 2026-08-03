@@ -26,10 +26,21 @@ export interface EmbeddedRuntimeSources {
 }
 
 export async function readEmbeddedRuntimeSources(): Promise<EmbeddedRuntimeSources> {
-  const header = (await readFile(HEADER_URL, "utf8")).replaceAll("\r\n", "\n");
+  let header: string;
+  try {
+    header = await readFile(HEADER_URL, "utf8");
+  } catch (caught) {
+    throw new RuntimeSourceError(
+      "RUNTIME_SOURCE_MISSING",
+      caught instanceof Error
+        ? `Unable to read PocketQuickJsSources.h: ${caught.message}`
+        : "Unable to read PocketQuickJsSources.h.",
+    );
+  }
+  const normalizedHeader = header.replaceAll("\r\n", "\n");
   return {
-    sdk: extractRawString(header, "kSdk"),
-    runner: extractRawString(header, "kRunner"),
+    sdk: extractRawString(normalizedHeader, "kSdk"),
+    runner: extractRawString(normalizedHeader, "kRunner"),
   };
 }
 
