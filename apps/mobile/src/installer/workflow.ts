@@ -1,3 +1,4 @@
+import { DIAGNOSTIC_APP_ID_PREFIX } from "../diagnostics/fixtures";
 import { PREVIEW_STORAGE_PREFIX } from "../storage/namespaces";
 
 export type InstallWorkflowMode = "create" | "duplicate" | "edit";
@@ -7,6 +8,11 @@ export function assertCandidateIdentity(
   installedId: string | null,
   candidateId: string,
 ): void {
+  if (candidateId.startsWith(DIAGNOSTIC_APP_ID_PREFIX)) {
+    throw new Error(
+      `INSTALLATION_FAILED: manifest.id values beginning with ${DIAGNOSTIC_APP_ID_PREFIX} are reserved for host diagnostics.`,
+    );
+  }
   if (mode === "edit" && installedId !== null && installedId !== candidateId) {
     throw new Error(
       `INSTALLATION_FAILED: An update cannot change manifest.id from ${installedId} to ${candidateId}. Use Duplicate to create a new app.`,
