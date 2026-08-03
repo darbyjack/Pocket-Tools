@@ -4,8 +4,6 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
-import java.util.Locale
-import org.json.JSONObject
 
 class PocketQuickJsModule : Module() {
   override fun definition() = ModuleDefinition {
@@ -50,29 +48,7 @@ internal object PocketQuickJsBridge {
       limits.maximumLogEntries,
       limits.maximumLogBytes,
     )
-    return preserveSandboxFailureCode(result.toString(Charsets.UTF_8))
-  }
-
-  private fun preserveSandboxFailureCode(result: String): String {
-    return try {
-      val payload = JSONObject(result)
-      val error = payload.optJSONObject("error") ?: return result
-      if (error.optString("code") != "UNHANDLED_PROMISE_REJECTION") return result
-
-      val normalizedMessage = error.optString("message").lowercase(Locale.ROOT)
-      val sandboxCode = when {
-        "interrupted" in normalizedMessage -> "RUNTIME_TIMEOUT"
-        "out of memory" in normalizedMessage || normalizedMessage == "[unprintable]" ->
-          "RUNTIME_MEMORY_LIMIT"
-        "stack overflow" in normalizedMessage -> "RUNTIME_STACK_LIMIT"
-        else -> return result
-      }
-
-      error.put("code", sandboxCode)
-      payload.toString()
-    } catch (_: Exception) {
-      result
-    }
+    return result.toString(Charsets.UTF_8)
   }
 
   private external fun runUtf8(
