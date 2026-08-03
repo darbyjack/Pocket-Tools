@@ -49,5 +49,4 @@ export const setting = {
 
 export interface SettingsClient {
   get<TValue extends SerializableValue = SerializableValue>(name: string): TValue;
-  set(name: string, value: SerializableValue): void;
 }
