@@ -31,9 +31,17 @@ interface BackupTimerRow {
   readonly started_at: string;
 }
 
+interface StatePresenceRow {
+  readonly has_state: number;
+}
+
 export interface RestoreMiniAppBackupOptions {
   readonly replaceExisting?: boolean;
 }
+
+export type MiniAppRestoreConflict =
+  | { readonly kind: "installed"; readonly app: InstalledMiniApp }
+  | { readonly kind: "retained-data"; readonly appId: string };
 
 export async function createMiniAppBackup(appId: string): Promise<MiniAppBackupV1> {
   const app = await getInstalledMiniApp(appId);
@@ -101,6 +109,18 @@ export async function createMiniAppBackup(appId: string): Promise<MiniAppBackupV
   return backup;
 }
 
+export async function getMiniAppRestoreConflict(
+  appId: string,
+): Promise<MiniAppRestoreConflict | null> {
+  const installed = await getInstalledMiniApp(appId);
+  if (installed !== null) return { kind: "installed", app: installed };
+
+  const database = await databasePromise;
+  return (await hasStoredState(database, appId))
+    ? { kind: "retained-data", appId }
+    : null;
+}
+
 export async function restoreMiniAppBackup(
   backup: MiniAppBackupV1,
   activeInspection: MiniAppInspection,
@@ -117,16 +137,15 @@ export async function restoreMiniAppBackup(
         "SELECT app_id FROM installed_mini_apps WHERE app_id = ?",
         parsed.app.id,
       );
-      if (existing !== null && options.replaceExisting !== true) {
+      const hasState = await hasStoredState(database, parsed.app.id);
+      if ((existing !== null || hasState) && options.replaceExisting !== true) {
         throw new Error(
-          `BACKUP_CONFLICT: ${parsed.app.id} is already installed. Explicit replacement is required.`,
+          `BACKUP_CONFLICT: ${parsed.app.id} already has an installation or retained data. Explicit replacement is required.`,
         );
       }
 
-      if (existing !== null) {
-        await database.runAsync("DELETE FROM installed_mini_apps WHERE app_id = ?", parsed.app.id);
-        await clearStateInTransaction(database, parsed.app.id);
-      }
+      await database.runAsync("DELETE FROM installed_mini_apps WHERE app_id = ?", parsed.app.id);
+      await clearStateInTransaction(database, parsed.app.id);
 
       await database.runAsync(
         `INSERT INTO installed_mini_apps (
@@ -187,6 +206,20 @@ export async function restoreMiniAppBackup(
     throw new Error("BACKUP_RESTORE_FAILED: The restored mini app could not be reloaded.");
   }
   return restored;
+}
+
+async function hasStoredState(database: SQLite.SQLiteDatabase, appId: string): Promise<boolean> {
+  const row = await database.getFirstAsync<StatePresenceRow>(
+    `SELECT CASE WHEN
+       EXISTS (SELECT 1 FROM settings WHERE app_id = ?)
+       OR EXISTS (SELECT 1 FROM records WHERE app_id = ?)
+       OR EXISTS (SELECT 1 FROM timers WHERE app_id = ?)
+     THEN 1 ELSE 0 END AS has_state`,
+    appId,
+    appId,
+    appId,
+  );
+  return row?.has_state === 1;
 }
 
 async function clearStateInTransaction(
