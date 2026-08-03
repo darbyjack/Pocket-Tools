@@ -82,7 +82,7 @@ export function SettingControl({
         definition={definition}
         value={typeof value === "string" ? value : definition.default}
         label={label}
-        placeholder={placeholder}
+        {...(placeholder === undefined ? {} : { placeholder })}
         onChange={onChange}
       />
     );
@@ -138,11 +138,13 @@ function TextSetting({
       )}
       <TextInput
         accessibilityLabel={label}
-        maxLength={definition.maxLength}
+        {...(definition.maxLength === undefined
+          ? {}
+          : { maxLength: definition.maxLength })}
         onBlur={commit}
         onChangeText={setDraft}
         onSubmitEditing={commit}
-        placeholder={placeholder}
+        {...(placeholder === undefined ? {} : { placeholder })}
         style={styles.input}
         value={draft}
       />
