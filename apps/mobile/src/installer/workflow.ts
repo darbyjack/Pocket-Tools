@@ -1,5 +1,7 @@
-import { DIAGNOSTIC_APP_ID_PREFIX } from "../diagnostics/fixtures";
-import { PREVIEW_STORAGE_PREFIX } from "../storage/namespaces";
+import {
+  DIAGNOSTIC_APP_ID_PREFIX,
+  PREVIEW_STORAGE_PREFIX,
+} from "../storage/namespaces";
 
 export type InstallWorkflowMode = "create" | "duplicate" | "edit";
 
