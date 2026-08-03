@@ -31,6 +31,37 @@ function validPage(): Record<string, unknown> {
       { type: "heading", text: "Editor", level: 2 },
       { type: "text", text: "Update the values below." },
       {
+        type: "section",
+        title: "Current values",
+        children: [
+          {
+            type: "metric",
+            label: "Count",
+            value: 1,
+            format: "number",
+            liveTimer: { timerId: "activeTimer", ratePerHour: 2 },
+          },
+          { type: "timer", timerId: "activeTimer", emptyValue: "00:00:00" },
+          {
+            type: "list",
+            title: "Entries",
+            items: [
+              {
+                type: "list-item",
+                title: "Entry",
+                subtitle: "Details",
+                trailing: "1",
+              },
+            ],
+            emptyState: {
+              type: "empty-state",
+              title: "No entries",
+              description: "Add an entry to begin.",
+            },
+          },
+        ],
+      },
+      {
         type: "column",
         children: [
           { type: "text-input", setting: "title", placeholder: "Title" },
@@ -60,7 +91,7 @@ function children(node: Record<string, unknown>): Array<Record<string, unknown>>
   return node.children as Array<Record<string, unknown>>;
 }
 
-test("accepts every frozen layout, input, action, and navigation node", () => {
+test("accepts every frozen SDK v1 UI node", () => {
   assert.doesNotThrow(() => validatePageNode(validPage(), inspection));
 });
 
@@ -75,31 +106,31 @@ test("rejects unknown node properties", () => {
 
 test("rejects unknown action and screen targets", () => {
   const page = validPage();
-  const row = children(page)[3]!;
+  const row = children(page)[4]!;
   children(row)[0]!.action = "removeAll";
   assert.throws(() => validatePageNode(page, inspection), /Unknown declared action/);
 
   const secondPage = validPage();
-  const secondRow = children(secondPage)[3]!;
+  const secondRow = children(secondPage)[4]!;
   children(secondRow)[1]!.screen = "missing";
   assert.throws(() => validatePageNode(secondPage, inspection), /Unknown declared screen/);
 });
 
 test("rejects missing and incompatible setting bindings", () => {
   const page = validPage();
-  const column = children(page)[2]!;
+  const column = children(page)[3]!;
   children(column)[0]!.setting = "missing";
   assert.throws(() => validatePageNode(page, inspection), /Unknown declared setting/);
 
   const secondPage = validPage();
-  const secondColumn = children(secondPage)[2]!;
+  const secondColumn = children(secondPage)[3]!;
   children(secondColumn)[1]!.setting = "title";
   assert.throws(() => validatePageNode(secondPage, inspection), /incompatible type text/);
 });
 
 test("rejects non-finite formatted values and nested pages", () => {
   const page = validPage();
-  const summary = children(page)[4]!;
+  const summary = children(page)[5]!;
   const values = summary.values as Array<Record<string, unknown>>;
   values[0]!.value = Number.POSITIVE_INFINITY;
   assert.throws(() => validatePageNode(page, inspection), /Expected a finite number/);
@@ -107,6 +138,14 @@ test("rejects non-finite formatted values and nested pages", () => {
   const nested = validPage();
   children(nested).push({ type: "page", title: "Nested", children: [] });
   assert.throws(() => validatePageNode(nested, inspection), /Page nodes cannot be nested/);
+});
+
+test("rejects invalid list child types", () => {
+  const page = validPage();
+  const section = children(page)[2]!;
+  const list = children(section)[2]!;
+  list.items = [{ type: "text", text: "Not a list item" }];
+  assert.throws(() => validatePageNode(page, inspection), /Lists may contain list-item nodes only/);
 });
 
 test("rejects oversized trees", () => {
