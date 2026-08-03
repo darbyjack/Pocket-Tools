@@ -27,6 +27,7 @@ pnpm mini-app inspect ./tool.miniapp.js --json
 | `INVALID_MANIFEST` | The manifest is missing or malformed. |
 | `UNSUPPORTED_SDK_VERSION` | The script does not declare frozen `sdkVersion: 1`. |
 | `UNSUPPORTED_MODULE` | The script imported anything other than `@pocket-tools/sdk`, used a re-export, or used dynamic import. |
+| `TYPECHECK_FAILED` | The script does not typecheck against the committed frozen SDK declarations. JSON output includes TypeScript code, file, line, column, and message. |
 | `VALIDATION_FAILED` | Canonical SDK definition validation failed. JSON output includes `issues` with exact `path` and `message` values. |
 | `ASYNC_NOT_SUPPORTED` | The script used top-level await or cannot be inspected synchronously. |
 | `INVALID_BRIDGE_VALUE` | Inspection produced a value that is not finite and serializable. |
