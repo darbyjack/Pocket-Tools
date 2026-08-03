@@ -1,20 +1,20 @@
 # Pocket Tools
 
-Pocket Tools is an Android-first host for small, scriptable personal utilities. A mini app is one JavaScript module authored against a versioned, capability-based SDK, then validated, previewed, permission-reviewed, and installed inside the native host.
+Pocket Tools is an Android-first host for small, scriptable personal utilities. A mini app is one JavaScript module that uses a small host-owned SDK and renders through native components.
 
-The first reference utility is **Bathroom Pay**, which tracks bathroom-trip time and calculates its gross pay equivalent without adding any Bathroom Pay-specific behavior to the host application.
+The first reference utility is **Bathroom Pay**, which tracks bathroom-trip time and calculates its gross pay equivalent without adding Bathroom Pay-specific behavior to the host.
+
+## Development rules
+
+Read [AGENTS.md](AGENTS.md) before changing the project. The current SDK contains only the settings, storage, timer, and UI primitives required by the first Bathroom Pay slice. New APIs are added only when the next working end-to-end slice needs them.
 
 ## Current phase
 
-The repository is establishing the SDK v1 contract and security boundary before the Expo host is implemented. The canonical delivery map is [Wayfinder: Deliver the Pocket Tools Android MVP](https://github.com/darbyjack/Pocket-Tools/issues/1).
+This pull request establishes the repository and the smallest public contract needed to express Bathroom Pay. It does not add compatibility layers, migrations, permissions, or unused UI components.
 
-Phase 0 includes:
+The next implementation step must make this contract work end to end on Android before the SDK grows further.
 
-- Architecture and threat-model documentation
-- The public TypeScript SDK contract
-- Definition validation and unit tests
-- A type-checked Bathroom Pay reference script
-- Workspace, formatting, linting, and type-checking commands
+The canonical delivery map is [Wayfinder: Deliver the Pocket Tools Android MVP](https://github.com/darbyjack/Pocket-Tools/issues/1).
 
 ## Requirements
 
@@ -38,7 +38,7 @@ pnpm test
 
 ## Mini-app shape
 
-Installed scripts will import only the host-provided virtual SDK module:
+Installed scripts import only the host-provided virtual SDK module:
 
 ```js
 import { defineMiniApp, ui } from "@pocket-tools/sdk";
@@ -48,7 +48,6 @@ export default defineMiniApp({
     id: "example-tool",
     name: "Example Tool",
     sdkVersion: 1,
-    version: 1,
   },
   screens: {
     home() {
@@ -58,7 +57,7 @@ export default defineMiniApp({
 });
 ```
 
-The host will reject external imports, ambient native access, unsupported capabilities, invalid bridge values, and UI trees that exceed documented limits.
+The host rejects external imports, ambient native access, unsupported SDK identifiers, invalid bridge values, and invalid UI trees.
 
 ## Documentation
 
