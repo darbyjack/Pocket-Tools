@@ -53,7 +53,7 @@ export const declarationSmokeMiniApp = defineMiniApp({
 });
 
 function isSerializableObject(
-  value: SerializableValue,
+  value: SerializableValue | undefined,
 ): value is Readonly<Record<string, SerializableValue>> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
