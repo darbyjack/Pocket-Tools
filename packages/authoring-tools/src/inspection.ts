@@ -8,6 +8,7 @@ import {
 } from "@pocket-tools/sdk-contract";
 
 import { AuthoringRuntimeError, executeInspection } from "./quickjs.ts";
+import { assertMiniAppTypeChecks } from "./typecheck.ts";
 
 const IDENTIFIER_PATTERN = /^[a-z][A-Za-z0-9]*$/;
 
@@ -30,7 +31,10 @@ export class AuthoringValidationError extends Error {
   }
 }
 
-export async function inspectMiniAppSource(source: string): Promise<AuthoringInspection> {
+export async function inspectMiniAppSource(
+  source: string,
+  fileName?: string,
+): Promise<AuthoringInspection> {
   const response = await executeInspection(source);
   const envelope = requireRecord(response, "runtime response");
   if (envelope.ok !== true) {
@@ -70,6 +74,7 @@ export async function inspectMiniAppSource(source: string): Promise<AuthoringIns
 
   const issues = validateMiniAppDefinition(definition);
   if (issues.length > 0) throw new AuthoringValidationError(issues);
+  assertMiniAppTypeChecks(source, fileName);
 
   return {
     manifest: definition.manifest,
@@ -80,8 +85,11 @@ export async function inspectMiniAppSource(source: string): Promise<AuthoringIns
   };
 }
 
-export async function validateMiniAppSource(source: string): Promise<void> {
-  await inspectMiniAppSource(source);
+export async function validateMiniAppSource(
+  source: string,
+  fileName?: string,
+): Promise<void> {
+  await inspectMiniAppSource(source, fileName);
 }
 
 function requireIdentifiers(value: unknown, path: string): readonly string[] {
