@@ -1,3 +1,5 @@
+import { PREVIEW_STORAGE_PREFIX } from "../storage/namespaces";
+
 export type InstallWorkflowMode = "create" | "duplicate" | "edit";
 
 export function assertCandidateIdentity(
@@ -32,5 +34,5 @@ export function createPreviewStorageId(
   const randomPart = Math.floor(random * 0x1_0000_0000)
     .toString(36)
     .padStart(7, "0");
-  return `__preview__${timestamp.toString(36)}${randomPart}`;
+  return `${PREVIEW_STORAGE_PREFIX}${timestamp.toString(36)}${randomPart}`;
 }
