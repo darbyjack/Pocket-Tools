@@ -8,8 +8,11 @@ import {
   validateMiniAppBackupForRestore,
   type MiniAppBackupV1,
 } from "../storage/backup";
-import { restoreMiniAppBackup } from "../storage/backup-storage";
-import { getInstalledMiniApp, type InstalledMiniApp } from "../storage/database";
+import {
+  getMiniAppRestoreConflict,
+  restoreMiniAppBackup,
+} from "../storage/backup-storage";
+import type { InstalledMiniApp } from "../storage/database";
 
 export interface MiniAppBackupEditorProps {
   readonly onCancel: () => void;
@@ -86,24 +89,37 @@ export function MiniAppBackupEditor({ onCancel, onRestored }: MiniAppBackupEdito
       return;
     }
 
-    const existing = await getInstalledMiniApp(candidate.backup.app.id);
-    if (existing === null) {
-      await performRestore(candidate, false);
-      return;
-    }
+    try {
+      const conflict = await getMiniAppRestoreConflict(candidate.backup.app.id);
+      if (conflict === null) {
+        await performRestore(candidate, false);
+        return;
+      }
 
-    Alert.alert(
-      `Replace ${existing.name}?`,
-      "Restoring this backup will atomically replace the installed source, settings, records, and active timers for the same manifest ID.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Replace from backup",
-          style: "destructive",
-          onPress: () => void performRestore(candidate, true),
-        },
-      ],
-    );
+      const title =
+        conflict.kind === "installed"
+          ? `Replace ${conflict.app.name}?`
+          : `Replace retained data for ${conflict.appId}?`;
+      const detail =
+        conflict.kind === "installed"
+          ? "the installed source and all isolated app state"
+          : "the retained settings, records, and active timers";
+
+      Alert.alert(
+        title,
+        `Restoring this backup will atomically replace ${detail} for the same manifest ID.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Replace from backup",
+            style: "destructive",
+            onPress: () => void performRestore(candidate, true),
+          },
+        ],
+      );
+    } catch (caught) {
+      setError(formatBackupError(caught));
+    }
   }, [candidate, performRestore]);
 
   return (
@@ -135,7 +151,11 @@ export function MiniAppBackupEditor({ onCancel, onRestored }: MiniAppBackupEdito
       />
 
       <View style={styles.buttonRow}>
-        <ActionButton disabled={busy || source.length === 0} label="Validate backup" onPress={validate} />
+        <ActionButton
+          disabled={busy || source.length === 0}
+          label="Validate backup"
+          onPress={validate}
+        />
         <ActionButton
           disabled={busy || candidate === null}
           label={busy ? "Working…" : "Restore backup"}
