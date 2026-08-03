@@ -28,7 +28,15 @@ const SETTING = "sharedValue";
 const COLLECTION = "sharedRecords";
 const TIMER = "sharedTimer";
 
-export async function runNamespaceIsolationDiagnostics(): Promise<readonly DiagnosticCheck[]> {
+interface DiagnosticApp {
+  readonly id: string;
+  readonly source: string;
+  readonly inspection: MiniAppInspection;
+}
+
+export async function runNamespaceIsolationDiagnostics(): Promise<
+  readonly DiagnosticCheck[]
+> {
   const suffix = createDiagnosticSuffix();
   const [appA, appB] = await Promise.all([
     createDiagnosticApp(
@@ -43,8 +51,10 @@ export async function runNamespaceIsolationDiagnostics(): Promise<readonly Diagn
   const checks: DiagnosticCheck[] = [];
 
   try {
-    await cleanupDiagnosticApp(appA.id);
-    await cleanupDiagnosticApp(appB.id);
+    await Promise.all([
+      cleanupDiagnosticApp(appA.id),
+      cleanupDiagnosticApp(appB.id),
+    ]);
     await installDiagnosticApp(appA);
     await installDiagnosticApp(appB);
 
@@ -57,8 +67,8 @@ export async function runNamespaceIsolationDiagnostics(): Promise<readonly Diagn
       loadRenderSnapshot(appA),
       loadRenderSnapshot(appB),
     ]);
-    assertIsolatedSnapshot(snapshotA, "alpha");
-    assertIsolatedSnapshot(snapshotB, "beta");
+    assertIsolatedSnapshot(snapshotA, "alpha", 1);
+    assertIsolatedSnapshot(snapshotB, "beta", 1);
     checks.push(
       passed(
         "namespace-isolation",
@@ -77,15 +87,12 @@ export async function runNamespaceIsolationDiagnostics(): Promise<readonly Diagn
     if (!failureObserved) {
       throw new Error("The intentional script failure unexpectedly succeeded.");
     }
+
     const afterFailure = await loadRenderSnapshot(appA);
     assertSamePersistedState(beforeFailure, afterFailure);
     await invokeAction(appA, "addRecord");
     const afterRecovery = await loadRenderSnapshot(appA);
-    if ((afterRecovery.records[COLLECTION]?.length ?? 0) !== 2) {
-      throw new Error(
-        "A valid invocation did not succeed after the intentional failure.",
-      );
-    }
+    assertIsolatedSnapshot(afterRecovery, "alpha", 2);
     checks.push(
       passed(
         "failure-recovery",
@@ -101,11 +108,11 @@ export async function runNamespaceIsolationDiagnostics(): Promise<readonly Diagn
       );
     }
     const retained = await loadRenderSnapshot(appA);
-    assertIsolatedSnapshot(retained, "alpha");
+    assertIsolatedSnapshot(retained, "alpha", 2);
 
     await installMiniApp(appA.inspection, appA.source);
     const restored = await loadRenderSnapshot(appA);
-    assertIsolatedSnapshot(restored, "alpha");
+    assertIsolatedSnapshot(restored, "alpha", 2);
 
     await deleteInstalledMiniApp(appA.id, true);
     const cleared = await loadRenderSnapshot(appA);
@@ -130,7 +137,7 @@ export async function runNamespaceIsolationDiagnostics(): Promise<readonly Diagn
       failed(
         "diagnostic-suite",
         "Lifecycle diagnostic suite failed",
-        caught instanceof Error ? caught.message : String(caught),
+        errorMessage(caught),
       ),
     );
   } finally {
@@ -153,16 +160,15 @@ export async function prepareTimerRecoveryDiagnostic(): Promise<{
     await clearTimerRecoveryCheckpoint();
   }
 
-  const suffix = createDiagnosticSuffix();
   const app = await createDiagnosticApp(
-    `${DIAGNOSTIC_APP_ID_PREFIX}${suffix}-recovery`,
+    `${DIAGNOSTIC_APP_ID_PREFIX}${createDiagnosticSuffix()}-recovery`,
     "Timer Recovery Diagnostic",
   );
   await installDiagnosticApp(app);
   await setSetting(app.inspection, app.id, SETTING, "recovery");
   await invokeAction(app, "seed");
-  const snapshot = await loadRenderSnapshot(app);
-  const timer = snapshot.timers[TIMER];
+
+  const timer = (await loadRenderSnapshot(app)).timers[TIMER];
   if (timer === undefined) {
     throw new Error(
       "The recovery diagnostic could not start its durable timer.",
@@ -219,8 +225,7 @@ export async function resumeTimerRecoveryDiagnostic(): Promise<DiagnosticCheck> 
       source: checkpoint.source,
       inspection,
     };
-    const snapshot = await loadRenderSnapshot(app);
-    const timer = snapshot.timers[TIMER];
+    const timer = (await loadRenderSnapshot(app)).timers[TIMER];
     if (timer === undefined) {
       throw new Error(
         "The active timer did not survive process termination and relaunch.",
@@ -245,8 +250,7 @@ export async function resumeTimerRecoveryDiagnostic(): Promise<DiagnosticCheck> 
     }
 
     await invokeAction(app, "stopTimer");
-    const stopped = await loadRenderSnapshot(app);
-    if (stopped.timers[TIMER] !== undefined) {
+    if ((await loadRenderSnapshot(app)).timers[TIMER] !== undefined) {
       throw new Error(
         "The recovered timer could not be stopped normally after relaunch.",
       );
@@ -255,13 +259,13 @@ export async function resumeTimerRecoveryDiagnostic(): Promise<DiagnosticCheck> 
     return passed(
       "timer-recovery",
       "Durable timer recovered after relaunch",
-      `The timer preserved ${timer.startedAt} and reconstructed ${timer.elapsedSeconds.toFixed(1)} seconds without keeping QuickJS state alive.`,
+      `The timer preserved ${timer.startedAt} and reconstructed ${timer.elapsedSeconds.toFixed(1)} seconds from its persisted timestamp.`,
     );
   } catch (caught) {
     return failed(
       "timer-recovery",
       "Durable timer recovery failed",
-      caught instanceof Error ? caught.message : String(caught),
+      errorMessage(caught),
     );
   } finally {
     await cleanupDiagnosticApp(checkpoint.appId);
@@ -277,12 +281,6 @@ export async function resetLifecycleDiagnostics(): Promise<void> {
   const checkpoint = await loadTimerRecoveryCheckpoint();
   if (checkpoint !== null) await cleanupDiagnosticApp(checkpoint.appId);
   await clearTimerRecoveryCheckpoint();
-}
-
-interface DiagnosticApp {
-  readonly id: string;
-  readonly source: string;
-  readonly inspection: MiniAppInspection;
 }
 
 async function createDiagnosticApp(
@@ -323,22 +321,29 @@ function loadRenderSnapshot(app: DiagnosticApp): Promise<RuntimeSnapshot> {
   });
 }
 
-async function cleanupDiagnosticApp(appId: string): Promise<void> {
-  await deleteInstalledMiniApp(appId, true);
+function cleanupDiagnosticApp(appId: string): Promise<void> {
+  return deleteInstalledMiniApp(appId, true);
 }
 
 function assertIsolatedSnapshot(
   snapshot: RuntimeSnapshot,
   expectedValue: string,
+  expectedRecordCount: number,
 ): void {
   if (snapshot.settings[SETTING] !== expectedValue) {
     throw new Error(
       `Expected setting ${expectedValue}, received ${String(snapshot.settings[SETTING])}.`,
     );
   }
+
   const records = snapshot.records[COLLECTION] ?? [];
-  if (records.length !== 1 || records[0]?.value !== expectedValue) {
-    throw new Error(`Expected one isolated ${expectedValue} record.`);
+  if (
+    records.length !== expectedRecordCount ||
+    records.some((record) => record.value !== expectedValue)
+  ) {
+    throw new Error(
+      `Expected ${expectedRecordCount} isolated ${expectedValue} record(s).`,
+    );
   }
   if (snapshot.timers[TIMER] === undefined) {
     throw new Error(
@@ -357,19 +362,18 @@ function assertSamePersistedState(
   if (JSON.stringify(before.records) !== JSON.stringify(after.records)) {
     throw new Error("The failed invocation changed records.");
   }
-  const beforeTimers = Object.fromEntries(
-    Object.entries(before.timers).map(([id, timer]) => [
-      id,
-      timer.startedAt,
-    ]),
-  );
-  const afterTimers = Object.fromEntries(
-    Object.entries(after.timers).map(([id, timer]) => [
-      id,
-      timer.startedAt,
-    ]),
-  );
-  if (JSON.stringify(beforeTimers) !== JSON.stringify(afterTimers)) {
+
+  const startedAtValues = (snapshot: RuntimeSnapshot) =>
+    Object.fromEntries(
+      Object.entries(snapshot.timers).map(([id, timer]) => [
+        id,
+        timer.startedAt,
+      ]),
+    );
+  if (
+    JSON.stringify(startedAtValues(before)) !==
+    JSON.stringify(startedAtValues(after))
+  ) {
     throw new Error("The failed invocation changed timers.");
   }
 }
@@ -394,4 +398,8 @@ function failed(
   detail: string,
 ): DiagnosticCheck {
   return { id, title, status: "failed", detail };
+}
+
+function errorMessage(caught: unknown): string {
+  return caught instanceof Error ? caught.message : String(caught);
 }
