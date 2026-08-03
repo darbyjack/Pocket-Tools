@@ -24,10 +24,14 @@ const fileNames = (await readdir(examplesDirectory))
 const miniApps = await Promise.all(
   fileNames.map(async (fileName) => ({
     fileName: basename(fileName),
-    source: await readFile(resolve(examplesDirectory, fileName), "utf8"),
+    source: normalizeLineEndings(
+      await readFile(resolve(examplesDirectory, fileName), "utf8"),
+    ),
   })),
 );
-const authoringTemplate = await readFile(authoringTemplatePath, "utf8");
+const authoringTemplate = normalizeLineEndings(
+  await readFile(authoringTemplatePath, "utf8"),
+);
 
 const outputs = [
   {
@@ -49,7 +53,7 @@ if (process.argv.includes("--check")) {
   let stale = false;
   for (const output of outputs) {
     const current = await readFile(output.path, "utf8").catch(() => "");
-    if (current !== output.content) {
+    if (normalizeLineEndings(current) !== output.content) {
       console.error(`${output.label} is stale. Run pnpm sync:mini-apps.`);
       stale = true;
     }
@@ -60,4 +64,8 @@ if (process.argv.includes("--check")) {
     await mkdir(resolve(output.path, ".."), { recursive: true });
     await writeFile(output.path, output.content);
   }
+}
+
+function normalizeLineEndings(value) {
+  return value.replace(/\r\n?/g, "\n");
 }
