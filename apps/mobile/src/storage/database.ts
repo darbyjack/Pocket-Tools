@@ -16,6 +16,7 @@ import {
 
 const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 const BUNDLED_SEED_KEY = "bundled-mini-apps-v1";
+const PREVIEW_STORAGE_PREFIX = "__preview__";
 
 interface SettingRow {
   readonly name: string;
@@ -109,6 +110,21 @@ export async function initializeDatabase(): Promise<void> {
       value TEXT NOT NULL
     );
   `);
+
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      "DELETE FROM settings WHERE app_id GLOB ?",
+      `${PREVIEW_STORAGE_PREFIX}*`,
+    );
+    await database.runAsync(
+      "DELETE FROM records WHERE app_id GLOB ?",
+      `${PREVIEW_STORAGE_PREFIX}*`,
+    );
+    await database.runAsync(
+      "DELETE FROM timers WHERE app_id GLOB ?",
+      `${PREVIEW_STORAGE_PREFIX}*`,
+    );
+  });
 }
 
 export async function seedBundledMiniAppsOnce(
@@ -177,6 +193,13 @@ export async function installMiniApp(
   inspection: MiniAppInspection,
   source: string,
 ): Promise<InstalledMiniApp> {
+  const appId = inspection.manifest.id;
+  if ((await getInstalledMiniApp(appId)) !== null) {
+    throw new Error(
+      `INSTALLATION_FAILED: A mini app with ID ${appId} is already installed.`,
+    );
+  }
+
   const database = await databasePromise;
   const timestamp = new Date().toISOString();
   try {
@@ -185,7 +208,7 @@ export async function installMiniApp(
          app_id, name, description, icon, active_source,
          last_known_good_source, installed_at, updated_at
        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      inspection.manifest.id,
+      appId,
       inspection.manifest.name,
       inspection.manifest.description ?? null,
       inspection.manifest.icon ?? null,
@@ -195,13 +218,18 @@ export async function installMiniApp(
       timestamp,
     );
   } catch (cause) {
-    throw new Error(
-      `INSTALLATION_FAILED: A mini app with ID ${inspection.manifest.id} is already installed.`,
-      { cause },
-    );
+    if ((await getInstalledMiniApp(appId)) !== null) {
+      throw new Error(
+        `INSTALLATION_FAILED: A mini app with ID ${appId} is already installed.`,
+        { cause },
+      );
+    }
+    throw new Error("INSTALLATION_FAILED: SQLite could not store the mini app.", {
+      cause,
+    });
   }
 
-  const installed = await getInstalledMiniApp(inspection.manifest.id);
+  const installed = await getInstalledMiniApp(appId);
   if (installed === null) {
     throw new Error("INSTALLATION_FAILED: The installed mini app could not be reloaded.");
   }
@@ -219,19 +247,22 @@ export async function updateInstalledMiniApp(
     );
   }
 
-  const database = await databasePromise;
   const current = await getInstalledMiniApp(appId);
-  if (current === null) throw new Error(`INSTALLATION_FAILED: ${appId} is not installed.`);
+  if (current === null) {
+    throw new Error(`INSTALLATION_FAILED: ${appId} is not installed.`);
+  }
 
+  const database = await databasePromise;
   const result = await database.runAsync(
     `UPDATE installed_mini_apps
      SET name = ?, description = ?, icon = ?, active_source = ?,
-         last_known_good_source = active_source, updated_at = ?
+         last_known_good_source = ?, updated_at = ?
      WHERE app_id = ?`,
     inspection.manifest.name,
     inspection.manifest.description ?? null,
     inspection.manifest.icon ?? null,
     source,
+    current.activeSource,
     new Date().toISOString(),
     appId,
   );
@@ -254,17 +285,22 @@ export async function rollbackInstalledMiniApp(
     throw new Error("INSTALLATION_FAILED: The rollback source has a different manifest ID.");
   }
 
+  const current = await getInstalledMiniApp(appId);
+  if (current === null) {
+    throw new Error(`INSTALLATION_FAILED: ${appId} is not installed.`);
+  }
+
   const database = await databasePromise;
   const result = await database.runAsync(
     `UPDATE installed_mini_apps
      SET name = ?, description = ?, icon = ?,
-         active_source = last_known_good_source,
-         last_known_good_source = active_source,
-         updated_at = ?
+         active_source = ?, last_known_good_source = ?, updated_at = ?
      WHERE app_id = ?`,
     inspection.manifest.name,
     inspection.manifest.description ?? null,
     inspection.manifest.icon ?? null,
+    current.lastKnownGoodSource,
+    current.activeSource,
     new Date().toISOString(),
     appId,
   );
@@ -294,6 +330,10 @@ export async function preparePreviewStorage(
   sourceStorageId: string | null,
   previewStorageId: string,
 ): Promise<void> {
+  if (!previewStorageId.startsWith(PREVIEW_STORAGE_PREFIX)) {
+    throw new Error("INSTALLATION_FAILED: Preview storage must use the reserved host namespace.");
+  }
+
   const database = await databasePromise;
   await database.withTransactionAsync(async () => {
     await clearAppDataInTransaction(database, previewStorageId);
