@@ -2,7 +2,7 @@
 
 ## Security objective
 
-A pasted mini-app script may compute values and use narrowly defined host services without gaining ambient authority over the phone, host application, other scripts, or user data.
+A mini-app script may compute values and use narrowly defined host services without gaining ambient authority over the phone, host application, other scripts, or user data.
 
 Every script is untrusted, including scripts produced by an agent or written by the device owner.
 
@@ -11,46 +11,54 @@ Every script is untrusted, including scripts produced by an agent or written by 
 Trusted:
 
 - Signed Pocket Tools host code
-- The canonical SDK contract
-- Host-owned native modules and services
-- Installation UI
+- The current SDK contract
+- The native QuickJS module
+- Host-owned SQLite and React Native services
 
 Untrusted:
 
-- Pasted script source
+- Mini-app source
 - Script manifests and schemas
 - Script-generated UI trees
-- Script action return values
+- Script-requested operations
 
 ## Core invariants
 
 1. Scripts execute in QuickJS-NG, not the React Native JavaScript runtime.
-2. Each active mini app receives an isolated runtime and host namespace.
-3. Only explicitly exposed SDK bridge methods are callable.
-4. Every cross-boundary value must satisfy `SerializableValue` and host limits.
-5. Native objects and host references never cross into the script runtime.
-6. Preview mode cannot use installed data or durable side effects.
-7. Installation writes occur only after validation succeeds.
+2. Every invocation receives a fresh runtime and context.
+3. The module loader resolves only `@pocket-tools/sdk`.
+4. Cross-boundary values are JSON-compatible finite values.
+5. Native objects and host references never enter the script runtime.
+6. SQLite namespaces are selected by the host, not the script.
+7. Requested writes are applied only after successful execution and host validation.
 8. Running timers do not imply running script code.
-9. A runtime failure must not terminate or corrupt the host.
+9. A runtime failure cannot terminate or corrupt the React Native host.
 
 ## Current host services
 
-The first slice exposes only:
+The Bathroom Pay slice exposes only:
 
-- Settings declared by the script
-- Isolated collection storage
+- Declared setting values
+- Isolated record insertion and current queries/aggregates
 - Durable start/get/stop timers
-- Host time
+- Current host time
 - Native rendering of the current UI nodes
 
-There is no permission or capability layer in the current SDK because the first slice does not need one.
+No capability or permission layer exists yet because this slice has no sensitive file, network, notification, location, or secret access.
 
-## Runtime limits
+## Runtime bounds
 
-QuickJS execution, bridge payloads, source size, logging, and rendered UI trees must be bounded.
+The Android native module currently enforces:
 
-Exact values are not part of the SDK contract before an Android runtime exists to measure them. The runtime implementation must select explicit limits, test interruption and allocation failure on Android, and document the values alongside those tests.
+- 512 KiB maximum source
+- 2 MiB maximum host request
+- 32 MiB QuickJS heap
+- 512 KiB QuickJS stack
+- 250 ms execution deadline
+- 512 UI nodes
+- UI depth of 16
+
+The deadline uses QuickJS's interrupt handler. Memory and stack bounds use QuickJS runtime controls. These values are implementation limits, not SDK promises, and must be checked on Android hardware before the draft pull request is made ready.
 
 ## Bridge validation
 
@@ -63,45 +71,31 @@ Allowed values are:
 - arrays containing allowed values
 - plain objects with string keys and allowed values
 
-Rejected values include:
+Dates cross the boundary as ISO 8601 strings. Native handles, functions, symbols, bigints, cyclic objects, and class instances do not cross.
 
-- `undefined`
-- `NaN` and infinities
-- functions
-- symbols
-- bigints
-- cyclic objects
-- class instances
-- dates and native handles
-- objects with custom prototypes
+## Source restrictions
 
-Dates cross the boundary as ISO 8601 strings.
+Installed-source support is not implemented yet, but the active runtime already rejects:
+
+- Imports other than `@pocket-tools/sdk`
+- Dynamic import resolution
+- Relative or absolute filesystem imports
+- Package registry modules
+- Remote URLs
+- React Native or Expo globals
+
+There is no WebView or React Native `eval` fallback.
 
 ## Data isolation
 
-Every operation is scoped by the host to the calling mini-app ID. Scripts cannot supply or override that namespace. Raw SQL is never exposed. Collection and field identifiers are validated against the installed definition.
+The host loads and writes state under the inspected manifest ID. Collection operations are checked against declared collections. Raw SQL is unavailable to scripts.
 
-Preview state uses a temporary namespace that is destroyed after preview.
-
-## Source and module restrictions
-
-Installed scripts may import only host-provided virtual SDK modules. The host rejects:
-
-- Dynamic import
-- Relative or absolute filesystem imports
-- Package registry imports
-- Remote URLs
-- Native module references
-- Host-provided code-evaluation bridges
-
-The host does not provide network, filesystem, process, or React Native globals.
+An action produces a serializable operation list. SQLite applies the list in one transaction; any failure rolls back the entire action.
 
 ## Failure handling
 
-Runtime interruption, allocation failure, invalid output, and bridge-validation failure become structured `PocketToolsError` values. Host logs must avoid recording complete user datasets.
-
-A failed install does not modify installed source or data. A failed preview is discarded. A failed invocation may dispose and recreate only that mini app's runtime.
+Syntax, module, validation, timeout, memory, unknown action, unknown collection, timer, and UI failures are converted to runtime errors shown by the host. The runtime and context are always disposed after the request.
 
 ## Deferred work
 
-File access, network access, secret storage, location, notifications, public script distribution, remote updates, and background jobs require separate concrete product requirements and threat modeling. They are not represented by placeholder SDK APIs.
+File access, network access, secret storage, location, notifications, public script distribution, remote updates, and background jobs require concrete product requirements and separate threat modeling. They are not represented by placeholder APIs.
