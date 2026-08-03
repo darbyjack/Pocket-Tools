@@ -50,7 +50,7 @@ export default defineMiniApp({
     name: "Bathroom Pay",
     description: "Track bathroom-trip time and its gross pay equivalent.",
     icon: "timer",
-    sdkVersion: 1,
+    sdkVersion: "1.1",
   },
 
   settings: {
@@ -177,6 +177,20 @@ export default defineMiniApp({
                 title: String(trip.startedAt),
                 subtitle: `${String(trip.durationSeconds)} seconds`,
                 trailing: `$${Number(trip.grossEarnings).toFixed(2)}`,
+                actions: [
+                  ui.action({
+                    label: "Delete",
+                    action: "removeTrip",
+                    input: trip.id,
+                    intent: "destructive",
+                    confirmation: {
+                      title: "Delete this trip?",
+                      message: "The trip and its earnings will be removed.",
+                      confirmLabel: "Delete",
+                      cancelLabel: "Keep trip",
+                    },
+                  }),
+                ],
               }),
             ),
             emptyState: ui.emptyState({
@@ -222,6 +236,13 @@ export default defineMiniApp({
         effectiveHourlyRate: rate,
         grossEarnings: (trip.durationSeconds / 3_600) * rate,
       });
+    },
+
+    removeTrip(context, input) {
+      if (typeof input !== "string") {
+        throw new Error("A trip ID is required.");
+      }
+      context.data.collection(TRIPS_COLLECTION).remove(input);
     },
   },
 });
