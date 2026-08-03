@@ -1,4 +1,4 @@
-import * as ts from "typescript";
+import * as ts from "typescript-compiler-api";
 
 const SDK_MODULE = "@pocket-tools/sdk";
 
@@ -48,7 +48,9 @@ export function findImportViolation(source: string): ImportViolation | null {
       violation = createViolation(
         sourceFile,
         argument ?? node,
-        argument === undefined ? "<missing dynamic import>" : argument.getText(sourceFile),
+        argument === undefined
+          ? "<missing dynamic import>"
+          : argument.getText(sourceFile),
         "Dynamic imports are unsupported.",
       );
       return;
@@ -71,7 +73,9 @@ function createViolation(
   moduleName: string,
   message: string,
 ): ImportViolation {
-  const position = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+  const position = sourceFile.getLineAndCharacterOfPosition(
+    node.getStart(sourceFile),
+  );
   return {
     moduleName,
     line: position.line + 1,
