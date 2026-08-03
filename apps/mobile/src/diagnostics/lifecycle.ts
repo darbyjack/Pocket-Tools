@@ -30,8 +30,16 @@ const TIMER = "sharedTimer";
 
 export async function runNamespaceIsolationDiagnostics(): Promise<readonly DiagnosticCheck[]> {
   const suffix = createDiagnosticSuffix();
-  const appA = createDiagnosticApp(`${DIAGNOSTIC_APP_ID_PREFIX}${suffix}-a`, "Lifecycle Diagnostic A");
-  const appB = createDiagnosticApp(`${DIAGNOSTIC_APP_ID_PREFIX}${suffix}-b`, "Lifecycle Diagnostic B");
+  const [appA, appB] = await Promise.all([
+    createDiagnosticApp(
+      `${DIAGNOSTIC_APP_ID_PREFIX}${suffix}-a`,
+      "Lifecycle Diagnostic A",
+    ),
+    createDiagnosticApp(
+      `${DIAGNOSTIC_APP_ID_PREFIX}${suffix}-b`,
+      "Lifecycle Diagnostic B",
+    ),
+  ]);
   const checks: DiagnosticCheck[] = [];
 
   try {
@@ -51,11 +59,13 @@ export async function runNamespaceIsolationDiagnostics(): Promise<readonly Diagn
     ]);
     assertIsolatedSnapshot(snapshotA, "alpha");
     assertIsolatedSnapshot(snapshotB, "beta");
-    checks.push(passed(
-      "namespace-isolation",
-      "Settings, records, and timers are isolated",
-      "Two installed scripts used identical setting, collection, and timer names without observing each other’s values.",
-    ));
+    checks.push(
+      passed(
+        "namespace-isolation",
+        "Settings, records, and timers are isolated",
+        "Two installed scripts used identical setting, collection, and timer names without observing each other’s values.",
+      ),
+    );
 
     const beforeFailure = await loadRenderSnapshot(appA);
     let failureObserved = false;
@@ -72,17 +82,23 @@ export async function runNamespaceIsolationDiagnostics(): Promise<readonly Diagn
     await invokeAction(appA, "addRecord");
     const afterRecovery = await loadRenderSnapshot(appA);
     if ((afterRecovery.records[COLLECTION]?.length ?? 0) !== 2) {
-      throw new Error("A valid invocation did not succeed after the intentional failure.");
+      throw new Error(
+        "A valid invocation did not succeed after the intentional failure.",
+      );
     }
-    checks.push(passed(
-      "failure-recovery",
-      "A failed invocation does not poison later work",
-      "The failing action persisted nothing, and a following action completed through a fresh QuickJS runtime.",
-    ));
+    checks.push(
+      passed(
+        "failure-recovery",
+        "A failed invocation does not poison later work",
+        "The failing action persisted nothing, and a following action completed through a fresh QuickJS runtime.",
+      ),
+    );
 
     await deleteInstalledMiniApp(appA.id, false);
-    if (await getInstalledMiniApp(appA.id) !== null) {
-      throw new Error("Remove-with-retained-data left the installation record behind.");
+    if ((await getInstalledMiniApp(appA.id)) !== null) {
+      throw new Error(
+        "Remove-with-retained-data left the installation record behind.",
+      );
     }
     const retained = await loadRenderSnapshot(appA);
     assertIsolatedSnapshot(retained, "alpha");
@@ -98,19 +114,25 @@ export async function runNamespaceIsolationDiagnostics(): Promise<readonly Diagn
       (cleared.records[COLLECTION]?.length ?? 0) !== 0 ||
       Object.keys(cleared.timers).length !== 0
     ) {
-      throw new Error("Remove-with-data did not clear the complete app namespace.");
+      throw new Error(
+        "Remove-with-data did not clear the complete app namespace.",
+      );
     }
-    checks.push(passed(
-      "deletion-semantics",
-      "Removal preserves or deletes state as selected",
-      "Retained data survived reinstall with the same manifest ID, while remove-with-data cleared settings, records, and timers.",
-    ));
+    checks.push(
+      passed(
+        "deletion-semantics",
+        "Removal preserves or deletes state as selected",
+        "Retained data survived reinstall with the same manifest ID, while remove-with-data cleared settings, records, and timers.",
+      ),
+    );
   } catch (caught) {
-    checks.push(failed(
-      "diagnostic-suite",
-      "Lifecycle diagnostic suite failed",
-      caught instanceof Error ? caught.message : String(caught),
-    ));
+    checks.push(
+      failed(
+        "diagnostic-suite",
+        "Lifecycle diagnostic suite failed",
+        caught instanceof Error ? caught.message : String(caught),
+      ),
+    );
   } finally {
     await Promise.allSettled([
       cleanupDiagnosticApp(appA.id),
@@ -132,7 +154,7 @@ export async function prepareTimerRecoveryDiagnostic(): Promise<{
   }
 
   const suffix = createDiagnosticSuffix();
-  const app = createDiagnosticApp(
+  const app = await createDiagnosticApp(
     `${DIAGNOSTIC_APP_ID_PREFIX}${suffix}-recovery`,
     "Timer Recovery Diagnostic",
   );
@@ -142,7 +164,9 @@ export async function prepareTimerRecoveryDiagnostic(): Promise<{
   const snapshot = await loadRenderSnapshot(app);
   const timer = snapshot.timers[TIMER];
   if (timer === undefined) {
-    throw new Error("The recovery diagnostic could not start its durable timer.");
+    throw new Error(
+      "The recovery diagnostic could not start its durable timer.",
+    );
   }
 
   const checkpoint: TimerRecoveryCheckpoint = {
@@ -160,7 +184,8 @@ export async function prepareTimerRecoveryDiagnostic(): Promise<{
       id: "timer-recovery-pending",
       title: "Durable timer recovery is ready",
       status: "pending",
-      detail: "Force-stop Pocket Tools, confirm its process is gone, wait at least one second, reopen it, and resume this test.",
+      detail:
+        "Force-stop Pocket Tools, confirm its process is gone, wait at least one second, reopen it, and resume this test.",
     },
   };
 }
@@ -179,10 +204,14 @@ export async function resumeTimerRecoveryDiagnostic(): Promise<DiagnosticCheck> 
   try {
     const inspection = await inspectMiniApp(checkpoint.source);
     if (inspection.manifest.id !== checkpoint.appId) {
-      throw new Error("The recovery fixture manifest no longer matches its saved checkpoint.");
+      throw new Error(
+        "The recovery fixture manifest no longer matches its saved checkpoint.",
+      );
     }
-    if (await getInstalledMiniApp(checkpoint.appId) === null) {
-      throw new Error("The temporary installed diagnostic app did not survive relaunch.");
+    if ((await getInstalledMiniApp(checkpoint.appId)) === null) {
+      throw new Error(
+        "The temporary installed diagnostic app did not survive relaunch.",
+      );
     }
 
     const app: DiagnosticApp = {
@@ -193,24 +222,34 @@ export async function resumeTimerRecoveryDiagnostic(): Promise<DiagnosticCheck> 
     const snapshot = await loadRenderSnapshot(app);
     const timer = snapshot.timers[TIMER];
     if (timer === undefined) {
-      throw new Error("The active timer did not survive process termination and relaunch.");
+      throw new Error(
+        "The active timer did not survive process termination and relaunch.",
+      );
     }
     if (timer.startedAt !== checkpoint.startedAt) {
-      throw new Error("The recovered timer start timestamp changed across relaunch.");
+      throw new Error(
+        "The recovered timer start timestamp changed across relaunch.",
+      );
     }
 
     const expectedElapsed = elapsedSecondsSince(checkpoint.startedAt);
     if (timer.elapsedSeconds < 1) {
-      throw new Error("The recovered timer did not include at least one second outside the process.");
+      throw new Error(
+        "The recovered timer did not include at least one second outside the process.",
+      );
     }
     if (Math.abs(timer.elapsedSeconds - expectedElapsed) > 2) {
-      throw new Error("The recovered elapsed time does not match the persisted start timestamp.");
+      throw new Error(
+        "The recovered elapsed time does not match the persisted start timestamp.",
+      );
     }
 
     await invokeAction(app, "stopTimer");
     const stopped = await loadRenderSnapshot(app);
     if (stopped.timers[TIMER] !== undefined) {
-      throw new Error("The recovered timer could not be stopped normally after relaunch.");
+      throw new Error(
+        "The recovered timer could not be stopped normally after relaunch.",
+      );
     }
 
     return passed(
@@ -246,20 +285,21 @@ interface DiagnosticApp {
   readonly inspection: MiniAppInspection;
 }
 
-function createDiagnosticApp(id: string, name: string): DiagnosticApp {
+async function createDiagnosticApp(
+  id: string,
+  name: string,
+): Promise<DiagnosticApp> {
   const source = createLifecycleDiagnosticSource(id, name);
   return {
     id,
     source,
-    inspection: undefined as never,
+    inspection: await inspectMiniApp(source),
   };
 }
 
 async function installDiagnosticApp(app: DiagnosticApp): Promise<void> {
-  const inspection = await inspectMiniApp(app.source);
-  Object.assign(app, { inspection });
-  await installMiniApp(inspection, app.source);
-  await ensureSettingDefaults(inspection, app.id);
+  await installMiniApp(app.inspection, app.source);
+  await ensureSettingDefaults(app.inspection, app.id);
 }
 
 async function invokeAction(app: DiagnosticApp, action: string): Promise<void> {
@@ -278,12 +318,9 @@ async function invokeAction(app: DiagnosticApp, action: string): Promise<void> {
 }
 
 function loadRenderSnapshot(app: DiagnosticApp): Promise<RuntimeSnapshot> {
-  return loadRuntimeSnapshot(
-    app.inspection,
-    app.id,
-    "render",
-    { screen: "home" },
-  );
+  return loadRuntimeSnapshot(app.inspection, app.id, "render", {
+    screen: "home",
+  });
 }
 
 async function cleanupDiagnosticApp(appId: string): Promise<void> {
@@ -295,14 +332,18 @@ function assertIsolatedSnapshot(
   expectedValue: string,
 ): void {
   if (snapshot.settings[SETTING] !== expectedValue) {
-    throw new Error(`Expected setting ${expectedValue}, received ${String(snapshot.settings[SETTING])}.`);
+    throw new Error(
+      `Expected setting ${expectedValue}, received ${String(snapshot.settings[SETTING])}.`,
+    );
   }
   const records = snapshot.records[COLLECTION] ?? [];
   if (records.length !== 1 || records[0]?.value !== expectedValue) {
     throw new Error(`Expected one isolated ${expectedValue} record.`);
   }
   if (snapshot.timers[TIMER] === undefined) {
-    throw new Error(`Expected the ${expectedValue} timer namespace to be active.`);
+    throw new Error(
+      `Expected the ${expectedValue} timer namespace to be active.`,
+    );
   }
 }
 
@@ -317,10 +358,16 @@ function assertSamePersistedState(
     throw new Error("The failed invocation changed records.");
   }
   const beforeTimers = Object.fromEntries(
-    Object.entries(before.timers).map(([id, timer]) => [id, timer.startedAt]),
+    Object.entries(before.timers).map(([id, timer]) => [
+      id,
+      timer.startedAt,
+    ]),
   );
   const afterTimers = Object.fromEntries(
-    Object.entries(after.timers).map(([id, timer]) => [id, timer.startedAt]),
+    Object.entries(after.timers).map(([id, timer]) => [
+      id,
+      timer.startedAt,
+    ]),
   );
   if (JSON.stringify(beforeTimers) !== JSON.stringify(afterTimers)) {
     throw new Error("The failed invocation changed timers.");
@@ -328,13 +375,23 @@ function assertSamePersistedState(
 }
 
 function createDiagnosticSuffix(): string {
-  return `${Date.now().toString(36)}-${Math.floor(Math.random() * 0x1_0000_0000).toString(36)}`;
+  return `${Date.now().toString(36)}-${Math.floor(
+    Math.random() * 0x1_0000_0000,
+  ).toString(36)}`;
 }
 
-function passed(id: string, title: string, detail: string): DiagnosticCheck {
+function passed(
+  id: string,
+  title: string,
+  detail: string,
+): DiagnosticCheck {
   return { id, title, status: "passed", detail };
 }
 
-function failed(id: string, title: string, detail: string): DiagnosticCheck {
+function failed(
+  id: string,
+  title: string,
+  detail: string,
+): DiagnosticCheck {
   return { id, title, status: "failed", detail };
 }
