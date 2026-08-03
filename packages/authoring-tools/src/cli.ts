@@ -17,11 +17,16 @@ interface Arguments {
 }
 
 async function main(): Promise<void> {
+  const rawArguments = process.argv.slice(2);
   let argumentsValue: Arguments;
   try {
-    argumentsValue = parseArguments(process.argv.slice(2));
+    argumentsValue = parseArguments(rawArguments);
   } catch (caught) {
-    writeFailure("USAGE_ERROR", caught instanceof Error ? caught.message : String(caught), true);
+    writeFailure(
+      "USAGE_ERROR",
+      caught instanceof Error ? caught.message : String(caught),
+      rawArguments.includes("--json"),
+    );
     process.exitCode = 2;
     return;
   }
