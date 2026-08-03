@@ -66,7 +66,7 @@ test("accepts the complete SDK 1.1 definition surface", () => {
 test("accepts SDK 1.0 and legacy numeric v1 manifests", () => {
   const sdk10 = {
     ...validDefinition(),
-    manifest: { ...validDefinition().manifest, sdkVersion: "1.0" },
+    manifest: { ...validDefinition().manifest, sdkVersion: "1.0" as const },
   };
   const legacy = {
     ...validDefinition(),
