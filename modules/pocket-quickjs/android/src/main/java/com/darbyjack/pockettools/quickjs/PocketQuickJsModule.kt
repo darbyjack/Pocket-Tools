@@ -4,6 +4,8 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
+import java.util.Locale
+import org.json.JSONObject
 
 class PocketQuickJsModule : Module() {
   override fun definition() = ModuleDefinition {
@@ -48,7 +50,23 @@ internal object PocketQuickJsBridge {
       limits.maximumLogEntries,
       limits.maximumLogBytes,
     )
-    return result.toString(Charsets.UTF_8)
+    return preserveRuntimeTimeoutCode(result.toString(Charsets.UTF_8))
+  }
+
+  private fun preserveRuntimeTimeoutCode(result: String): String {
+    return try {
+      val payload = JSONObject(result)
+      val error = payload.optJSONObject("error") ?: return result
+      if (error.optString("code") != "UNHANDLED_PROMISE_REJECTION") return result
+
+      val normalizedMessage = error.optString("message").lowercase(Locale.ROOT)
+      if ("interrupted" !in normalizedMessage) return result
+
+      error.put("code", "RUNTIME_TIMEOUT")
+      payload.toString()
+    } catch (_: Exception) {
+      result
+    }
   }
 
   private external fun runUtf8(
