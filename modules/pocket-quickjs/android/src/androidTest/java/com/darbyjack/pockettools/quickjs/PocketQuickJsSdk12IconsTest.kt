@@ -12,7 +12,7 @@ import org.junit.runner.RunWith
 class PocketQuickJsSdk12IconsTest {
   @Test
   fun preservesEveryFrozenButtonIcon() {
-    val icons = success(run(definition(), request("render").put("screen", "icons")))
+    val icons = success(run(definition(), request("render").put("screen", "home")))
       .getJSONObject("value")
       .getJSONObject("page")
       .getJSONArray("children")
@@ -136,7 +136,7 @@ class PocketQuickJsSdk12IconsTest {
           sdkVersion: '1.2',
         },
         screens: {
-          icons() {
+          home() {
             return ui.page({
               title: 'Icons',
               children: iconNames.map((icon) =>
