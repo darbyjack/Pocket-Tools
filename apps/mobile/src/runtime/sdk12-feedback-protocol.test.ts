@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  MiniAppRuntimeError,
-  parseDormantSdk12RuntimeResponse,
-  parseRuntimeResponse,
-} from "./protocol.ts";
+import { MiniAppRuntimeError, parseRuntimeResponse } from "./protocol.ts";
 
 function response(effects: unknown): string {
   return JSON.stringify({
@@ -19,30 +15,17 @@ function response(effects: unknown): string {
   });
 }
 
-test("parses one dormant SDK 1.2 feedback effect", () => {
-  const parsed = parseDormantSdk12RuntimeResponse(
-    response([{ type: "feedback", message: "Saved" }]),
-  );
-
+test("parses one public SDK 1.2 feedback effect", () => {
+  const parsed = parseRuntimeResponse(response([{ type: "feedback", message: "Saved" }]));
   assert.deepEqual(parsed.value.effects, [{ type: "feedback", message: "Saved" }]);
 });
 
 test("counts feedback limits by Unicode code point", () => {
   const message = "😀".repeat(160);
-  const parsed = parseDormantSdk12RuntimeResponse(response([{ type: "feedback", message }]));
+  const parsed = parseRuntimeResponse(response([{ type: "feedback", message }]));
   const effect = parsed.value.effects?.[0];
   assert.equal(effect?.type, "feedback");
   if (effect?.type === "feedback") assert.equal(effect.message, message);
-});
-
-test("normal response parsing rejects dormant effects", () => {
-  assert.throws(
-    () => parseRuntimeResponse(response([{ type: "feedback", message: "Saved" }])),
-    (error: unknown) =>
-      error instanceof MiniAppRuntimeError &&
-      error.code === "INVALID_NATIVE_RESPONSE" &&
-      error.message.includes("require SDK 1.2"),
-  );
 });
 
 const invalidEffects: readonly [string, unknown][] = [
@@ -64,7 +47,7 @@ const invalidEffects: readonly [string, unknown][] = [
 for (const [name, effects] of invalidEffects) {
   test(`rejects ${name}`, () => {
     assert.throws(
-      () => parseDormantSdk12RuntimeResponse(response(effects)),
+      () => parseRuntimeResponse(response(effects)),
       (error: unknown) =>
         error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
     );
