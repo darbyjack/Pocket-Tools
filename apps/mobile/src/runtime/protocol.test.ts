@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   metricValue,
   MiniAppRuntimeError,
+  parseDormantSdk12RuntimeResponse,
   parseRuntimeResponse,
   settingIsVisible,
   timerElapsedSeconds,
@@ -16,6 +17,39 @@ function success(value: Record<string, unknown>) {
     logs: [],
     logsTruncated: false,
   });
+}
+
+function sdk12DateInspection() {
+  return {
+    manifest: { id: "date-tool", name: "Date Tool", sdkVersion: "1.2" },
+    settings: {
+      dueDate: {
+        type: "date",
+        label: "Due date",
+        default: "2026-08-03",
+        min: "2026-01-01",
+        max: "2026-12-31",
+      },
+      reminderAt: {
+        type: "datetime",
+        label: "Reminder",
+        default: "2026-08-04T03:30:00.000Z",
+      },
+    },
+    collections: {
+      entries: {
+        fields: {
+          dueDate: { type: "date" },
+          recordedAt: {
+            type: "datetime",
+            min: "2026-01-01T00:00:00.000Z",
+          },
+        },
+      },
+    },
+    screens: ["home"],
+    actions: ["save"],
+  };
 }
 
 test("reconstructs a durable timer from its start timestamp", () => {
@@ -124,6 +158,58 @@ test("parses dormant SDK 1.2 setting operations structurally", () => {
     { type: "setting-set", setting: "draftTitle", value: "Saved" },
     { type: "setting-reset", setting: "draftTitle" },
   ]);
+});
+
+test("parses dormant SDK 1.2 date definitions and nodes only through the guarded path", () => {
+  const inspectionJson = success({ inspection: sdk12DateInspection() });
+  assert.throws(
+    () => parseRuntimeResponse(inspectionJson),
+    (error: unknown) => error instanceof MiniAppRuntimeError && error.code === "VALIDATION_FAILED",
+  );
+
+  const inspection = parseDormantSdk12RuntimeResponse(inspectionJson).value.inspection;
+  assert.equal(inspection?.manifest.sdkVersion, "1.2");
+  assert.equal(inspection?.settings.dueDate?.type, "date");
+  assert.equal(
+    "hostSdkVersion" in (inspection?.settings.reminderAt ?? {}),
+    true,
+  );
+  assert.equal(
+    "hostSdkVersion" in (inspection?.collections.entries?.fields.recordedAt ?? {}),
+    true,
+  );
+
+  const pageJson = success({
+    page: {
+      type: "page",
+      title: "Date Tool",
+      children: [
+        { type: "date-input", setting: "dueDate" },
+        { type: "datetime-input", setting: "reminderAt" },
+      ],
+    },
+  });
+  assert.throws(
+    () => parseRuntimeResponse(pageJson),
+    (error: unknown) => error instanceof MiniAppRuntimeError && error.code === "INVALID_UI_TREE",
+  );
+  assert.equal(parseDormantSdk12RuntimeResponse(pageJson).value.page?.children.length, 2);
+});
+
+test("rejects malformed dormant temporal definitions", () => {
+  const invalid = sdk12DateInspection();
+  invalid.settings.dueDate.default = "2026-02-30";
+  invalid.settings.reminderAt.default = "2026-08-03T22:30:00.000-05:00";
+
+  assert.throws(
+    () => parseDormantSdk12RuntimeResponse(success({ inspection: invalid })),
+    (error: unknown) => {
+      if (!(error instanceof MiniAppRuntimeError) || error.code !== "VALIDATION_FAILED") return false;
+      assert.match(error.message, /settings\.dueDate\.default/);
+      assert.match(error.message, /settings\.reminderAt\.default/);
+      return true;
+    },
+  );
 });
 
 test("accepts a normalized SDK 1.0 inspection", () => {
