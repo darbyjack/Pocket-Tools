@@ -29,7 +29,7 @@ single-file mini-app source
   → schema-validated isolated settings, records, and timers
 ```
 
-Bundled reference scripts are imported into the installed mini-app library only once. Pasted and bundled scripts then use the same installed-source runtime path. A user can paste, preview, install, run, edit, update, roll back, export, duplicate, back up, restore, and remove a script entirely on Android without rebuilding Pocket Tools.
+Bundled reference scripts are imported into the installed tool collection only once. Pasted and bundled scripts then use the same installed-source runtime path. A user can paste, preview, install, run, edit, update, roll back, export, duplicate, back up, restore, and remove a script entirely on Android without rebuilding Pocket Tools.
 
 The canonical delivery map is [Wayfinder: Deliver the Pocket Tools Android MVP](https://github.com/darbyjack/Pocket-Tools/issues/1).
 
@@ -76,21 +76,23 @@ These commands execute the same SDK and runner source embedded in the Android na
 
 ## Install a mini-app on Android
 
-1. Open the mini-app library and choose **Add script**.
+1. Open Pocket Tools and choose **Add tool**.
 2. Paste one SDK 1.0 or SDK 1.1 JavaScript module.
-3. Validate it.
-4. Preview it in a disposable storage namespace.
-5. Install it after the current exact source completes its first render.
+3. Choose **Check**.
+4. Choose **Preview**.
+5. Choose **Install tool** after the preview is ready.
 
 Updates render against a cloned copy of current installed state before the active source changes. Failed validation, preview, or first render leaves the working installation untouched. Successful updates preserve the previous source for rollback.
+
+Open a tool and choose **Manage** for edit, duplicate, script export, backup, rollback, and removal.
 
 See [Installed Mini-App Lifecycle](docs/INSTALLED_MINI_APPS.md) for storage, preview, update, rollback, export, duplication, and removal behavior.
 
 ## Back up and restore
 
-### One installed mini app
+### One installed tool
 
-Open an installed app and choose **Backup** to share a versioned JSON document containing both saved sources, manifest metadata, settings, records, and active durable timer timestamps. Choose **Restore one app** from the library to paste, validate, and restore that document transactionally.
+Open a tool, choose **Manage**, then choose **Back up tool** to share a versioned JSON document containing both saved sources, manifest metadata, settings, records, and active durable timer timestamps. Open **Settings** and choose **Restore a tool** to paste, check, and restore that document transactionally.
 
 Restoring over an existing manifest ID requires explicit confirmation. Invalid backups and failed SQLite writes leave the existing installation unchanged.
 
@@ -98,7 +100,7 @@ See [Portable Mini-App Backups](docs/PORTABLE_BACKUPS.md).
 
 ### Complete Pocket Tools state
 
-Choose **Back up all** from the library to share one versioned host backup containing every installed mini app plus retained settings, records, and timers for removed apps. Choose **Restore all** to validate every installed source and replace all user-owned state in one transaction after explicit confirmation.
+Open **Settings** and choose **Back up everything** to share one versioned host backup containing every installed tool plus retained settings, records, and timers for removed tools. Choose **Restore everything** to validate every installed source and replace all user-owned state in one transaction after explicit confirmation.
 
 Preview and lifecycle-diagnostic namespaces are excluded. Internal host metadata is preserved.
 
@@ -106,7 +108,7 @@ See [Complete Host Backups](docs/HOST_BACKUPS.md).
 
 ## Validate lifecycle and isolation
 
-Open **Host diagnostics** from the installed mini-app library to run the repeatable namespace, failed-invocation recovery, deletion, and force-stop timer tests.
+Open **Settings**, then choose **Diagnostics** to run the repeatable namespace, failed-invocation recovery, deletion, and force-stop timer tests.
 
 The immediate suite creates two temporary installed scripts with colliding setting, collection, and timer names and proves that their state remains isolated. The timer procedure spans two launches and requires confirming with `adb shell pidof` that the application process is absent while the durable timer remains active.
 
