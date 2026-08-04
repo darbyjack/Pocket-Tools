@@ -27,7 +27,11 @@ export type {
   TimerSnapshot,
 } from "@pocket-tools/sdk-contract";
 
-export interface DateSetting {
+interface DormantSdk12Definition {
+  readonly hostSdkVersion?: "1.2";
+}
+
+export interface DateSetting extends DormantSdk12Definition {
   readonly type: "date";
   readonly label: string;
   readonly description?: string;
@@ -37,7 +41,7 @@ export interface DateSetting {
   readonly max?: string;
 }
 
-export interface DateTimeSetting {
+export interface DateTimeSetting extends DormantSdk12Definition {
   readonly type: "datetime";
   readonly label: string;
   readonly description?: string;
@@ -49,14 +53,14 @@ export interface DateTimeSetting {
 
 export type SettingDefinition = PublicSettingDefinition | DateSetting | DateTimeSetting;
 
-export interface DateField {
+export interface DateField extends DormantSdk12Definition {
   readonly type: "date";
   readonly optional?: boolean;
   readonly min?: string;
   readonly max?: string;
 }
 
-export interface DateTimeField {
+export interface DateTimeField extends DormantSdk12Definition {
   readonly type: "datetime";
   readonly optional?: boolean;
   readonly min?: string;
