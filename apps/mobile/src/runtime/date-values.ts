@@ -31,7 +31,10 @@ export function dateStringToLocalDate(value: string): Date {
   const year = Number(value.slice(0, 4));
   const month = Number(value.slice(5, 7));
   const day = Number(value.slice(8, 10));
-  return new Date(year, month - 1, day, 12, 0, 0, 0);
+  const date = new Date(0);
+  date.setFullYear(year, month - 1, day);
+  date.setHours(12, 0, 0, 0);
+  return date;
 }
 
 export function localDateToDateString(value: Date): string {
@@ -48,15 +51,10 @@ export function dateTimeStringToDate(value: string): Date {
 }
 
 export function combineLocalDateAndTime(date: Date, time: Date): Date {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    time.getHours(),
-    time.getMinutes(),
-    0,
-    0,
-  );
+  const combined = new Date(date.getTime());
+  combined.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+  combined.setHours(time.getHours(), time.getMinutes(), 0, 0);
+  return combined;
 }
 
 function daysInMonth(year: number, month: number): number {
