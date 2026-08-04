@@ -760,13 +760,35 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       if (node.type === "navigation" && typeof screenDefinitions[node.screen] !== "function") {
         fail("INVALID_UI_TREE", `Unknown screen target: ${String(node.screen)}`);
       }
-      if (node.type === "list-item" && node.actions !== undefined) {
-        if (!supportsSdk11) fail("INVALID_UI_TREE", "List-item actions require SDK 1.1.");
-        if (!Array.isArray(node.actions) || node.actions.length < 1 || node.actions.length > 3) {
-          fail("INVALID_UI_TREE", "List items may contain between 1 and 3 actions.");
+      if (node.type === "list-item") {
+        exactKeys(
+          node,
+          ["type", "title", "subtitle", "trailing", "primaryAction", "actions"],
+          path,
+        );
+        if (node.primaryAction !== undefined) {
+          if (!supportsSdk12) {
+            fail("INVALID_UI_TREE", "List-item primary actions require SDK 1.2.");
+          }
+          validateActionControl(node.primaryAction, `${path}.primaryAction`);
+          if (
+            node.primaryAction.intent === "destructive" &&
+            node.primaryAction.confirmation === undefined
+          ) {
+            fail(
+              "INVALID_UI_TREE",
+              "Destructive list-item primary actions require confirmation.",
+            );
+          }
         }
-        for (let index = 0; index < node.actions.length; index += 1) {
-          validateActionControl(node.actions[index], `${path}.actions[${index}]`);
+        if (node.actions !== undefined) {
+          if (!supportsSdk11) fail("INVALID_UI_TREE", "List-item actions require SDK 1.1.");
+          if (!Array.isArray(node.actions) || node.actions.length < 1 || node.actions.length > 3) {
+            fail("INVALID_UI_TREE", "List items may contain between 1 and 3 actions.");
+          }
+          for (let index = 0; index < node.actions.length; index += 1) {
+            validateActionControl(node.actions[index], `${path}.actions[${index}]`);
+          }
         }
       }
       if (["text-input", "number-input", "toggle", "select", "date-input", "datetime-input"].includes(node.type)) {
