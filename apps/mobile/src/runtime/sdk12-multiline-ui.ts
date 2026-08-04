@@ -2,7 +2,7 @@ import type { MiniAppInspection, PageNode, SettingDefinition } from "../model.ts
 import { BADGE_TONES } from "./sdk12-badge.ts";
 import { UI_ICON_NAMES } from "./sdk12-icons.ts";
 import { PROGRESS_FORMATS } from "./sdk12-progress.ts";
-import { validatePageNode, type UiValidationOptions } from "./ui-validation.ts";
+import { validatePageNode } from "./ui-validation.ts";
 
 type PlainObject = Record<string, unknown>;
 
@@ -10,29 +10,22 @@ const BADGE_TONE_SET = new Set<string>(BADGE_TONES);
 const PROGRESS_FORMAT_SET = new Set<string>(PROGRESS_FORMATS);
 const UI_ICON_NAME_SET = new Set<string>(UI_ICON_NAMES);
 
-export function validatePageNodeWithDormantFormHints(
+export function validateSdkPageNode(
   value: unknown,
   inspection?: MiniAppInspection,
-  options: UiValidationOptions = {},
 ): asserts value is PageNode {
-  const legacyCompatible = stripAndValidateFormHints(value, inspection, options);
-  validatePageNode(legacyCompatible, legacyInspection(inspection), options);
+  const legacyCompatible = stripAndValidateSdk12Extensions(value, inspection);
+  validatePageNode(legacyCompatible, legacyInspection(inspection), { allowDormantSdk12: true });
 }
 
-export function validatePageNodeWithDormantMultiline(
-  value: unknown,
-  inspection?: MiniAppInspection,
-  options: UiValidationOptions = {},
-): asserts value is PageNode {
-  validatePageNodeWithDormantFormHints(value, inspection, options);
-}
+export const validatePageNodeWithDormantFormHints = validateSdkPageNode;
+export const validatePageNodeWithDormantMultiline = validateSdkPageNode;
 
-function stripAndValidateFormHints(
+function stripAndValidateSdk12Extensions(
   value: unknown,
   inspection: MiniAppInspection | undefined,
-  options: UiValidationOptions,
 ): unknown {
-  return visit(value, "page", supportsDormantSdk12(inspection, options));
+  return visit(value, "page", inspection === undefined || inspection.manifest.sdkVersion === "1.2");
 }
 
 function visit(value: unknown, path: string, supportsSdk12: boolean): unknown {
@@ -96,10 +89,8 @@ function visit(value: unknown, path: string, supportsSdk12: boolean): unknown {
   if (isBadge) {
     if (!supportsSdk12) fail(path, "Badge nodes require SDK 1.2.");
     exactKeys(value, ["type", "text", "tone"], path);
-    if (typeof value.text !== "string") {
-      fail(`${path}.text`, "Expected text.");
-    }
-    const textLength = Array.from(value.text).length;
+    if (typeof value.text !== "string") fail(`${path}.text`, "Expected text.");
+    const textLength = Array.from(value.text as string).length;
     if (textLength < 1 || textLength > 80) {
       fail(`${path}.text`, "Expected 1 to 80 characters.");
     }
@@ -147,8 +138,7 @@ function visit(value: unknown, path: string, supportsSdk12: boolean): unknown {
       typeof value.label === "string" &&
       typeof value.action === "string");
   const iconPresent = Object.prototype.hasOwnProperty.call(value, "icon");
-  const leadingIconPresent =
-    isListItem && Object.prototype.hasOwnProperty.call(value, "leadingIcon");
+  const leadingIconPresent = isListItem && Object.prototype.hasOwnProperty.call(value, "leadingIcon");
 
   if (isActionControl && iconPresent) {
     validateIcon(value.icon, `${path}.icon`, supportsSdk12);
@@ -211,14 +201,6 @@ function legacySettingDefinition(definition: SettingDefinition): SettingDefiniti
     default: definition.options[0]?.value ?? "",
     options: definition.options,
   };
-}
-
-function supportsDormantSdk12(
-  inspection: MiniAppInspection | undefined,
-  options: UiValidationOptions,
-): boolean {
-  if (options.allowDormantSdk12 !== true) return false;
-  return inspection === undefined || inspection.manifest.sdkVersion === "1.2";
 }
 
 function exactKeys(object: PlainObject, allowed: readonly string[], path: string): void {
