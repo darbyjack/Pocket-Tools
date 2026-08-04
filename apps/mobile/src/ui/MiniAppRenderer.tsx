@@ -9,8 +9,9 @@ import type {
   TimerSnapshot,
   UiNode,
 } from "../model.ts";
-import { formatDateTime, formatDisplayValue, formatDuration } from "../runtime/display-format.ts";
+import { formatDisplayValue, formatDuration } from "../runtime/display-format.ts";
 import { metricValue, settingIsVisible, timerElapsedSeconds } from "../runtime/protocol.ts";
+import { ListItemControl } from "./ListItemControl.tsx";
 import { SettingControl } from "./SettingControl.tsx";
 
 interface MiniAppRendererProps {
@@ -255,48 +256,7 @@ function NodeView(props: NodeViewProps) {
         </View>
       );
     case "list-item":
-      return (
-        <View style={styles.listItem}>
-          <View style={styles.listItemSummary}>
-            <View style={styles.listCopy}>
-              <Text style={styles.listTitle}>{formatDateTime(node.title)}</Text>
-              {node.subtitle === undefined ? null : (
-                <Text style={styles.listSubtitle}>{node.subtitle}</Text>
-              )}
-            </View>
-            {node.trailing === undefined ? null : (
-              <Text style={styles.listTrailing}>{node.trailing}</Text>
-            )}
-          </View>
-          {node.actions === undefined ? null : (
-            <View style={styles.listActions}>
-              {node.actions.map((action, index) => (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: action.disabled === true }}
-                  disabled={action.disabled === true}
-                  key={`${action.action}-${index}`}
-                  onPress={() => invokeAction(action)}
-                  style={[
-                    styles.listAction,
-                    action.intent === "destructive" ? styles.destructiveListAction : null,
-                    action.disabled === true ? styles.disabledAction : null,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.listActionText,
-                      action.intent === "destructive" ? styles.destructiveListActionText : null,
-                    ]}
-                  >
-                    {action.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </View>
-      );
+      return <ListItemControl node={node} onInvokeAction={invokeAction} />;
     case "empty-state":
       return (
         <View style={styles.emptyState}>
@@ -436,59 +396,6 @@ const styles = StyleSheet.create({
     color: "#172033",
     fontSize: 16,
     fontWeight: "700",
-  },
-  listItem: {
-    borderTopColor: "#eaecf0",
-    borderTopWidth: 1,
-    gap: 10,
-    paddingTop: 12,
-  },
-  listItemSummary: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 12,
-  },
-  listCopy: {
-    flex: 1,
-    gap: 3,
-  },
-  listTitle: {
-    color: "#172033",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  listSubtitle: {
-    color: "#667085",
-    fontSize: 13,
-  },
-  listTrailing: {
-    color: "#172033",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  listActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    justifyContent: "flex-end",
-  },
-  listAction: {
-    borderColor: "#98a2b3",
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  destructiveListAction: {
-    borderColor: "#d92d20",
-  },
-  listActionText: {
-    color: "#344054",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  destructiveListActionText: {
-    color: "#b42318",
   },
   emptyState: {
     alignItems: "center",
