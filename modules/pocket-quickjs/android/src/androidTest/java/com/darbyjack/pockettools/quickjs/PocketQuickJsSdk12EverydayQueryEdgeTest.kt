@@ -63,7 +63,7 @@ class PocketQuickJsSdk12EverydayQueryEdgeTest {
               count('dueDate', 'eq', '2026-08-10') === 1,
               count('dueDate', 'neq', '2026-08-10') === 2,
               count('dueDate', 'lte', '2026-08-20') === 2,
-              count('recordedAt', 'gt', '2026-08-10T00:00:00.000Z') === 2,
+              count('recordedAt', 'gt', '2026-08-10T10:00:00.000Z') === 2,
               count('recordedAt', 'gte', '2026-08-20T10:00:00.000Z') === 2,
               count('recordedAt', 'lte', '2026-08-20T10:00:00.000Z') === 2,
               values.min('score') === 10,
@@ -94,14 +94,64 @@ class PocketQuickJsSdk12EverydayQueryEdgeTest {
 
   private fun records(): JSONArray =
     JSONArray()
-      .put(record("11111111111111111111111111111111", "A", true, 10.0, 1.0, "2026-08-10", "2026-08-10T10:00:00.000Z"))
-      .put(record("22222222222222222222222222222222", "B", false, 20.0, 2.0, "2026-08-20", "2026-08-20T10:00:00.000Z"))
-      .put(record("33333333333333333333333333333333", "C", true, 30.0, 3.0, "2026-08-30", "2026-08-30T10:00:00.000Z"))
+      .put(
+        record(
+          "11111111111111111111111111111111",
+          "A",
+          true,
+          10.0,
+          1.0,
+          "2026-08-10",
+          "2026-08-10T10:00:00.000Z",
+        ),
+      )
+      .put(
+        record(
+          "22222222222222222222222222222222",
+          "B",
+          false,
+          20.0,
+          2.0,
+          "2026-08-20",
+          "2026-08-20T10:00:00.000Z",
+        ),
+      )
+      .put(
+        record(
+          "33333333333333333333333333333333",
+          "C",
+          true,
+          30.0,
+          3.0,
+          "2026-08-30",
+          "2026-08-30T10:00:00.000Z",
+        ),
+      )
 
   private fun maximumRecords(): JSONArray =
     JSONArray()
-      .put(record("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "A", true, Double.MAX_VALUE, 1.0, "2026-08-10", "2026-08-10T10:00:00.000Z"))
-      .put(record("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "B", true, Double.MAX_VALUE, 1.0, "2026-08-20", "2026-08-20T10:00:00.000Z"))
+      .put(
+        record(
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "A",
+          true,
+          Double.MAX_VALUE,
+          1.0,
+          "2026-08-10",
+          "2026-08-10T10:00:00.000Z",
+        ),
+      )
+      .put(
+        record(
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "B",
+          true,
+          Double.MAX_VALUE,
+          1.0,
+          "2026-08-20",
+          "2026-08-20T10:00:00.000Z",
+        ),
+      )
 
   private fun record(
     id: String,
