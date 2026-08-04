@@ -63,7 +63,7 @@ test("preserves multi-select definitions, UI, and array operations in dormant pa
   });
 });
 
-test("rejects malformed multi-select operation values through trusted validation", () => {
+test("does not silently normalize untrusted operation arrays", () => {
   const malformed = JSON.parse(response()) as {
     value: { operations: [{ value: unknown }] };
   };
