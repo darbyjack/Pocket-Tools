@@ -3,6 +3,7 @@ import { isSerializableValue, validateMiniAppDefinition } from "@pocket-tools/sd
 import type {
   MetricNode,
   MiniAppInspection,
+  RuntimeEffect,
   RuntimeLogEntry,
   RuntimeOperation,
   RuntimeSuccess,
@@ -90,16 +91,16 @@ export function parseRuntimeResponse(
     });
   }
 
+  const allowDormantSdk12 = options.allowDormantSdk12 === true;
   const operations = parseOperations(parsed.value.operations);
+  const effects = parseEffects(parsed.value.effects, allowDormantSdk12);
   const inspection =
     parsed.value.inspection === undefined
       ? undefined
-      : parseInspection(parsed.value.inspection, options.allowDormantSdk12 === true);
+      : parseInspection(parsed.value.inspection, allowDormantSdk12);
   if (parsed.value.page !== undefined) {
     try {
-      validatePageNode(parsed.value.page, undefined, {
-        allowDormantSdk12: options.allowDormantSdk12 === true,
-      });
+      validatePageNode(parsed.value.page, undefined, { allowDormantSdk12 });
     } catch (cause) {
       throw new MiniAppRuntimeError(
         "INVALID_UI_TREE",
@@ -115,6 +116,7 @@ export function parseRuntimeResponse(
     logsTruncated: parsed.logsTruncated,
     value: {
       operations,
+      ...(effects === undefined ? {} : { effects }),
       ...(inspection === undefined ? {} : { inspection }),
       ...(parsed.value.page === undefined ? {} : { page: parsed.value.page }),
     },
@@ -243,6 +245,32 @@ function parseOperations(value: unknown): readonly RuntimeOperation[] {
       return entry as unknown as RuntimeOperation;
     }
     throw invalidNative(`${path}.type is unsupported.`);
+  });
+}
+
+function parseEffects(
+  value: unknown,
+  allowDormantSdk12: boolean,
+): readonly RuntimeEffect[] | undefined {
+  if (value === undefined) return undefined;
+  if (!allowDormantSdk12) throw invalidNative("Runtime effects require SDK 1.2.");
+  if (!Array.isArray(value)) throw invalidNative("The runtime effect list is invalid.");
+  if (value.length > 1) throw invalidNative("An action may return at most one feedback effect.");
+
+  return value.map((entry, index) => {
+    const path = `effects[${index}]`;
+    if (!isRecord(entry) || entry.type !== "feedback") {
+      throw invalidNative(`${path} must be a feedback effect.`);
+    }
+    exactKeys(entry, ["type", "message"], path);
+    if (typeof entry.message !== "string") {
+      throw invalidNative(`${path}.message must be text.`);
+    }
+    const length = Array.from(entry.message).length;
+    if (length < 1 || length > 160) {
+      throw invalidNative(`${path}.message must contain 1 to 160 characters.`);
+    }
+    return entry as unknown as RuntimeEffect;
   });
 }
 

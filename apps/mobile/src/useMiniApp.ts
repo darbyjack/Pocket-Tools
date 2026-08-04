@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { MiniAppInspection, PageNode, RuntimeSnapshot, SerializableValue } from "./model";
+import { completeRuntimeAction } from "./runtime/feedback";
 import {
   formatMiniAppError,
   inspectMiniApp,
@@ -17,11 +18,13 @@ import {
 
 export interface MiniAppState {
   readonly error: string | null;
+  readonly feedback: string | null;
   readonly inspection: MiniAppInspection | null;
   readonly loading: boolean;
   readonly page: PageNode | null;
   readonly screen: string;
   readonly snapshot: RuntimeSnapshot | null;
+  readonly dismissFeedback: () => void;
   readonly invokeAction: (action: string, input?: SerializableValue) => Promise<void>;
   readonly navigate: (screen: string, input?: SerializableValue) => Promise<void>;
   readonly updateSetting: (name: string, value: SerializableValue) => Promise<void>;
@@ -43,6 +46,13 @@ export function useMiniApp(
   const [snapshot, setSnapshot] = useState<RuntimeSnapshot | null>(null);
   const [loading, setLoading] = useState(source !== null);
   const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [pendingFeedback, setPendingFeedback] = useState<string | null>(null);
+  const interactionRevision = useRef(0);
+
+  useLayoutEffect(() => {
+    interactionRevision.current += 1;
+  }, [requestedStorageId, source]);
 
   const storageIdFor = useCallback(
     (currentInspection: MiniAppInspection) => requestedStorageId ?? currentInspection.manifest.id,
@@ -96,6 +106,12 @@ export function useMiniApp(
   );
 
   useEffect(() => {
+    if (pendingFeedback === null) return;
+    setFeedback(pendingFeedback);
+    setPendingFeedback(null);
+  }, [page, pendingFeedback, snapshot]);
+
+  useEffect(() => {
     let cancelled = false;
 
     setInspection(null);
@@ -104,6 +120,8 @@ export function useMiniApp(
     setScreenInput(undefined);
     setSnapshot(null);
     setError(null);
+    setFeedback(null);
+    setPendingFeedback(null);
 
     if (source === null) {
       setLoading(false);
@@ -138,10 +156,22 @@ export function useMiniApp(
     };
   }, [render, source, storageIdFor]);
 
+  const dismissFeedback = useCallback(() => {
+    setFeedback(null);
+    setPendingFeedback(null);
+  }, []);
+
   const invokeAction = useCallback(
     async (action: string, input?: SerializableValue) => {
       if (inspection === null || source === null) return;
+      const actionSource = source;
+      const revision = interactionRevision.current + 1;
+      interactionRevision.current = revision;
+      const isCurrent = () => interactionRevision.current === revision;
+
       setError(null);
+      setFeedback(null);
+      setPendingFeedback(null);
 
       try {
         if (!inspection.actions.includes(action)) {
@@ -151,20 +181,35 @@ export function useMiniApp(
         const baseSnapshot = await loadRuntimeSnapshot(inspection, storageId, "action", { action });
         const actionSnapshot: RuntimeSnapshot =
           input === undefined ? baseSnapshot : { ...baseSnapshot, actionInput: input };
-        const response = await invokeMiniAppAction(source, actionSnapshot);
-        await applyRuntimeOperations(inspection, storageId, response.value.operations);
-        await refresh(inspection, screen, screenInput);
+        const response = await invokeMiniAppAction(actionSource, actionSnapshot);
+        const message = await completeRuntimeAction(
+          response.value,
+          (operations) => applyRuntimeOperations(inspection, storageId, operations),
+          async () => {
+            const rendered = await render(inspection, screen, screenInput);
+            if (!isCurrent()) return;
+            setSnapshot(rendered.snapshot);
+            setPage(rendered.page);
+          },
+        );
+        if (!isCurrent()) return;
+        if (message !== null) setPendingFeedback(message);
       } catch (caught) {
+        if (!isCurrent()) return;
+        setPendingFeedback(null);
         setError(formatMiniAppError(caught));
       }
     },
-    [inspection, refresh, screen, screenInput, source, storageIdFor],
+    [inspection, render, screen, screenInput, source, storageIdFor],
   );
 
   const navigate = useCallback(
     async (targetScreen: string, input?: SerializableValue) => {
       if (inspection === null) return;
+      interactionRevision.current += 1;
       setError(null);
+      setFeedback(null);
+      setPendingFeedback(null);
 
       try {
         const rendered = await render(inspection, targetScreen, input);
@@ -182,7 +227,10 @@ export function useMiniApp(
   const updateSetting = useCallback(
     async (name: string, value: SerializableValue) => {
       if (inspection === null) return;
+      interactionRevision.current += 1;
       setError(null);
+      setFeedback(null);
+      setPendingFeedback(null);
 
       try {
         await setSetting(inspection, storageIdFor(inspection), name, value);
@@ -196,11 +244,13 @@ export function useMiniApp(
 
   return {
     error,
+    feedback,
     inspection,
     loading,
     page,
     screen,
     snapshot,
+    dismissFeedback,
     invokeAction,
     navigate,
     updateSetting,

@@ -210,10 +210,18 @@ export type RuntimeOperation =
   | TimerStartOperation
   | TimerStopOperation;
 
+export interface FeedbackEffect {
+  readonly type: "feedback";
+  readonly message: string;
+}
+
+export type RuntimeEffect = FeedbackEffect;
+
 export interface RuntimeValue {
   readonly inspection?: MiniAppInspection;
   readonly page?: PageNode;
   readonly operations: readonly RuntimeOperation[];
+  readonly effects?: readonly RuntimeEffect[];
 }
 
 export type RuntimeLogLevel = "log" | "info" | "warn" | "error";

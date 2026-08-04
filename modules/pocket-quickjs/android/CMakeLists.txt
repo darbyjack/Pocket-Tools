@@ -17,7 +17,7 @@ add_library(
   pocketquickjs
   SHARED
   src/main/cpp/PocketQuickJsJni.cpp
-  src/main/cpp/PocketQuickJsRuntimeEverydayQueries.cpp
+  src/main/cpp/PocketQuickJsRuntimeFeedback.cpp
   ${quickjs_SOURCE_DIR}/dtoa.c
   ${quickjs_SOURCE_DIR}/libregexp.c
   ${quickjs_SOURCE_DIR}/libunicode.c
