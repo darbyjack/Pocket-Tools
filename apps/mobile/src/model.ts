@@ -12,6 +12,7 @@ import type {
   SerializableValue,
   SettingDefinition as PublicSettingDefinition,
   StoredRecord,
+  TextInputNode as PublicTextInputNode,
   TimerSnapshot,
   UiNode as PublicUiNode,
 } from "@pocket-tools/sdk-contract";
@@ -79,6 +80,11 @@ export interface MiniAppManifest extends Omit<PublicMiniAppManifest, "sdkVersion
   readonly sdkVersion: "1.0" | "1.1" | "1.2";
 }
 
+export interface TextInputNode extends PublicTextInputNode {
+  readonly multiline?: boolean;
+  readonly minLines?: 2 | 3 | 4 | 5 | 6 | 7 | 8;
+}
+
 export interface DateInputNode {
   readonly type: "date-input";
   readonly setting: string;
@@ -105,6 +111,7 @@ type PublicLeafUiNode = Exclude<
   | PublicSectionNode
   | PublicRowNode
   | PublicColumnNode
+  | PublicTextInputNode
   | PublicListItemNode
   | PublicListNode
 >;
@@ -131,6 +138,7 @@ export type UiNode =
   | RowNode
   | ColumnNode
   | PublicLeafUiNode
+  | TextInputNode
   | DateInputNode
   | DateTimeInputNode
   | ListItemNode
