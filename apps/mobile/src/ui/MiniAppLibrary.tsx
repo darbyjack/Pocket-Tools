@@ -5,6 +5,7 @@ import { ScreenScrollView } from "./ScreenScrollView";
 
 export interface MiniAppLibraryProps {
   readonly apps: readonly InstalledMiniApp[];
+  readonly onBackupAll: () => void;
   readonly onCreate: () => void;
   readonly onDelete: (app: InstalledMiniApp) => void;
   readonly onDiagnostics: () => void;
@@ -13,10 +14,12 @@ export interface MiniAppLibraryProps {
   readonly onExport: (app: InstalledMiniApp) => void;
   readonly onOpen: (app: InstalledMiniApp) => void;
   readonly onRestore: () => void;
+  readonly onRestoreAll: () => void;
 }
 
 export function MiniAppLibrary({
   apps,
+  onBackupAll,
   onCreate,
   onDelete,
   onDiagnostics,
@@ -25,6 +28,7 @@ export function MiniAppLibrary({
   onExport,
   onOpen,
   onRestore,
+  onRestoreAll,
 }: MiniAppLibraryProps) {
   return (
     <ScreenScrollView contentContainerStyle={styles.content}>
@@ -41,8 +45,22 @@ export function MiniAppLibrary({
           <Pressable accessibilityRole="button" onPress={onCreate} style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>Add script</Text>
           </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onBackupAll}
+            style={styles.secondaryButton}
+          >
+            <Text style={styles.secondaryButtonText}>Back up all</Text>
+          </Pressable>
           <Pressable accessibilityRole="button" onPress={onRestore} style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>Restore backup</Text>
+            <Text style={styles.secondaryButtonText}>Restore one app</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onRestoreAll}
+            style={styles.secondaryButton}
+          >
+            <Text style={styles.secondaryButtonText}>Restore all</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -58,7 +76,7 @@ export function MiniAppLibrary({
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>No mini apps installed</Text>
           <Text style={styles.emptyText}>
-            Paste an agent-generated SDK v1 script or restore a portable backup without rebuilding
+            Paste an agent-generated SDK script or restore a portable backup without rebuilding
             Pocket Tools.
           </Text>
           <View style={styles.headingActions}>
@@ -70,7 +88,14 @@ export function MiniAppLibrary({
               onPress={onRestore}
               style={styles.secondaryButton}
             >
-              <Text style={styles.secondaryButtonText}>Restore backup</Text>
+              <Text style={styles.secondaryButtonText}>Restore one app</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onRestoreAll}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>Restore all</Text>
             </Pressable>
           </View>
         </View>
