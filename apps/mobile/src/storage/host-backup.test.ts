@@ -6,7 +6,7 @@ import {
   HOST_BACKUP_VERSION,
   parseHostBackup,
   stringifyHostBackup,
-  type HostBackupV1,
+  type HostBackupV2,
 } from "./host-backup.ts";
 
 const timestamp = "2026-08-04T00:30:00.000Z";
@@ -14,7 +14,7 @@ const timestamp = "2026-08-04T00:30:00.000Z";
 function appBackup(appId = "example-tool", recordId = "0123456789abcdef0123456789abcdef") {
   return {
     format: "pocket-tools-mini-app" as const,
-    version: 1 as const,
+    version: 2 as const,
     exportedAt: timestamp,
     app: {
       id: appId,
@@ -35,10 +35,17 @@ function appBackup(appId = "example-tool", recordId = "0123456789abcdef012345678
       },
     ],
     timers: [{ id: "activeTimer", startedAt: timestamp }],
+    notifications: [
+      {
+        id: "dailyReminder",
+        title: "Daily reminder",
+        trigger: { type: "daily" as const, hour: 9, minute: 0, delivery: "standard" as const },
+      },
+    ],
   };
 }
 
-function validBackup(): HostBackupV1 {
+function validBackup(): HostBackupV2 {
   return {
     format: HOST_BACKUP_FORMAT,
     version: HOST_BACKUP_VERSION,
@@ -63,7 +70,7 @@ function validBackup(): HostBackupV1 {
   };
 }
 
-test("round-trips installed apps and retained namespaces", () => {
+test("round-trips installed notifications and notification-free retained namespaces", () => {
   const backup = validBackup();
   const serialized = stringifyHostBackup(backup);
   assert.deepEqual(parseHostBackup(serialized), backup);
@@ -83,6 +90,18 @@ test("rejects duplicate and overlapping app IDs", () => {
         retained: [{ ...backup.retained[0]!, appId: "example-tool" }],
       }),
     /already present in backup\.apps/,
+  );
+});
+
+test("rejects notifications in retained removed-tool state", () => {
+  const backup = validBackup();
+  assert.throws(
+    () =>
+      parseHostBackup({
+        ...backup,
+        retained: [{ ...backup.retained[0]!, notifications: [] }],
+      }),
+    /notifications is not supported/,
   );
 });
 
@@ -115,12 +134,12 @@ test("rejects globally duplicated record IDs", () => {
   );
 });
 
-test("rejects malformed JSON, unknown fields, and unsupported versions", () => {
+test("rejects malformed JSON, unknown fields, and version-1 documents", () => {
   const backup = validBackup();
   assert.throws(() => parseHostBackup("{"), /HOST_BACKUP_INVALID: Backup is not valid JSON/);
   assert.throws(
     () => parseHostBackup({ ...backup, legacy: true }),
     /backup\.legacy is not supported/,
   );
-  assert.throws(() => parseHostBackup({ ...backup, version: 2 }), /backup\.version must be 1/);
+  assert.throws(() => parseHostBackup({ ...backup, version: 1 }), /backup\.version must be 2/);
 });
