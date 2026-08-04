@@ -11,7 +11,7 @@ import type {
   TimerSnapshot,
 } from "../model.ts";
 import { validateDormantSdk12Definition } from "./sdk12-date-definition.ts";
-import { validatePageNode } from "./ui-validation.ts";
+import { validatePageNodeWithDormantMultiline } from "./sdk12-multiline-ui.ts";
 
 const LOG_LEVELS = new Set(["log", "info", "warn", "error"]);
 const IDENTIFIER_PATTERN = /^[a-z][A-Za-z0-9]*$/;
@@ -100,7 +100,7 @@ export function parseRuntimeResponse(
       : parseInspection(parsed.value.inspection, allowDormantSdk12);
   if (parsed.value.page !== undefined) {
     try {
-      validatePageNode(parsed.value.page, undefined, { allowDormantSdk12 });
+      validatePageNodeWithDormantMultiline(parsed.value.page, undefined, { allowDormantSdk12 });
     } catch (cause) {
       throw new MiniAppRuntimeError(
         "INVALID_UI_TREE",
