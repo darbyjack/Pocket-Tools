@@ -325,20 +325,30 @@ internal object PocketNotificationScheduler {
       .notify(hostId, NOTIFICATION_TAG_ID, builder.build())
   }
 
-  private fun openPendingIntent(context: Context, hostId: String): PendingIntent {
+  internal fun notificationOpenIntent(context: Context, hostId: String): Intent {
     val uri = Uri.Builder()
       .scheme("pocket-tools")
       .authority("notification")
       .appendQueryParameter("hostId", hostId)
       .build()
-    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-      ?: Intent(Intent.ACTION_VIEW, uri)
-    intent.data = uri
-    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    val launchComponent = context.packageManager
+      .getLaunchIntentForPackage(context.packageName)
+      ?.component
+    return Intent(Intent.ACTION_VIEW, uri).apply {
+      if (launchComponent === null) {
+        setPackage(context.packageName)
+      } else {
+        component = launchComponent
+      }
+      addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    }
+  }
+
+  private fun openPendingIntent(context: Context, hostId: String): PendingIntent {
     return PendingIntent.getActivity(
       context,
       0,
-      intent,
+      notificationOpenIntent(context, hostId),
       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
   }
