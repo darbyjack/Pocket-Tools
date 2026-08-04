@@ -1,6 +1,6 @@
 import type { SerializablePrimitive, SerializableValue } from "./values.ts";
 
-interface FieldBase<TType extends string> {
+export interface FieldBase<TType extends string> {
   readonly type: TType;
   readonly optional?: boolean;
 }
@@ -22,9 +22,23 @@ export interface MoneyField extends FieldBase<"money"> {
   readonly max?: number;
 }
 
-export interface DateTimeField extends FieldBase<"datetime"> {}
+export interface DateField extends FieldBase<"date"> {
+  readonly min?: string;
+  readonly max?: string;
+}
 
-export type FieldDefinition = TextField | BooleanField | NumberField | MoneyField | DateTimeField;
+export interface DateTimeField extends FieldBase<"datetime"> {
+  readonly min?: string;
+  readonly max?: string;
+}
+
+export type FieldDefinition =
+  | TextField
+  | BooleanField
+  | NumberField
+  | MoneyField
+  | DateField
+  | DateTimeField;
 
 export const field = {
   text(definition: Omit<TextField, "type"> = {}): TextField {
@@ -38,6 +52,9 @@ export const field = {
   },
   money(definition: Omit<MoneyField, "type"> = {}): MoneyField {
     return { type: "money", ...definition };
+  },
+  date(definition: Omit<DateField, "type"> = {}): DateField {
+    return { type: "date", ...definition };
   },
   datetime(definition: Omit<DateTimeField, "type"> = {}): DateTimeField {
     return { type: "datetime", ...definition };
@@ -54,9 +71,19 @@ export function collection(
   return { fields };
 }
 
+export type QueryOperator =
+  | "eq"
+  | "neq"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte"
+  | "contains"
+  | "startsWith";
+
 export interface QueryFilter {
   readonly field: string;
-  readonly operator: "eq" | "gte" | "lte";
+  readonly operator: QueryOperator;
   readonly value: SerializablePrimitive;
 }
 
@@ -87,6 +114,9 @@ export interface CollectionClient {
   query(query?: CollectionQuery): readonly StoredRecord[];
   count(query?: CollectionQuery): number;
   sum(fieldName: string, query?: CollectionQuery): number;
+  min(fieldName: string, query?: CollectionQuery): number | null;
+  max(fieldName: string, query?: CollectionQuery): number | null;
+  average(fieldName: string, query?: CollectionQuery): number | null;
 }
 
 export interface DataClient {
