@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import type { ActionControl, ListItemNode } from "../model.ts";
 import { formatDateTime } from "../runtime/display-format.ts";
@@ -16,12 +16,25 @@ interface ListItemControlProps {
 }
 
 export function ListItemControl({ node, onInvokeAction }: ListItemControlProps) {
+  const { fontScale } = useWindowDimensions();
   const iconNode = node as DormantIconListItemNode;
   const primaryAction = iconNode.primaryAction;
+  const stackAccessories = fontScale >= 1.3;
+  const accessories = (
+    <View style={[styles.accessories, stackAccessories ? styles.stackedAccessories : null]}>
+      {iconNode.trailing === undefined ? null : (
+        <Text style={styles.listTrailing}>{iconNode.trailing}</Text>
+      )}
+      {primaryAction?.icon === undefined ? null : (
+        <HostIcon name={primaryAction.icon} tone="muted" />
+      )}
+    </View>
+  );
   const summary = (
     <View
       style={[
         styles.listItemSummary,
+        stackAccessories ? styles.listItemSummaryLargeText : null,
         primaryAction?.disabled === true ? styles.disabledSummary : null,
       ]}
     >
@@ -30,18 +43,21 @@ export function ListItemControl({ node, onInvokeAction }: ListItemControlProps) 
           <HostIcon name={iconNode.leadingIcon} tone="muted" />
         </View>
       )}
-      <View style={styles.listCopy}>
-        <Text style={styles.listTitle}>{formatDateTime(iconNode.title)}</Text>
-        {iconNode.subtitle === undefined ? null : (
-          <Text style={styles.listSubtitle}>{iconNode.subtitle}</Text>
-        )}
+      <View style={styles.summaryContent}>
+        <View style={styles.summaryMainRow}>
+          <View style={styles.listCopy}>
+            <Text style={styles.listTitle}>{formatDateTime(iconNode.title)}</Text>
+            {iconNode.subtitle === undefined ? null : (
+              <Text style={styles.listSubtitle}>{iconNode.subtitle}</Text>
+            )}
+          </View>
+          {stackAccessories ? null : accessories}
+        </View>
+        {stackAccessories &&
+        (iconNode.trailing !== undefined || primaryAction?.icon !== undefined)
+          ? accessories
+          : null}
       </View>
-      {iconNode.trailing === undefined ? null : (
-        <Text style={styles.listTrailing}>{iconNode.trailing}</Text>
-      )}
-      {primaryAction?.icon === undefined ? null : (
-        <HostIcon name={primaryAction.icon} tone="muted" />
-      )}
     </View>
   );
 
@@ -141,6 +157,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.item,
   },
+  listItemSummaryLargeText: {
+    alignItems: "flex-start",
+  },
   leadingIcon: {
     alignItems: "center",
     justifyContent: "center",
@@ -150,9 +169,20 @@ const styles = StyleSheet.create({
   disabledSummary: {
     opacity: 0.45,
   },
+  summaryContent: {
+    flex: 1,
+    gap: 8,
+    minWidth: 0,
+  },
+  summaryMainRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.item,
+  },
   listCopy: {
     flex: 1,
     gap: 3,
+    minWidth: 0,
   },
   listTitle: {
     color: colors.text,
@@ -162,6 +192,15 @@ const styles = StyleSheet.create({
   listSubtitle: {
     color: colors.textMuted,
     fontSize: 13,
+  },
+  accessories: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexShrink: 0,
+    gap: 8,
+  },
+  stackedAccessories: {
+    alignSelf: "flex-end",
   },
   listTrailing: {
     color: colors.text,
