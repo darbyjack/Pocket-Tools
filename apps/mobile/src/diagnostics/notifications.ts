@@ -22,6 +22,8 @@ import {
 
 const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 
+type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
 export type NotificationAcceptanceKind =
   | "immediate"
   | "standardDate"
@@ -139,7 +141,7 @@ function buildRequest(kind: NotificationAcceptanceKind, now: Date): Notification
         ? ({ type: "daily", hour, minute, delivery: "standard" } as const)
         : ({
             type: "weekly",
-            weekday: target.getDay() === 0 ? 7 : target.getDay(),
+            weekday: isoWeekday(target),
             hour,
             minute,
             delivery: "standard",
@@ -167,4 +169,11 @@ function buildRequest(kind: NotificationAcceptanceKind, now: Date): Notification
     },
     open,
   };
+}
+
+function isoWeekday(date: Date): IsoWeekday {
+  const weekday = date.getDay();
+  if (weekday === 0) return 7;
+  if (weekday >= 1 && weekday <= 6) return weekday as 1 | 2 | 3 | 4 | 5 | 6;
+  throw new Error("The device returned an invalid weekday.");
 }
