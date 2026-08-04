@@ -1,11 +1,12 @@
 import type { CollectionDefinition, DataClient } from "./data.ts";
+import type { FeedbackClient, NotificationClient, OutputClient } from "./runtime.ts";
 import type { SettingDefinition, SettingsClient } from "./settings.ts";
 import type { TimerClient } from "./timers.ts";
 import type { PageNode } from "./ui.ts";
 import type { SerializableValue } from "./values.ts";
 
-export const SDK_VERSION = "1.1" as const;
-export const SUPPORTED_SDK_VERSIONS = ["1.0", SDK_VERSION] as const;
+export const SDK_VERSION = "1.2" as const;
+export const SUPPORTED_SDK_VERSIONS = ["1.0", "1.1", SDK_VERSION] as const;
 export type SdkVersion = (typeof SUPPORTED_SDK_VERSIONS)[number];
 
 export function normalizeSdkVersion(value: unknown): SdkVersion | null {
@@ -27,6 +28,9 @@ export interface MiniAppContext {
   readonly settings: SettingsClient;
   readonly data: DataClient;
   readonly timers: TimerClient;
+  readonly notifications: NotificationClient;
+  readonly output: OutputClient;
+  readonly feedback: FeedbackClient;
   readonly now: () => string;
 }
 
