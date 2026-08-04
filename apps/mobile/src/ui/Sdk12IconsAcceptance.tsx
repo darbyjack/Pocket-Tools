@@ -138,7 +138,11 @@ export function Sdk12IconsAcceptance() {
         </Text>
       </View>
 
-      <View accessible accessibilityLabel={`Primary row actions ${primaryCount}. Visible actions ${visibleCount}. Last action ${lastAction}.`} style={styles.counter}>
+      <View
+        accessible
+        accessibilityLabel={`Primary row actions ${primaryCount}. Visible actions ${visibleCount}. Last action ${lastAction}.`}
+        style={styles.counter}
+      >
         <Text style={styles.counterTitle}>Interaction counters</Text>
         <Text style={styles.counterText}>Primary row actions: {primaryCount}</Text>
         <Text style={styles.counterText}>Visible actions: {visibleCount}</Text>

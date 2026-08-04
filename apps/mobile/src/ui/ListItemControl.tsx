@@ -2,10 +2,7 @@ import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-na
 
 import type { ActionControl, ListItemNode } from "../model.ts";
 import { formatDateTime } from "../runtime/display-format.ts";
-import type {
-  DormantIconActionControl,
-  DormantIconListItemNode,
-} from "../runtime/sdk12-icons.ts";
+import type { DormantIconActionControl, DormantIconListItemNode } from "../runtime/sdk12-icons.ts";
 import { HostIcon } from "./HostIcon.tsx";
 import { invokeIsolatedListAction } from "./list-row-action.ts";
 import { colors, radii, spacing } from "./theme.ts";
@@ -55,8 +52,7 @@ export function ListItemControl({ node, onInvokeAction }: ListItemControlProps) 
           </View>
           {stackAccessories ? null : accessories}
         </View>
-        {stackAccessories &&
-        (iconNode.trailing !== undefined || primaryAction?.icon !== undefined)
+        {stackAccessories && (iconNode.trailing !== undefined || primaryAction?.icon !== undefined)
           ? accessories
           : null}
       </View>
@@ -126,10 +122,7 @@ function ListActionButton({
           <HostIcon name={action.icon} size="small" tone={destructive ? "danger" : "muted"} />
         )}
         <Text
-          style={[
-            styles.listActionText,
-            destructive ? styles.destructiveListActionText : null,
-          ]}
+          style={[styles.listActionText, destructive ? styles.destructiveListActionText : null]}
         >
           {action.label}
         </Text>
