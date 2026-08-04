@@ -111,7 +111,9 @@ function visitNode(
       validateActionControl(node, path, state);
       if (
         !supportsSdk11(state) &&
-        (node.intent !== undefined || node.disabled !== undefined || node.confirmation !== undefined)
+        (node.intent !== undefined ||
+          node.disabled !== undefined ||
+          node.confirmation !== undefined)
       ) {
         fail(path, "Action intent, disabled state, and confirmation require SDK 1.1.");
       }
@@ -200,11 +202,7 @@ function visitNode(
   }
 }
 
-function validateActionControl(
-  action: PlainObject,
-  path: string,
-  state: ValidationState,
-): void {
+function validateActionControl(action: PlainObject, path: string, state: ValidationState): void {
   requireString(action.label, `${path}.label`, 1, 120);
   const actionName = requireIdentifier(action.action, `${path}.action`);
   validateInteractionInput(action.input, `${path}.input`);
@@ -223,11 +221,7 @@ function validateActionControl(
   if (action.confirmation !== undefined) {
     const confirmationPath = `${path}.confirmation`;
     const confirmation = requireObject(action.confirmation, confirmationPath);
-    exactKeys(
-      confirmation,
-      ["title", "message", "confirmLabel", "cancelLabel"],
-      confirmationPath,
-    );
+    exactKeys(confirmation, ["title", "message", "confirmLabel", "cancelLabel"], confirmationPath);
     requireString(confirmation.title, `${confirmationPath}.title`, 1, 120);
     optionalString(confirmation.message, `${confirmationPath}.message`, 0, 500);
     optionalString(confirmation.confirmLabel, `${confirmationPath}.confirmLabel`, 1, 80);

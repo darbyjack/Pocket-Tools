@@ -122,8 +122,5 @@ test("rejects malformed JSON, unknown fields, and unsupported versions", () => {
     () => parseHostBackup({ ...backup, legacy: true }),
     /backup\.legacy is not supported/,
   );
-  assert.throws(
-    () => parseHostBackup({ ...backup, version: 2 }),
-    /backup\.version must be 1/,
-  );
+  assert.throws(() => parseHostBackup({ ...backup, version: 2 }), /backup\.version must be 1/);
 });

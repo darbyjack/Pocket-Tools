@@ -190,10 +190,7 @@ function ActionButton({
 }
 
 function formatHostBackupError(caught: unknown): string {
-  if (
-    caught instanceof Error &&
-    /^(?:HOST_BACKUP_|BACKUP_)/.test(caught.message)
-  ) {
+  if (caught instanceof Error && /^(?:HOST_BACKUP_|BACKUP_)/.test(caught.message)) {
     return caught.message;
   }
   return formatMiniAppError(caught);

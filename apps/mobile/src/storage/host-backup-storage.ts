@@ -110,17 +110,13 @@ export async function restoreHostBackup(
   for (const appBackup of backup.apps) {
     const preparedApp = preparedById.get(appBackup.app.id);
     if (preparedApp === undefined) {
-      throw new Error(
-        `HOST_BACKUP_INVALID: Missing prepared inspections for ${appBackup.app.id}.`,
-      );
+      throw new Error(`HOST_BACKUP_INVALID: Missing prepared inspections for ${appBackup.app.id}.`);
     }
     if (
       preparedApp.backup.app.activeSource !== appBackup.app.activeSource ||
       preparedApp.backup.app.lastKnownGoodSource !== appBackup.app.lastKnownGoodSource
     ) {
-      throw new Error(
-        `HOST_BACKUP_INVALID: ${appBackup.app.id} source changed after validation.`,
-      );
+      throw new Error(`HOST_BACKUP_INVALID: ${appBackup.app.id} source changed after validation.`);
     }
     validateMiniAppBackupForRestore(
       appBackup,
@@ -146,10 +142,7 @@ export async function restoreHostBackup(
       }
     });
   } catch (cause) {
-    if (
-      cause instanceof Error &&
-      /^(?:HOST_BACKUP_INVALID|BACKUP_INVALID):/.test(cause.message)
-    ) {
+    if (cause instanceof Error && /^(?:HOST_BACKUP_INVALID|BACKUP_INVALID):/.test(cause.message)) {
       throw cause;
     }
     throw new Error(
