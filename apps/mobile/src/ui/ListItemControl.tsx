@@ -19,7 +19,9 @@ export function ListItemControl({ node, onInvokeAction }: ListItemControlProps) 
   const { fontScale } = useWindowDimensions();
   const iconNode = node as DormantIconListItemNode;
   const primaryAction = iconNode.primaryAction;
-  const stackAccessories = fontScale >= 1.3;
+  const hasMultipleAccessories =
+    iconNode.trailing !== undefined && primaryAction?.icon !== undefined;
+  const stackAccessories = fontScale > 1.05 || hasMultipleAccessories;
   const accessories = (
     <View style={[styles.accessories, stackAccessories ? styles.stackedAccessories : null]}>
       {iconNode.trailing === undefined ? null : (
