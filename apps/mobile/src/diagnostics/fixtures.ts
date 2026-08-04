@@ -1,8 +1,5 @@
 export { DIAGNOSTIC_APP_ID_PREFIX } from "../storage/namespaces.ts";
 
-export const NOTIFICATION_ACCEPTANCE_APP_ID = "notification-acceptance-fixture";
-export const NOTIFICATION_ACCEPTANCE_APP_NAME = "Notification Acceptance";
-
 export function createLifecycleDiagnosticSource(appId: string, appName: string): string {
   return `// @ts-check
 
@@ -77,49 +74,6 @@ export default defineMiniApp({
     },
     fail() {
       throw new Error("Intentional lifecycle diagnostic failure");
-    },
-  },
-});
-`;
-}
-
-export function createNotificationAcceptanceSource(): string {
-  return `// @ts-check
-
-import { defineMiniApp, ui } from "@pocket-tools/sdk";
-
-export default defineMiniApp({
-  manifest: {
-    id: ${JSON.stringify(NOTIFICATION_ACCEPTANCE_APP_ID)},
-    name: ${JSON.stringify(NOTIFICATION_ACCEPTANCE_APP_NAME)},
-    description: "Temporary internal target for Android notification acceptance testing.",
-    sdkVersion: "1.0",
-  },
-  screens: {
-    home() {
-      return ui.page({
-        title: ${JSON.stringify(NOTIFICATION_ACCEPTANCE_APP_NAME)},
-        children: [
-          ui.text({
-            text: "Use Settings → Diagnostics to create and cancel physical notification tests.",
-          }),
-          ui.navigation({ label: "Open tap target", screen: "details", input: { source: "manual" } }),
-        ],
-      });
-    },
-    details(_context, input) {
-      return ui.page({
-        title: "Notification tap target",
-        children: [
-          ui.text({
-            text:
-              input === undefined
-                ? "No notification input was supplied."
-                : "Opened with: " + JSON.stringify(input),
-          }),
-          ui.navigation({ label: "Back", screen: "home" }),
-        ],
-      });
     },
   },
 });
