@@ -22,8 +22,10 @@ internal object PocketNotificationScheduler {
   private const val PREFERENCES_NAME = "pocket-tools-notifications"
   private const val SCHEDULE_PREFIX = "schedule:"
   private const val ROUTE_PREFIX = "route:"
+  private const val DELIVERED_PREFIX = "delivered:"
   private const val HOST_ID_EXTRA = "pocket_tools_host_id"
   private const val NOTIFICATION_TAG_ID = 1
+  private const val ROUTE_RETENTION_MILLISECONDS = 30L * 24L * 60L * 60L * 1_000L
 
   fun ensureChannel(context: Context) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -65,6 +67,7 @@ internal object PocketNotificationScheduler {
 
   fun reconcile(context: Context, entriesJson: String): String {
     ensureChannel(context)
+    cleanupExpiredRoutes(context)
     val entries = JSONArray(entriesJson)
     val incomingHostIds = mutableSetOf<String>()
     val results = JSONArray()
@@ -112,7 +115,22 @@ internal object PocketNotificationScheduler {
   }
 
   fun getOpenTarget(context: Context, hostId: String): String? {
-    return preferences(context).getString(ROUTE_PREFIX + hostId, null)
+    val key = ROUTE_PREFIX + hostId
+    val json = preferences(context).getString(key, null) ?: return null
+    return try {
+      val route = JSONObject(json)
+      val storedAt = route.optLong("storedAt", 0L)
+      if (storedAt <= 0L || System.currentTimeMillis() - storedAt > ROUTE_RETENTION_MILLISECONDS) {
+        preferences(context).edit().remove(key).remove(DELIVERED_PREFIX + hostId).apply()
+        null
+      } else {
+        route.remove("storedAt")
+        route.toString()
+      }
+    } catch (_: Exception) {
+      preferences(context).edit().remove(key).remove(DELIVERED_PREFIX + hostId).apply()
+      null
+    }
   }
 
   fun handleAlarm(context: Context, hostId: String) {
@@ -123,20 +141,22 @@ internal object PocketNotificationScheduler {
 
     ensureChannel(context)
     val canPost = notificationsEnabled(context)
-    if (canPost) postNotification(context, entry)
+    if (canPost) {
+      postNotification(context, entry)
+      if (triggerType != "daily" && triggerType != "weekly") markDelivered(context, hostId)
+    }
 
     if (triggerType == "daily" || triggerType == "weekly") {
       scheduleRecurringFromNow(context, entry)
       return
     }
 
-    if (canPost) {
-      removeSchedule(context, hostId)
-    }
+    if (canPost) removeSchedule(context, hostId)
   }
 
   fun recoverSchedules(context: Context) {
     ensureChannel(context)
+    cleanupExpiredRoutes(context)
     val values = preferences(context).all
     for ((key, value) in values) {
       if (!key.startsWith(SCHEDULE_PREFIX) || value !is String) continue
@@ -177,6 +197,7 @@ internal object PocketNotificationScheduler {
       cancelAlarm(context, hostId)
       if (postImmediate) {
         postNotification(context, entry)
+        markDelivered(context, hostId)
         removeSchedule(context, hostId)
         return result(hostId, storageId, notificationId, "delivered", platformId = hostId)
       }
@@ -215,10 +236,14 @@ internal object PocketNotificationScheduler {
     if (triggerType == "date" && triggerAt <= now) {
       cancelAlarm(context, hostId)
       removeSchedule(context, hostId)
+      if (wasDelivered(context, hostId)) {
+        return result(hostId, storageId, notificationId, "delivered", platformId = hostId)
+      }
       removeRoute(context, hostId)
       return result(hostId, storageId, notificationId, "expired")
     }
 
+    removeDelivered(context, hostId)
     scheduleAlarm(context, hostId, triggerAt, exact)
     return result(hostId, storageId, notificationId, "scheduled", platformId = hostId)
   }
@@ -284,12 +309,12 @@ internal object PocketNotificationScheduler {
       .setSmallIcon(smallIcon)
       .setContentTitle(title)
       .setContentText(body)
-      .setStyle(if (body.isEmpty()) null else Notification.BigTextStyle().bigText(body))
       .setContentIntent(openPendingIntent(context, hostId))
       .setAutoCancel(true)
       .setCategory(Notification.CATEGORY_REMINDER)
       .setVisibility(Notification.VISIBILITY_PRIVATE)
       .setShowWhen(true)
+    if (body.isNotEmpty()) builder.setStyle(Notification.BigTextStyle().bigText(body))
 
     context.getSystemService(NotificationManager::class.java)
       .notify(hostId, NOTIFICATION_TAG_ID, builder.build())
@@ -333,6 +358,7 @@ internal object PocketNotificationScheduler {
   private fun cancelHost(context: Context, hostId: String, removeRoute: Boolean) {
     cancelAlarm(context, hostId)
     removeSchedule(context, hostId)
+    removeDelivered(context, hostId)
     if (removeRoute) removeRoute(context, hostId)
     context.getSystemService(NotificationManager::class.java)
       .cancel(hostId, NOTIFICATION_TAG_ID)
@@ -353,6 +379,26 @@ internal object PocketNotificationScheduler {
         removeSchedule(context, hostId)
       }
     }
+  }
+
+  private fun cleanupExpiredRoutes(context: Context) {
+    val prefs = preferences(context)
+    val now = System.currentTimeMillis()
+    val editor = prefs.edit()
+    for ((key, value) in prefs.all) {
+      if (!key.startsWith(ROUTE_PREFIX) || value !is String) continue
+      val hostId = key.removePrefix(ROUTE_PREFIX)
+      if (prefs.contains(SCHEDULE_PREFIX + hostId)) continue
+      val storedAt = try {
+        JSONObject(value).optLong("storedAt", 0L)
+      } catch (_: Exception) {
+        0L
+      }
+      if (storedAt <= 0L || now - storedAt > ROUTE_RETENTION_MILLISECONDS) {
+        editor.remove(key).remove(DELIVERED_PREFIX + hostId)
+      }
+    }
+    editor.apply()
   }
 
   private fun persistSchedule(context: Context, hostId: String, entry: JSONObject) {
@@ -379,6 +425,7 @@ internal object PocketNotificationScheduler {
       .put("hostId", hostId)
       .put("storageId", storageId)
       .put("notificationId", notificationId)
+      .put("storedAt", System.currentTimeMillis())
     val open = request.optJSONObject("open")
     if (open != null) {
       route.put("screen", open.getString("screen"))
@@ -389,6 +436,18 @@ internal object PocketNotificationScheduler {
 
   private fun removeRoute(context: Context, hostId: String) {
     preferences(context).edit().remove(ROUTE_PREFIX + hostId).apply()
+  }
+
+  private fun markDelivered(context: Context, hostId: String) {
+    preferences(context).edit().putLong(DELIVERED_PREFIX + hostId, System.currentTimeMillis()).apply()
+  }
+
+  private fun wasDelivered(context: Context, hostId: String): Boolean {
+    return preferences(context).contains(DELIVERED_PREFIX + hostId)
+  }
+
+  private fun removeDelivered(context: Context, hostId: String) {
+    preferences(context).edit().remove(DELIVERED_PREFIX + hostId).apply()
   }
 
   private fun preferences(context: Context) =
