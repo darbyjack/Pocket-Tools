@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@expo/material-symbols": "0.1.1",
     "@expo/ui": "~57.0.7",
     "@pocket-tools/notifications-runtime": "workspace:*",
     "@pocket-tools/quickjs-runtime": "workspace:*",
