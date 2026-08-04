@@ -25,24 +25,35 @@ class PocketNotificationsModule : Module() {
 
     AsyncFunction("openNotificationSettings") {
       val context = requireContext()
-      val activity = appContext.currentActivity ?: return@AsyncFunction false
-      val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+      val activity = appContext.currentActivity
+      if (activity == null) {
+        false
+      } else {
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+          putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        }
+        activity.startActivity(intent)
+        true
       }
-      activity.startActivity(intent)
-      true
     }
 
     AsyncFunction("openExactAlarmSettings") {
-      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return@AsyncFunction true
-      val context = requireContext()
-      val activity = appContext.currentActivity ?: return@AsyncFunction false
-      val intent = Intent(
-        Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-        Uri.parse("package:${context.packageName}"),
-      )
-      activity.startActivity(intent)
-      true
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        true
+      } else {
+        val context = requireContext()
+        val activity = appContext.currentActivity
+        if (activity == null) {
+          false
+        } else {
+          val intent = Intent(
+            Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+            Uri.parse("package:${context.packageName}"),
+          )
+          activity.startActivity(intent)
+          true
+        }
+      }
     }
 
     AsyncFunction("reconcile") { entriesJson: String ->
