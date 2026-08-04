@@ -2,56 +2,45 @@
 
 ## Status
 
-Pocket Tools currently supports SDK 1.0 and SDK 1.1. The canonical TypeScript definitions live in `packages/sdk-contract`; the embedded QuickJS module, runtime protocol, host validators, renderer, SQLite operation path, examples, and documentation implement the same contract.
+Pocket Tools supports SDK `"1.0"`, `"1.1"`, and `"1.2"`. The current public version is `"1.2"`.
+
+The canonical TypeScript definitions live in `packages/sdk-contract`. The embedded QuickJS SDK and runner, local authoring tools, runtime protocol, host validators, native renderer, SQLite persistence layer, notification runtime, backup/restore flow, examples, and documentation implement the same contract.
 
 - SDK 1.0 is the original frozen Android MVP surface.
-- SDK 1.1 is an additive release for richer, host-controlled action presentation.
+- SDK 1.1 adds richer host-controlled action presentation.
+- SDK 1.2 adds transactional setting writes, richer typed data, additional host-owned UI, feedback/output effects, and local notifications.
 - Legacy numeric `sdkVersion: 1` is normalized to SDK 1.0 for already-installed scripts.
-- New scripts declare an explicit `"1.0"` or `"1.1"` capability version.
+- New scripts declare an explicit string version and should use `"1.2"` unless they intentionally target an older host.
 
-A script must declare the lowest SDK version whose features it uses. Unsupported versions are rejected before installation.
+A script must declare the lowest SDK version whose capabilities it uses. Unknown versions and 1.2-only fields under 1.0/1.1 are rejected before installation.
 
-## SDK 1.2 planning status
+## Security and execution model
 
-The complete [SDK 1.2 contract](SDK_1_2_CONTRACT.md) is frozen for implementation planning, but SDK 1.2 is **not yet supported**.
+Mini-apps are synchronous JavaScript ES modules executed inside a bounded QuickJS sandbox. They import only `@pocket-tools/sdk` and return declarative data for the host to validate and render.
 
-Until the final activation slice is complete:
+The SDK remains offline-first and host-owned:
 
-- `SDK_VERSION` remains `"1.1"`.
-- Manifests must continue to declare `"1.0"` or `"1.1"`.
-- Generated declarations and the embedded QuickJS module do not expose 1.2 APIs.
-- Individual implementation slices may add internal support, but no incomplete public capability may be advertised to scripts or authoring agents.
+- No arbitrary network, filesystem, location, secrets, Android APIs, native modules, React Native components, JSX, HTML, or external packages.
+- No arbitrary background JavaScript, callbacks, promises, or long-running workers.
+- No custom SVG, image, icon package, style object, color, or component injection.
+- No direct SQLite access or host handles.
+- All bridge values must be finite and serializable.
+- Definitions, UI, operations, effects, queries, and notification requests are validated exactly; unknown properties are rejected.
 
-The frozen 1.2 scope covers transactional form-state writes, date-aware inputs, tappable rows, richer bounded queries and aggregates, host feedback, copy/share output, local reminders, Android notification recovery, and phone notification bridging to a paired Galaxy Watch. The contract defines the exact public shapes, operation and effect ordering, persistence rules, limits, exclusions, compatibility matrix, and activation boundary.
+## Common surface
 
-## Common offline surface
-
-Both supported versions provide:
+All supported versions provide:
 
 - Durable typed settings.
-- Isolated typed collections with `insert`, `get`, `update`, `remove`, `query`, `count`, and `sum`.
-- Named synchronous screens and actions with finite serializable input.
+- Isolated typed collections.
+- Named synchronous screens and actions.
 - Declarative native pages, sections, rows, columns, text, metrics, timers, settings controls, navigation, summaries, lists, list items, and empty states.
 - Durable host-managed timers.
-- Exact validation of definitions, values, operations, UI trees, action targets, screen targets, size limits, and bridge values.
-
-The supported SDK remains offline-only. It exposes no network, filesystem, location, notification, secret, native-module, arbitrary component, or arbitrary background-JavaScript access.
-
-## Version declarations
-
-```js
-manifest: {
-  id: "example-tool",
-  name: "Example Tool",
-  sdkVersion: "1.1",
-}
-```
-
-A 1.1 host accepts 1.0 and 1.1 scripts. A script declaring 1.1 must not be installed by a host that supports only 1.0.
+- Exact validation and transactional host persistence.
 
 ## SDK 1.1 additions
 
-SDK 1.1 adds one reusable action-control contract:
+SDK 1.1 adds reusable host-owned action presentation:
 
 ```js
 ui.action({
@@ -69,80 +58,167 @@ ui.action({
 });
 ```
 
-The same optional `intent`, `disabled`, and `confirmation` fields are available on `ui.button`.
+The same optional `intent`, `disabled`, and `confirmation` fields are available on `ui.button`. List items may expose up to three action controls.
 
-### Actionable list items
+The host owns confirmation, cancellation, disabled behavior, and invocation isolation. Scripts never receive native alert objects or callbacks.
 
-```js
-ui.listItem({
-  title: String(record.createdAt),
-  subtitle: String(record.title),
-  actions: [
-    ui.action({
-      label: "Delete",
-      action: "removeEntry",
-      input: record.id,
-      intent: "destructive",
-      confirmation: { title: "Delete this entry?" },
-    }),
-  ],
-});
-```
+## SDK 1.2 additions
 
-A list item may expose one to three action controls. Every action must target a declared handler and carry only finite serializable input.
+### Transactional setting writes
 
-### Host-owned behavior
-
-- Confirmation is rendered by the host.
-- Cancellation performs no operation.
-- Confirmation invokes the action once and rerenders the active screen.
-- A disabled action cannot be invoked.
-- `destructive` is a presentation intent only; the script still performs the requested operation inside its declared action.
-- Scripts never receive native alert objects, callbacks, promises, mutable controls, or direct database bindings.
-
-## Collections and record-targeted actions
-
-The host owns record IDs and timestamps. A script can pass a selected record ID into an action:
+Actions may update or reset declared settings:
 
 ```js
 actions: {
-  removeEntry(context, input) {
-    if (typeof input !== "string") throw new Error("A record ID is required.");
-    context.data.collection("entries").remove(input);
+  save(context) {
+    context.settings.set("draftTitle", "Saved");
+    context.settings.reset("temporaryFilter");
   },
 }
 ```
 
-All operations requested by one action are validated and applied transactionally by the host.
+Setting and collection writes requested by one action are validated and committed atomically. A failure rolls back the complete action transaction.
+
+### Date, date-time, and bounded multi-select settings
+
+SDK 1.2 adds:
+
+- `setting.date(...)`
+- `setting.datetime(...)`
+- `setting.multiSelect(...)`
+- `field.date(...)`
+- Canonical bounded `field.datetime(...)`
+- `ui.dateInput(...)`
+- `ui.datetimeInput(...)`
+- `ui.multiSelect(...)`
+
+Dates use canonical `YYYY-MM-DD`. Date-times use canonical UTC ISO strings with millisecond precision, such as `2026-08-04T23:30:00.000Z`.
+
+Multi-select values preserve declared option order, contain no duplicates, and obey optional `minSelections` and `maxSelections` bounds. Multi-select settings cannot drive `visibleWhen` equality comparisons.
+
+### Form hints
+
+- `ui.textInput({ multiline: true, minLines? })`
+- `ui.numberInput({ step?, decimalPlaces? })`
+
+These are bounded host rendering and input hints. Scripts do not control fonts, heights, keyboard implementations, or arbitrary styling.
+
+### Everyday queries and aggregates
+
+Collection clients support:
+
+- `insert`, `get`, `update`, and `remove`
+- `query({ where?, orderBy?, limit?, offset? })`
+- `count(query?)`
+- `sum(fieldName, query?)`
+
+Filters support the documented `eq`, `gte`, and `lte` operators where valid for the declared field type. Ordering, limits, offsets, metadata fields, numeric aggregates, and query complexity are host-bounded.
+
+### Host-owned UI
+
+SDK 1.2 adds:
+
+- `listItem.primaryAction` for a tappable row.
+- `ui.badge({ text, tone? })` with neutral, info, success, warning, or danger semantics.
+- `ui.progress({ label?, value, min?, max?, format? })`.
+- Fixed semantic icons on buttons/actions and leading list-item icons.
+
+Fixed icon names are:
+
+`add`, `edit`, `delete`, `check`, `calendar`, `clock`, `copy`, `share`, `search`, `settings`, `warning`, `info`, `money`, `list`, and `refresh`.
+
+Labels remain mandatory and authoritative for accessibility. Icons are decorative, host-rendered, and cannot be customized by scripts.
+
+Progress defaults to a range of 0 through 100. The host clamps visual presentation while preserving the original finite value in accessibility text. Percent format is calculated through the declared range.
+
+### Feedback and output
+
+Actions may request:
+
+```js
+context.feedback.show("Saved");
+context.output.copy("Copied text");
+context.output.share({ title: "Pocket Tools", text: "Shared text" });
+```
+
+Feedback and output are host effects. They execute only after durable operations commit. An action may request at most one feedback effect and at most one copy/share effect.
+
+### Local notifications
+
+Actions may schedule or cancel host-owned local notifications:
+
+```js
+context.notifications.schedule({
+  id: "dailyReminder",
+  title: "Review entries",
+  body: "Open Pocket Tools to continue.",
+  trigger: {
+    type: "daily",
+    hour: 17,
+    minute: 0,
+    delivery: "standard",
+  },
+  open: { screen: "home" },
+});
+```
+
+Supported triggers are:
+
+- Immediate.
+- One canonical UTC date-time.
+- Daily at a host-local hour and minute.
+- Weekly using weekday 1 through 7 plus hour and minute.
+
+Scheduled date, daily, and weekly notifications may request `standard` or `exact` delivery. Exact delivery is best-effort and may fall back according to Android capability and permission state.
+
+The host owns permission prompts, channels, scheduling, reconciliation, startup recovery, removal cleanup, tap routing, and Android notification behavior. A notification `open.screen` must reference a declared screen and may carry finite serializable input.
+
+Phone notifications can mirror to a paired Galaxy Watch through Android and Galaxy Wearable settings. The mini-app has no watch API and cannot require or inspect mirroring.
+
+## Lifecycle and recovery
+
+SDK 1.2 participates in the normal host lifecycle:
+
+- Local validation and inspection.
+- Preview and installation.
+- Update and rollback.
+- Duplication and export.
+- Single-tool and complete-host backup/restore.
+- Process death and startup recovery.
+- Tool removal with optional data deletion.
+- Notification reconciliation and tap routing.
+
+Backup format v2 includes the notification registry required to reconcile restored tools. Preview namespaces remain isolated and are cleared on startup.
+
+## Compatibility
+
+A 1.2 host must preserve existing 1.0 and 1.1 behavior:
+
+- Lower-version scripts do not gain 1.2 capabilities implicitly.
+- 1.2-only definitions and UI under 1.0/1.1 fail validation.
+- Legacy 1.0 date-time fields retain their existing compatibility rules.
+- Existing action presentation, timers, records, backups, updates, and rollbacks remain valid.
 
 ## UI and bridge limits
 
+Core limits include:
+
 - Maximum rendered UI nodes: 512.
 - Maximum UI depth: 16.
-- Maximum list-item actions: 3.
-- Interaction values must be finite serializable values.
-- Unknown properties, unsupported nodes, undeclared targets, invalid confirmation metadata, and incompatible setting bindings are rejected.
+- Maximum list-item visible actions: 3.
+- Finite serializable interaction and notification input.
+- Bounded text, option, query, effect, and notification sizes.
+- No circular, prototype-bearing, unsafe-key, or undeclared bridge objects.
 
-## Deliberate exclusions from SDK 1.1
-
-SDK 1.1 does not add:
-
-- Swipe actions.
-- Arbitrary list-item children.
-- Script-owned modals.
-- Custom icons or menu systems.
-- Direct collection-operation bindings.
-- Network, filesystem, location, notification, secret, or custom-native APIs.
-- Pause/resume timer APIs or arbitrary background execution.
-
-Future public surface requires another explicit SDK version decision and must be implemented through the entire contract path. SDK 1.2 follows that rule and remains disabled until its complete frozen contract is implemented.
+Consult the TypeScript declarations and authoring guide for exact per-field bounds.
 
 ## Authoritative references
 
 - [`AGENT_AUTHORING.md`](AGENT_AUTHORING.md)
+- [`AGENT_PROMPT.md`](AGENT_PROMPT.md)
 - [`SDK_1_2_CONTRACT.md`](SDK_1_2_CONTRACT.md)
 - [`packages/sdk-contract/dist/index.d.ts`](../packages/sdk-contract/dist/index.d.ts)
-- [`SECURITY_MODEL.md`](SECURITY_MODEL.md)
 - [`AUTHORING_ERRORS.md`](AUTHORING_ERRORS.md)
-- SDK 1.1 reference: [`examples/bathroom-pay.miniapp.js`](../examples/bathroom-pay.miniapp.js)
+- [`SECURITY_MODEL.md`](SECURITY_MODEL.md)
+- SDK 1.1 compatibility reference: [`examples/bathroom-pay.miniapp.js`](../examples/bathroom-pay.miniapp.js)
 - SDK 1.0 compatibility reference: [`examples/tip-splitter.miniapp.js`](../examples/tip-splitter.miniapp.js)
