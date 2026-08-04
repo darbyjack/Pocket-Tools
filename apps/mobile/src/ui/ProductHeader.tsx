@@ -13,6 +13,7 @@ export function ProductHeader({ onSettings }: ProductHeaderProps) {
         <Image
           accessibilityIgnoresInvertColors
           accessible={false}
+          resizeMode="contain"
           source={require("../../assets/icon.png")}
           style={styles.logo}
         />
@@ -43,6 +44,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logo: {
+    borderRadius: 12,
     height: 48,
     width: 48,
   },
