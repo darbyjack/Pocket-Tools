@@ -2,6 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, AppState, Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
+  cancelNotificationAcceptance,
+  getNotificationAcceptanceStatus,
+  installNotificationAcceptanceFixture,
+  removeNotificationAcceptanceFixture,
+  scheduleNotificationAcceptance,
+  type NotificationAcceptanceKind,
+  type NotificationAcceptanceStatus,
+} from "../diagnostics/notifications.ts";
+import {
   getHostNotificationStatus,
   openHostExactAlarmSettings,
   openHostNotificationSettings,
@@ -19,6 +28,7 @@ export interface NotificationSettingsProps {
 
 export function NotificationSettings({ onBack }: NotificationSettingsProps) {
   const [status, setStatus] = useState<HostNotificationStatus | null>(null);
+  const [acceptance, setAcceptance] = useState<NotificationAcceptanceStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +36,12 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
     setBusy(true);
     setError(null);
     try {
-      setStatus(await getHostNotificationStatus());
+      const [nextStatus, nextAcceptance] = await Promise.all([
+        getHostNotificationStatus(),
+        getNotificationAcceptanceStatus(),
+      ]);
+      setStatus(nextStatus);
+      setAcceptance(nextAcceptance);
     } catch (caught) {
       setError(errorMessage(caught));
     } finally {
@@ -54,13 +69,25 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
     try {
       await action();
       await reconcileHostNotifications();
-      setStatus(await getHostNotificationStatus());
+      const [nextStatus, nextAcceptance] = await Promise.all([
+        getHostNotificationStatus(),
+        getNotificationAcceptanceStatus(),
+      ]);
+      setStatus(nextStatus);
+      setAcceptance(nextAcceptance);
     } catch (caught) {
       setError(errorMessage(caught));
     } finally {
       setBusy(false);
     }
   }, []);
+
+  const scheduleAcceptance = useCallback(
+    (kind: NotificationAcceptanceKind) => {
+      void run(() => scheduleNotificationAcceptance(kind));
+    },
+    [run],
+  );
 
   return (
     <ScreenScrollView contentContainerStyle={styles.content}>
@@ -127,6 +154,91 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
             />
           </View>
         </>
+      )}
+
+      {acceptance === null ? null : (
+        <View style={styles.acceptanceCard}>
+          <Text style={styles.acceptanceTitle}>Temporary physical acceptance</Text>
+          <Text style={styles.muted}>
+            These controls create a removable internal tool and exercise the committed SQLite to
+            Android delivery path. They do not enable SDK 1.2 installation or authoring.
+          </Text>
+          <StatusRow
+            label="Acceptance tool"
+            value={acceptance.installed ? "Installed" : "Not installed"}
+          />
+          <StatusRow label="Tool registry rows" value={String(acceptance.entries.length)} />
+
+          {acceptance.entries.length === 0 ? null : (
+            <View style={styles.entryList}>
+              {acceptance.entries.map((entry) => (
+                <Text key={entry.notificationId} selectable style={styles.entryText}>
+                  {entry.notificationId}: {entry.desired ? entry.status : "cancelling"}
+                </Text>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.actions}>
+            {!acceptance.installed ? (
+              <ActionButton
+                disabled={busy}
+                label="Install acceptance tool"
+                onPress={() => void run(installNotificationAcceptanceFixture)}
+                primary
+              />
+            ) : (
+              <>
+                <ActionButton
+                  disabled={busy}
+                  label="Immediate"
+                  onPress={() => scheduleAcceptance("immediate")}
+                  primary
+                />
+                <ActionButton
+                  disabled={busy}
+                  label="Standard +2 min"
+                  onPress={() => scheduleAcceptance("standardDate")}
+                />
+                <ActionButton
+                  disabled={busy}
+                  label="Exact +3 min"
+                  onPress={() => scheduleAcceptance("exactDate")}
+                />
+                <ActionButton
+                  disabled={busy}
+                  label="Daily +2 min"
+                  onPress={() => scheduleAcceptance("daily")}
+                />
+                <ActionButton
+                  disabled={busy}
+                  label="Weekly +2 min"
+                  onPress={() => scheduleAcceptance("weekly")}
+                />
+                <ActionButton
+                  disabled={busy}
+                  label="Replacement A"
+                  onPress={() => scheduleAcceptance("replacementA")}
+                />
+                <ActionButton
+                  disabled={busy}
+                  label="Replacement B"
+                  onPress={() => scheduleAcceptance("replacementB")}
+                />
+                <ActionButton
+                  disabled={busy}
+                  label="Cancel all tests"
+                  onPress={() => void run(cancelNotificationAcceptance)}
+                />
+                <ActionButton
+                  disabled={busy}
+                  label="Remove acceptance tool"
+                  onPress={() => void run(removeNotificationAcceptanceFixture)}
+                />
+              </>
+            )}
+          </View>
+        </View>
       )}
 
       {error === null ? null : (
@@ -232,6 +344,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: "hidden",
   },
+  acceptanceCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    gap: spacing.item,
+    padding: spacing.card,
+  },
+  acceptanceTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: "800",
+  },
   statusRow: {
     alignItems: "center",
     borderBottomColor: colors.border,
@@ -252,6 +377,15 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     fontWeight: "600",
+  },
+  entryList: {
+    gap: 5,
+  },
+  entryText: {
+    color: colors.textMuted,
+    fontFamily: "monospace",
+    fontSize: 12,
+    lineHeight: 18,
   },
   actions: {
     alignItems: "flex-start",
