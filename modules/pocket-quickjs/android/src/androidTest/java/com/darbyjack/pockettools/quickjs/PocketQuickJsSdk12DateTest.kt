@@ -127,6 +127,9 @@ class PocketQuickJsSdk12DateTest {
             if (entries.count({
               where: [{ field: 'dueDate', operator: 'neq', value: '2026-08-10' }],
             }) !== 2) throw new Error('date neq query returned the wrong count');
+            if (entries.count({
+              where: [{ field: 'dueDate', operator: 'gt', value: '2025-12-31' }],
+            }) !== 3) throw new Error('query values were incorrectly restricted by storage bounds');
           },
         },
       });
