@@ -25,7 +25,7 @@ The existing **Export** action remains source-only. **Backup** is the portable s
 ## Restore
 
 1. Open the mini-app library.
-2. Choose **Restore backup**.
+2. Choose **Restore one app**.
 3. Paste one complete version 1 backup document.
 4. Choose **Validate backup**.
 5. Review the manifest ID and state counts.
@@ -41,7 +41,7 @@ Before SQLite changes begin, Pocket Tools:
 
 1. Parses the exact `pocket-tools-mini-app` version 1 format.
 2. Rejects unknown fields and unsupported versions rather than applying compatibility behavior.
-3. Validates both saved sources through the frozen SDK v1 QuickJS inspection path.
+3. Validates both saved sources through the embedded QuickJS inspection path.
 4. Confirms both sources use the backed-up manifest ID.
 5. Confirms active-source manifest metadata matches the backup metadata.
 6. Validates every setting and record against the active or last-known-good source schema.
