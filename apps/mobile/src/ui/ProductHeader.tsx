@@ -12,7 +12,7 @@ export function ProductHeader({ onSettings }: ProductHeaderProps) {
       <View style={styles.brand}>
         <Image
           accessibilityIgnoresInvertColors
-          accessibilityLabel="Pocket Tools logo"
+          accessible={false}
           source={require("../../assets/icon.png")}
           style={styles.logo}
         />
