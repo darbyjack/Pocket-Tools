@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import type { SerializableValue } from "../model";
 import type { InstalledMiniApp } from "../storage/database";
 import { MiniAppRuntimePanel } from "./MiniAppRuntimePanel";
 import { ScreenScrollView } from "./ScreenScrollView";
@@ -7,11 +8,19 @@ import { colors, radii, spacing } from "./theme";
 
 export interface InstalledMiniAppRunnerProps {
   readonly app: InstalledMiniApp;
+  readonly initialScreen?: string;
+  readonly initialScreenInput?: SerializableValue;
   readonly onBack: () => void;
   readonly onManage: () => void;
 }
 
-export function InstalledMiniAppRunner({ app, onBack, onManage }: InstalledMiniAppRunnerProps) {
+export function InstalledMiniAppRunner({
+  app,
+  initialScreen = "home",
+  initialScreenInput,
+  onBack,
+  onManage,
+}: InstalledMiniAppRunnerProps) {
   return (
     <ScreenScrollView contentContainerStyle={styles.content}>
       <View style={styles.toolbar}>
@@ -26,7 +35,12 @@ export function InstalledMiniAppRunner({ app, onBack, onManage }: InstalledMiniA
         </Pressable>
       </View>
 
-      <MiniAppRuntimePanel source={app.activeSource} storageId={app.id} />
+      <MiniAppRuntimePanel
+        initialScreen={initialScreen}
+        initialScreenInput={initialScreenInput}
+        source={app.activeSource}
+        storageId={app.id}
+      />
     </ScreenScrollView>
   );
 }
