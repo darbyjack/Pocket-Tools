@@ -4,6 +4,7 @@ import type * as SQLite from "expo-sqlite";
 
 import type { MiniAppInspection, RuntimeOperation } from "../model.ts";
 import {
+  applyPreparedNotificationOperation,
   notificationHostId,
   prepareNotificationOperations,
 } from "./notification-registry.ts";
@@ -126,6 +127,50 @@ test("enforces the 64 desired schedule limit against current and in-action state
     { now, exactAlarmAccess: false },
   );
   assert.equal(cancelThenAdd.size, 2);
+});
+
+test("rechecks capacity inside the transaction to close concurrent preflight races", async () => {
+  let writes = 0;
+  const fullDatabase = {
+    async getFirstAsync(query: string) {
+      return query.includes("COUNT(*)") ? { count: 64 } : null;
+    },
+    async runAsync() {
+      writes += 1;
+      return { changes: 1 };
+    },
+  } as unknown as SQLite.SQLiteDatabase;
+  const operation = schedule("concurrentReminder");
+  assert.equal(operation.type, "notification-schedule");
+  if (operation.type !== "notification-schedule") return;
+
+  await assert.rejects(
+    applyPreparedNotificationOperation(
+      fullDatabase,
+      "reminder-test",
+      { index: 0, operation },
+      now,
+    ),
+    /NOTIFICATION_LIMIT_EXCEEDED/,
+  );
+  assert.equal(writes, 0);
+
+  const replacementDatabase = {
+    async getFirstAsync(query: string) {
+      return query.includes("SELECT desired") ? { desired: 1 } : { count: 64 };
+    },
+    async runAsync() {
+      writes += 1;
+      return { changes: 1 };
+    },
+  } as unknown as SQLite.SQLiteDatabase;
+  await applyPreparedNotificationOperation(
+    replacementDatabase,
+    "reminder-test",
+    { index: 0, operation },
+    now,
+  );
+  assert.equal(writes, 1);
 });
 
 test("rejects notification operations below SDK 1.2", async () => {
