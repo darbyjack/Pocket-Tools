@@ -21,7 +21,7 @@ Adding another example mini app is not part of the current MVP plan. The existin
 ## Installed script workflow
 
 1. Choose **Add script** in the library.
-2. Paste one SDK v1 JavaScript module.
+2. Paste one SDK 1.0 or 1.1 JavaScript module.
 3. Choose **Validate** to inspect it through the embedded runtime.
 4. Choose **Preview** to render it against a disposable namespace.
 5. Install after the exact current source passes its first render.
@@ -32,9 +32,62 @@ The library supports open, edit, duplicate, export through the Android share she
 
 See [`docs/INSTALLED_MINI_APPS.md`](../../docs/INSTALLED_MINI_APPS.md) for the complete lifecycle.
 
+## Galaxy S24 Ultra build target
+
+Pocket Tools is intentionally configured for the Samsung Galaxy S24 Ultra's 64-bit ARM runtime:
+
+```properties
+reactNativeArchitectures=arm64-v8a
+android.enableMinifyInReleaseBuilds=true
+android.enableShrinkResourcesInReleaseBuilds=true
+```
+
+The Expo config plugin writes these values into the generated `android/gradle.properties` on every prebuild. Both debug and release builds omit ARMv7 and x86/x86_64 native binaries. Release builds additionally run R8 and remove unused Android resources.
+
+Consequences:
+
+- Native build work and APK size are reduced.
+- The APK remains suitable for the Galaxy S24 Ultra and other `arm64-v8a` Android devices.
+- The APK will not install on x86 Android emulators or 32-bit ARM devices.
+- This configuration does not replace the final private signing setup.
+
+After changing or pulling the build configuration, regenerate Android before building:
+
+```powershell
+Set-Location C:\Users\Glare\Documents\Projects\Pocket-Tools
+
+pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
+Set-Location .\apps\mobile\android
+
+.\gradlew.bat assembleDebug
+.\gradlew.bat assembleRelease
+```
+
+APK outputs:
+
+```text
+apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+```
+
+Confirm the connected phone supports the selected ABI:
+
+```powershell
+adb shell getprop ro.product.cpu.abilist
+```
+
+The output must include `arm64-v8a`. Confirm the APK contains no other native ABI directories:
+
+```powershell
+jar tf .\app\build\outputs\apk\release\app-release.apk |
+  Select-String '^lib/'
+```
+
+Every listed native library path should begin with `lib/arm64-v8a/`.
+
 ## Build and native instrumentation
 
-No GitHub Actions workflow is enabled. With an Android emulator or device connected:
+No GitHub Actions workflow is enabled. With an Android device connected:
 
 ```bash
 pnpm install
