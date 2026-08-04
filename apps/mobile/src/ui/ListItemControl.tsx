@@ -10,11 +10,12 @@ interface ListItemControlProps {
 }
 
 export function ListItemControl({ node, onInvokeAction }: ListItemControlProps) {
+  const primaryAction = node.primaryAction;
   const summary = (
     <View
       style={[
         styles.listItemSummary,
-        node.primaryAction?.disabled === true ? styles.disabledSummary : null,
+        primaryAction?.disabled === true ? styles.disabledSummary : null,
       ]}
     >
       <View style={styles.listCopy}>
@@ -31,15 +32,15 @@ export function ListItemControl({ node, onInvokeAction }: ListItemControlProps) 
 
   return (
     <View style={styles.listItem}>
-      {node.primaryAction === undefined ? (
+      {primaryAction === undefined ? (
         summary
       ) : (
         <Pressable
-          accessibilityLabel={node.primaryAction.label}
+          accessibilityLabel={primaryAction.label}
           accessibilityRole="button"
-          accessibilityState={{ disabled: node.primaryAction.disabled === true }}
-          disabled={node.primaryAction.disabled === true}
-          onPress={() => onInvokeAction(node.primaryAction!)}
+          accessibilityState={{ disabled: primaryAction.disabled === true }}
+          disabled={primaryAction.disabled === true}
+          onPress={() => onInvokeAction(primaryAction)}
           style={({ pressed }) => [
             styles.primaryAction,
             pressed ? styles.primaryActionPressed : null,
