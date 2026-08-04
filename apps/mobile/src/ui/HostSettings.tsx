@@ -34,7 +34,7 @@ export function HostSettings({
         <SettingsRow label="Restore everything" onPress={onRestoreAll} />
       </SettingsSection>
 
-      <SettingsSection title="Developer">
+      <SettingsSection title="Advanced">
         <SettingsRow label="Diagnostics" onPress={onDiagnostics} />
       </SettingsSection>
     </ScreenScrollView>
