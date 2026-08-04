@@ -6,6 +6,7 @@ import type {
   ListItemNode as PublicListItemNode,
   ListNode as PublicListNode,
   MiniAppManifest as PublicMiniAppManifest,
+  NumberInputNode as PublicNumberInputNode,
   PageNode as PublicPageNode,
   RowNode as PublicRowNode,
   SectionNode as PublicSectionNode,
@@ -85,6 +86,13 @@ export interface TextInputNode extends PublicTextInputNode {
   readonly minLines?: 2 | 3 | 4 | 5 | 6 | 7 | 8;
 }
 
+export type NumberInputDecimalPlaces = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface NumberInputNode extends PublicNumberInputNode {
+  readonly step?: number;
+  readonly decimalPlaces?: NumberInputDecimalPlaces;
+}
+
 export interface DateInputNode {
   readonly type: "date-input";
   readonly setting: string;
@@ -112,6 +120,7 @@ type PublicLeafUiNode = Exclude<
   | PublicRowNode
   | PublicColumnNode
   | PublicTextInputNode
+  | PublicNumberInputNode
   | PublicListItemNode
   | PublicListNode
 >;
@@ -139,6 +148,7 @@ export type UiNode =
   | ColumnNode
   | PublicLeafUiNode
   | TextInputNode
+  | NumberInputNode
   | DateInputNode
   | DateTimeInputNode
   | ListItemNode
