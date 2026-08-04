@@ -95,7 +95,7 @@ export const declarationSmokeMiniApp = defineMiniApp({
       context.feedback.show("Saved");
       context.output.copy("Saved entry");
       context.notifications.schedule({
-        id: "entry-reminder",
+        id: "entryReminder",
         title: "Review your entry",
         trigger: { type: "daily", hour: 9, minute: 0 },
         open: { screen: "home" },
@@ -107,7 +107,7 @@ export const declarationSmokeMiniApp = defineMiniApp({
     remove(context, input) {
       assertRecordId(input);
       context.data.collection("entries").remove(input);
-      context.notifications.cancel("entry-reminder");
+      context.notifications.cancel("entryReminder");
     },
   },
 });
