@@ -163,7 +163,7 @@ export async function applySdk12RuntimeOperations(
             `INVALID_OPERATION: operations[${index}] was not prepared as a notification operation.`,
           );
         default:
-          throw new Error(`INVALID_OPERATION: operations[${index}] has an unsupported type.`);
+          assertNeverOperation(operation, index);
       }
     }
   });
@@ -201,4 +201,9 @@ function requireSetting(inspection: MiniAppInspection, name: string, operationIn
     );
   }
   return definition;
+}
+
+function assertNeverOperation(operation: never, operationIndex: number): never {
+  void operation;
+  throw new Error(`INVALID_OPERATION: operations[${operationIndex}] has an unsupported type.`);
 }
