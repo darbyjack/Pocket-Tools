@@ -2,13 +2,21 @@ import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
-import type { SerializableValue, SettingDefinition } from "../model";
+import type {
+  MultiSelectSetting as MultiSelectSettingDefinition,
+  SerializableValue,
+  SettingDefinition,
+} from "../model";
 import {
   dateStringToLocalDate,
   dateTimeStringToDate,
   localDateToDateString,
 } from "../runtime/date-values.ts";
 import type { NumberInputDecimalPlaces } from "../runtime/sdk12-number-input-model.ts";
+import {
+  normalizeMultiSelectValue,
+  selectValueKey,
+} from "../runtime/sdk12-multiselect.ts";
 import {
   DEFAULT_MULTILINE_LINES,
   multilineInputHeight,
@@ -94,6 +102,18 @@ export function SettingControl({
     );
   }
 
+  if (definition.type === "multi-select") {
+    return (
+      <MultiSelectSetting
+        name={name}
+        definition={definition}
+        value={value}
+        label={label}
+        onChange={onChange}
+      />
+    );
+  }
+
   if (definition.type === "date" || definition.type === "datetime") {
     return (
       <TemporalSetting
@@ -131,6 +151,88 @@ export function SettingControl({
       {...(decimalPlaces === undefined ? {} : { decimalPlaces })}
       onChange={onChange}
     />
+  );
+}
+
+interface MultiSelectSettingProps {
+  readonly name: string;
+  readonly definition: MultiSelectSettingDefinition;
+  readonly value: SerializableValue;
+  readonly label: string;
+  readonly onChange: (name: string, value: SerializableValue) => Promise<void>;
+}
+
+function MultiSelectSetting({
+  name,
+  definition,
+  value,
+  label,
+  onChange,
+}: MultiSelectSettingProps) {
+  let selectedValues = definition.default;
+  try {
+    selectedValues = normalizeMultiSelectValue(definition, value, `settings.${name}`);
+  } catch {
+    selectedValues = definition.default;
+  }
+
+  const selectedKeys = new Set(selectedValues.map(selectValueKey));
+  const minimum = definition.minSelections ?? 0;
+  const maximum = definition.maxSelections ?? definition.options.length;
+  const selectionHint =
+    minimum === maximum
+      ? `Select exactly ${minimum} option${minimum === 1 ? "" : "s"}`
+      : `Select between ${minimum} and ${maximum} options`;
+
+  const toggle = (key: string, selected: boolean) => {
+    const nextKeys = new Set(selectedKeys);
+    if (selected) nextKeys.delete(key);
+    else nextKeys.add(key);
+    const nextValue = definition.options
+      .filter((option) => nextKeys.has(selectValueKey(option.value)))
+      .map((option) => option.value);
+    void onChange(name, nextValue);
+  };
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      {definition.description === undefined ? null : (
+        <Text style={styles.description}>{definition.description}</Text>
+      )}
+      <Text style={styles.selectionSummary}>
+        {selectedValues.length} selected. {selectionHint}.
+      </Text>
+      <View style={styles.optionRow}>
+        {definition.options.map((option) => {
+          const key = selectValueKey(option.value);
+          const selected = selectedKeys.has(key);
+          const disabled = selected
+            ? selectedValues.length <= minimum
+            : selectedValues.length >= maximum;
+          return (
+            <Pressable
+              key={key}
+              accessibilityHint={selectionHint}
+              accessibilityLabel={`${label}: ${option.label}`}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: selected, disabled }}
+              disabled={disabled}
+              onPress={() => toggle(key, selected)}
+              style={[
+                styles.option,
+                selected && styles.optionSelected,
+                disabled && styles.optionDisabled,
+              ]}
+            >
+              <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -402,6 +504,10 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
   },
+  selectionSummary: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
   input: {
     backgroundColor: colors.surfaceMuted,
     borderColor: colors.border,
@@ -468,6 +574,9 @@ const styles = StyleSheet.create({
   optionSelected: {
     backgroundColor: colors.brand,
     borderColor: colors.brand,
+  },
+  optionDisabled: {
+    opacity: 0.55,
   },
   optionText: {
     color: colors.text,
