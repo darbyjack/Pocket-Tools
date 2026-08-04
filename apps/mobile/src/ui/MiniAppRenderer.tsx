@@ -544,6 +544,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 7,
     justifyContent: "center",
+    width: "100%",
   },
   destructiveButton: {
     backgroundColor: "#b42318",
@@ -553,8 +554,11 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: "#ffffff",
+    flex: 1,
     fontSize: 17,
     fontWeight: "700",
+    minWidth: 0,
+    textAlign: "center",
   },
   secondaryButton: {
     alignItems: "center",
