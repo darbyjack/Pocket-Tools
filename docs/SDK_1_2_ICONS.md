@@ -111,11 +111,11 @@ Normal runtime parsing remains closed to these fields until public activation. D
 
 ## Host-owned Android presentation
 
-Pocket Tools maps each semantic name to one fixed Lucide vector component rendered through `lucide-react-native` and Expo's supported `react-native-svg` runtime.
+Pocket Tools maps each semantic SDK name to one fixed Lucide icon name rendered by `@react-native-vector-icons/lucide`.
 
-Only the 15 imported Lucide components are referenced by the host mapping. The host owns the exact component mapping, dimensions, stroke width, spacing, and color treatment; mini-app scripts continue to provide only a semantic `UiIconName`.
+The package uses an icon font loaded through Expo Font at runtime. Icons therefore render as ordinary React Native text-backed children and do not require Jetpack Compose views, `react-native-svg`, or another native view manager. The host owns the exact name mapping, dimensions, spacing, and color treatment; mini-app scripts continue to provide only a semantic `UiIconName`.
 
-The renderer intentionally does not use Expo UI Jetpack Compose icons. Compose views require a dedicated `Host` composition boundary and did not embed reliably inside the existing React Native button and list-row hierarchy. Lucide renders as an ordinary React Native SVG child and therefore composes directly with the established controls.
+Only these 15 host-selected names are reachable through the SDK mapping. Scripts cannot select arbitrary Lucide names.
 
 - Primary button icons use the button's fixed inverse treatment.
 - Destructive visible-action icons use the host danger treatment.
@@ -148,17 +148,7 @@ pnpm format
 pnpm check
 ```
 
-Because `react-native-svg` contains native Android code, regenerate and rebuild the development client after first adding it:
-
-```powershell
-pnpm --dir apps/mobile exec expo prebuild `
-  --platform android `
-  --clean `
-  --no-install
-
-Set-Location apps/mobile/android
-.\gradlew.bat :app:assembleDebug connectedDebugAndroidTest --max-workers=4
-```
+The font-backed renderer adds no native Android view manager. Once the existing embedded QuickJS changes have passed the connected suite, changes limited to the icon package, mapping, or fixture require only the repository checks and device acceptance.
 
 Coverage includes:
 
