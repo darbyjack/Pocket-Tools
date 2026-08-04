@@ -1,6 +1,6 @@
 #include "PocketQuickJsSources.h"
-#include "PocketQuickJsNotifications.h"
+#include "PocketQuickJsNotificationSnapshot.h"
 
-#define kRunner notificationRunner()
+#define kRunner notificationSnapshotRunner()
 #include "PocketQuickJsRuntime.cpp"
 #undef kRunner
