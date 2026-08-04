@@ -30,7 +30,9 @@ test("parses one dormant SDK 1.2 feedback effect", () => {
 test("counts feedback limits by Unicode code point", () => {
   const message = "😀".repeat(160);
   const parsed = parseDormantSdk12RuntimeResponse(response([{ type: "feedback", message }]));
-  assert.equal(parsed.value.effects?.[0]?.message, message);
+  const effect = parsed.value.effects?.[0];
+  assert.equal(effect?.type, "feedback");
+  if (effect?.type === "feedback") assert.equal(effect.message, message);
 });
 
 test("normal response parsing rejects dormant effects", () => {

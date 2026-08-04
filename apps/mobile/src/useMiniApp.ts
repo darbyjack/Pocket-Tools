@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 
 import type { MiniAppInspection, PageNode, RuntimeSnapshot, SerializableValue } from "./model";
 import { completeRuntimeAction } from "./runtime/feedback";
+import { performHostOutput } from "./runtime/host-output";
 import {
   formatMiniAppError,
   inspectMiniApp,
@@ -198,6 +199,10 @@ export function useMiniApp(
             if (!isCurrent()) return;
             setSnapshot(rendered.snapshot);
             setPage(rendered.page);
+          },
+          async (effect) => {
+            if (!isCurrent()) return;
+            await performHostOutput(effect);
           },
         );
         if (!isCurrent()) return;

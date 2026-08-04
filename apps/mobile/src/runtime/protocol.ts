@@ -255,22 +255,44 @@ function parseEffects(
   if (value === undefined) return undefined;
   if (!allowDormantSdk12) throw invalidNative("Runtime effects require SDK 1.2.");
   if (!Array.isArray(value)) throw invalidNative("The runtime effect list is invalid.");
-  if (value.length > 1) throw invalidNative("An action may return at most one feedback effect.");
+  if (value.length > 2) {
+    throw invalidNative("An action may return at most one output effect and one feedback effect.");
+  }
 
+  let feedbackSeen = false;
+  let outputSeen = false;
   return value.map((entry, index) => {
     const path = `effects[${index}]`;
-    if (!isRecord(entry) || entry.type !== "feedback") {
-      throw invalidNative(`${path} must be a feedback effect.`);
+    if (!isRecord(entry) || typeof entry.type !== "string") {
+      throw invalidNative(`${path} must be a typed plain object.`);
     }
-    exactKeys(entry, ["type", "message"], path);
-    if (typeof entry.message !== "string") {
-      throw invalidNative(`${path}.message must be text.`);
+
+    if (entry.type === "feedback") {
+      if (feedbackSeen) throw invalidNative("An action may return at most one feedback effect.");
+      feedbackSeen = true;
+      exactKeys(entry, ["type", "message"], path);
+      boundedText(entry.message, `${path}.message`, 1, 160);
+      return entry as unknown as RuntimeEffect;
     }
-    const length = Array.from(entry.message).length;
-    if (length < 1 || length > 160) {
-      throw invalidNative(`${path}.message must contain 1 to 160 characters.`);
+
+    if (entry.type === "copy") {
+      if (outputSeen) throw invalidNative("An action may return at most one output effect.");
+      outputSeen = true;
+      exactKeys(entry, ["type", "text"], path);
+      boundedText(entry.text, `${path}.text`, 1, 10_000);
+      return entry as unknown as RuntimeEffect;
     }
-    return entry as unknown as RuntimeEffect;
+
+    if (entry.type === "share") {
+      if (outputSeen) throw invalidNative("An action may return at most one output effect.");
+      outputSeen = true;
+      exactKeys(entry, ["type", "text", "title"], path);
+      boundedText(entry.text, `${path}.text`, 1, 10_000);
+      if (entry.title !== undefined) boundedText(entry.title, `${path}.title`, 1, 120);
+      return entry as unknown as RuntimeEffect;
+    }
+
+    throw invalidNative(`${path}.type is unsupported.`);
   });
 }
 
@@ -309,6 +331,15 @@ function requireIdentifier(value: unknown, path: string): string {
 
 function requireString(value: unknown, path: string): string {
   if (typeof value !== "string" || value.length === 0) throw invalidNative(`${path} must be text.`);
+  return value;
+}
+
+function boundedText(value: unknown, path: string, minimum: number, maximum: number): string {
+  if (typeof value !== "string") throw invalidNative(`${path} must be text.`);
+  const length = Array.from(value).length;
+  if (length < minimum || length > maximum) {
+    throw invalidNative(`${path} must contain ${minimum} to ${maximum} characters.`);
+  }
   return value;
 }
 
