@@ -20,15 +20,15 @@ Adding another example mini app is not part of the current MVP plan. The existin
 
 ## Installed script workflow
 
-1. Choose **Add script** in the library.
+1. Choose **Add tool** from Pocket Tools.
 2. Paste one SDK 1.0 or 1.1 JavaScript module.
-3. Choose **Validate** to inspect it through the embedded runtime.
-4. Choose **Preview** to render it against a disposable namespace.
-5. Install after the exact current source passes its first render.
+3. Choose **Check**.
+4. Choose **Preview**.
+5. Choose **Install tool** after the preview is ready.
 
-Editing an installed app clones its settings, records, and timers into preview storage. Preview actions never write to the installed namespace. The source is updated only after preview succeeds, and the previous active source becomes the last-known-good rollback source.
+Editing an installed tool clones its settings, records, and timers into preview storage. Preview actions never write to the installed namespace. The source is updated only after preview succeeds, and the previous active source becomes the last-known-good rollback source.
 
-The library supports open, edit, duplicate, export through the Android share sheet, and removal with either retained or deleted app data.
+Open a tool and choose **Manage** for edit, duplicate, script export, backup, rollback, and removal. Open **Settings** for complete backup, restore, and developer diagnostics.
 
 See [`docs/INSTALLED_MINI_APPS.md`](../../docs/INSTALLED_MINI_APPS.md) for the complete lifecycle.
 
@@ -102,7 +102,7 @@ The native instrumentation tests exercise timeout interruption, memory pressure,
 
 ## Run lifecycle and namespace diagnostics
 
-Open **Host diagnostics** from the mini-app library.
+Open **Settings**, then choose **Diagnostics**.
 
 The immediate suite uses two temporary installed scripts with the same setting, collection, and timer names to prove:
 

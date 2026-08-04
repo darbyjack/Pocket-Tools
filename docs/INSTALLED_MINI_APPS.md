@@ -31,9 +31,9 @@ The manifest ID is the permanent namespace for installed settings, records, and 
 
 ## Paste and validation
 
-The Android editor accepts one multiline JavaScript ES module. `Validate` executes the script through the frozen embedded SDK and inspects its manifest, settings, collections, screens, and actions.
+Choose **Add tool** to open the Android editor. It accepts one multiline JavaScript ES module. **Check** executes the script through the frozen embedded SDK and inspects its manifest, settings, collections, screens, and actions.
 
-Validation errors preserve the runtime error code, script stack, and bounded console output when available. The editor does not expose syntax highlighting, formatting, arbitrary imports, or a second SDK implementation.
+Validation errors preserve the runtime error code, script stack, and bounded console output when available. Technical details are hidden by default and can be expanded when needed. The editor does not expose syntax highlighting, formatting, arbitrary imports, or a second SDK implementation.
 
 ## Isolated preview
 
@@ -63,21 +63,25 @@ An update does not modify the installed source during validation or preview. Aft
 
 Validation, preview, or first-render failure therefore leaves the current installation untouched.
 
-## Rollback
+## Tool management
 
-After an update, the runner exposes `Roll back`. Pocket Tools validates the saved last-known-good source, then explicitly swaps it with the active source. Settings, records, and timers are not changed.
+Open an installed tool and choose **Manage**. The management screen contains edit, duplicate, script export, backup, rollback when available, and removal.
+
+### Rollback
+
+After an update, **Manage** exposes **Roll back**. Pocket Tools validates the saved last-known-good source, then explicitly swaps it with the active source. Settings, records, and timers are not changed.
 
 The swap is reversible, so rolling back again returns to the newer source.
 
-## Export and duplication
+### Export and duplication
 
-`Export` uses the Android share sheet to send the active source as text.
+**Export script** uses the Android share sheet to send the active source as text.
 
-`Duplicate` opens the active source in the editor but does not copy installed state. The user or authoring agent must assign a new manifest ID before validation and preview can pass.
+**Duplicate** opens the active source in the editor but does not copy installed state. The user or authoring agent must assign a new manifest ID before checking and preview can pass.
 
-## Removal
+### Removal
 
-Removing an app always deletes its installation record. The user chooses whether to:
+Removing a tool always deletes its installation record. The user chooses whether to:
 
 - Keep isolated settings, records, and timers for a future reinstall with the same manifest ID.
 - Delete the installation and all associated app data.
@@ -97,13 +101,13 @@ Scripts do not receive network, filesystem, location, notifications, secrets, Re
 
 Before this phase is considered device-verified, exercise the following on an emulator or device:
 
-1. Paste and validate a valid SDK v1 script.
+1. Paste and check a valid SDK v1 script.
 2. Preview it, change settings, add records, and start a timer.
 3. Cancel the editor and verify the installed app was not changed.
 4. Install the script and reopen it after process termination.
 5. Edit and preview an update against cloned current state.
 6. Introduce a validation or first-render failure and verify the active source remains unchanged.
 7. Apply a valid update, roll it back, and verify app data remains intact.
-8. Export and duplicate the source; verify duplicate validation requires a new manifest ID.
+8. Export and duplicate the source; verify duplicate checking requires a new manifest ID.
 9. Remove the app while keeping data, reinstall the same ID, and verify preview and recovery use retained state.
 10. Remove the app and data, reinstall the same ID, and verify a clean state.

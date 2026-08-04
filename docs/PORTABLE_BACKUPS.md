@@ -15,21 +15,22 @@ The backup does not contain unrelated app state, host diagnostics, preview names
 
 ## Export
 
-1. Open an installed mini app.
-2. Choose **Backup**.
-3. Use the Android share sheet to save or send the JSON text.
-4. Preserve the suggested title `<Mini App Name>.pocket-tools-backup.json` when the destination supports naming shared text.
+1. Open an installed tool.
+2. Choose **Manage**.
+3. Choose **Back up tool**.
+4. Use the Android share sheet to save or send the JSON text.
+5. Preserve the suggested title `<Tool Name>.pocket-tools-backup.json` when the destination supports naming shared text.
 
-The existing **Export** action remains source-only. **Backup** is the portable stateful format.
+**Export script** remains source-only. **Back up tool** is the portable stateful format.
 
 ## Restore
 
-1. Open the mini-app library.
-2. Choose **Restore one app**.
+1. Open **Settings**.
+2. Choose **Restore a tool**.
 3. Paste one complete version 1 backup document.
-4. Choose **Validate backup**.
-5. Review the manifest ID and state counts.
-6. Choose **Restore backup**.
+4. Choose **Check backup**.
+5. Review the tool and state counts.
+6. Choose **Restore tool**.
 
 If the manifest ID has no installation or retained namespace, Pocket Tools creates the installation and restores its state.
 
