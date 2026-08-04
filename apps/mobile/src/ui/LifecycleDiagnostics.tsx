@@ -10,6 +10,7 @@ import {
 } from "../diagnostics/lifecycle";
 import type { DiagnosticCheck, TimerRecoveryCheckpoint } from "../diagnostics/types";
 import { ScreenScrollView } from "./ScreenScrollView";
+import { Sdk12ProgressAcceptance } from "./Sdk12ProgressAcceptance.tsx";
 
 export interface LifecycleDiagnosticsProps {
   readonly onBack: () => void;
@@ -185,6 +186,8 @@ export function LifecycleDiagnostics({ onBack }: LifecycleDiagnosticsProps) {
           </>
         )}
       </View>
+
+      <Sdk12ProgressAcceptance />
 
       {busy ? (
         <View style={styles.loadingRow}>
