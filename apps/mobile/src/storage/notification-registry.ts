@@ -9,6 +9,7 @@ import {
   assertNotificationId,
   normalizeNotificationRequest,
   notificationUsesExactDelivery,
+  parseNotificationRequestShape,
 } from "../runtime/notification-validation.ts";
 
 export const MAX_DESIRED_NOTIFICATIONS = 64;
@@ -136,9 +137,7 @@ export async function prepareNotificationOperations(
       }
       desired.add(request.id);
       if (desired.size > MAX_DESIRED_NOTIFICATIONS) {
-        throw new Error(
-          `NOTIFICATION_LIMIT_EXCEEDED: A tool may own at most ${MAX_DESIRED_NOTIFICATIONS} desired schedules.`,
-        );
+        throw notificationLimitError();
       }
       prepared.set(index, {
         index,
@@ -180,6 +179,7 @@ export async function applyPreparedNotificationOperation(
 ): Promise<void> {
   const operation = prepared.operation;
   if (operation.type === "notification-schedule") {
+    await assertScheduleCapacityInTransaction(database, storageId, operation.request.id);
     await database.runAsync(
       `INSERT INTO notification_registry (
          storage_id, notification_id, desired, request_json, platform_id,
@@ -212,12 +212,7 @@ export async function listNotificationRegistryEntries(
   database: SQLite.SQLiteDatabase,
 ): Promise<readonly NotificationRegistryEntry[]> {
   await ensureNotificationRegistrySchema(database);
-  const rows = await database.getAllAsync<NotificationRegistryRow>(
-    `SELECT storage_id, notification_id, desired, request_json, platform_id,
-            status, last_error, updated_at, reconciled_at
-     FROM notification_registry
-     ORDER BY storage_id ASC, notification_id ASC`,
-  );
+  const rows = await readRegistryRows(database);
   return rows.map(mapRegistryRow);
 }
 
@@ -225,13 +220,7 @@ export async function listNotificationReconciliationEntries(
   database: SQLite.SQLiteDatabase,
 ): Promise<readonly NotificationRegistryEntry[]> {
   await ensureNotificationRegistrySchema(database);
-  const rows = await database.getAllAsync<NotificationRegistryRow>(
-    `SELECT storage_id, notification_id, desired, request_json, platform_id,
-            status, last_error, updated_at, reconciled_at
-     FROM notification_registry
-     WHERE desired = 0 OR status != 'scheduled'
-     ORDER BY storage_id ASC, notification_id ASC`,
-  );
+  const rows = await readRegistryRows(database);
   return rows.map(mapRegistryRow);
 }
 
@@ -309,7 +298,7 @@ export async function markNotificationScheduled(
     notificationId,
   );
   if (result.changes !== 1) {
-    throw new Error(`NOTIFICATION_RECONCILIATION_FAILED: Missing desired schedule ${storageId}.`);
+    throw missingRegistryRow(storageId, notificationId, "desired schedule");
   }
 }
 
@@ -332,7 +321,7 @@ export async function markNotificationReconciliationProblem(
     notificationId,
   );
   if (result.changes !== 1) {
-    throw new Error(`NOTIFICATION_RECONCILIATION_FAILED: Missing registry row ${storageId}.`);
+    throw missingRegistryRow(storageId, notificationId, "registry row");
   }
 }
 
@@ -351,6 +340,41 @@ export async function completeNotificationCancellation(
 
 export function notificationHostId(storageId: string, notificationId: string): string {
   return `pocket-tools:${storageId.length}:${storageId}:${notificationId}`;
+}
+
+async function readRegistryRows(
+  database: SQLite.SQLiteDatabase,
+): Promise<readonly NotificationRegistryRow[]> {
+  return database.getAllAsync<NotificationRegistryRow>(
+    `SELECT storage_id, notification_id, desired, request_json, platform_id,
+            status, last_error, updated_at, reconciled_at
+     FROM notification_registry
+     ORDER BY storage_id ASC, notification_id ASC`,
+  );
+}
+
+async function assertScheduleCapacityInTransaction(
+  database: SQLite.SQLiteDatabase,
+  storageId: string,
+  notificationId: string,
+): Promise<void> {
+  const existing = await database.getFirstAsync<{ readonly desired: number }>(
+    `SELECT desired FROM notification_registry
+     WHERE storage_id = ? AND notification_id = ?`,
+    storageId,
+    notificationId,
+  );
+  if (existing?.desired === 1) return;
+
+  const count = await database.getFirstAsync<{ readonly count: number }>(
+    `SELECT COUNT(*) AS count
+     FROM notification_registry
+     WHERE storage_id = ? AND desired = 1`,
+    storageId,
+  );
+  if ((count?.count ?? 0) >= MAX_DESIRED_NOTIFICATIONS) {
+    throw notificationLimitError();
+  }
 }
 
 async function cancelOneInTransaction(
@@ -433,21 +457,36 @@ function parseStoredRequest(json: string, notificationId: string): NotificationR
       { cause },
     );
   }
-  const request = normalizeStoredRequest(value, notificationId);
-  return request;
-}
 
-function normalizeStoredRequest(value: unknown, notificationId: string): NotificationRequest {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+  let request: NotificationRequest;
+  try {
+    request = parseNotificationRequestShape(value, `notification_registry.${notificationId}`);
+  } catch (cause) {
     throw new Error(
       `NOTIFICATION_RECONCILIATION_FAILED: Stored request ${notificationId} is invalid.`,
+      { cause },
     );
   }
-  const request = value as NotificationRequest;
   if (request.id !== notificationId) {
     throw new Error(
       `NOTIFICATION_RECONCILIATION_FAILED: Stored request identity ${notificationId} changed.`,
     );
   }
   return request;
+}
+
+function notificationLimitError(): Error {
+  return new Error(
+    `NOTIFICATION_LIMIT_EXCEEDED: A tool may own at most ${MAX_DESIRED_NOTIFICATIONS} desired schedules.`,
+  );
+}
+
+function missingRegistryRow(
+  storageId: string,
+  notificationId: string,
+  kind: string,
+): Error {
+  return new Error(
+    `NOTIFICATION_RECONCILIATION_FAILED: Missing ${kind} ${storageId}.${notificationId}.`,
+  );
 }
