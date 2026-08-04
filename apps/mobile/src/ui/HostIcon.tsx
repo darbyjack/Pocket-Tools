@@ -1,24 +1,40 @@
-import { StyleSheet, Text } from "react-native";
+import AddSymbol from "@expo/material-symbols/add.xml";
+import AttachMoneySymbol from "@expo/material-symbols/attach_money.xml";
+import CalendarMonthSymbol from "@expo/material-symbols/calendar_month.xml";
+import CheckSymbol from "@expo/material-symbols/check.xml";
+import ContentCopySymbol from "@expo/material-symbols/content_copy.xml";
+import DeleteSymbol from "@expo/material-symbols/delete.xml";
+import EditSymbol from "@expo/material-symbols/edit.xml";
+import FormatListBulletedSymbol from "@expo/material-symbols/format_list_bulleted.xml";
+import InfoSymbol from "@expo/material-symbols/info.xml";
+import RefreshSymbol from "@expo/material-symbols/refresh.xml";
+import ScheduleSymbol from "@expo/material-symbols/schedule.xml";
+import SearchSymbol from "@expo/material-symbols/search.xml";
+import SettingsSymbol from "@expo/material-symbols/settings.xml";
+import ShareSymbol from "@expo/material-symbols/share.xml";
+import WarningSymbol from "@expo/material-symbols/warning.xml";
+import { Icon } from "@expo/ui";
+import { StyleSheet, View, type ColorValue } from "react-native";
 
 import type { UiIconName } from "../runtime/sdk12-icons.ts";
 
-const ICON_GLYPHS: Readonly<Record<UiIconName, string>> = {
-  add: "+",
-  edit: "✎",
-  delete: "×",
-  check: "✓",
-  calendar: "▦",
-  clock: "◷",
-  copy: "⧉",
-  share: "↗",
-  search: "⌕",
-  settings: "⚙︎",
-  warning: "!",
-  info: "i",
-  money: "$",
-  list: "≡",
-  refresh: "↻",
-};
+const ICON_SOURCES = {
+  add: AddSymbol,
+  edit: EditSymbol,
+  delete: DeleteSymbol,
+  check: CheckSymbol,
+  calendar: CalendarMonthSymbol,
+  clock: ScheduleSymbol,
+  copy: ContentCopySymbol,
+  share: ShareSymbol,
+  search: SearchSymbol,
+  settings: SettingsSymbol,
+  warning: WarningSymbol,
+  info: InfoSymbol,
+  money: AttachMoneySymbol,
+  list: FormatListBulletedSymbol,
+  refresh: RefreshSymbol,
+} as const satisfies Readonly<Record<UiIconName, number>>;
 
 export type HostIconTone = "default" | "inverse" | "danger" | "muted";
 
@@ -29,54 +45,36 @@ interface HostIconProps {
 }
 
 export function HostIcon({ name, size = "medium", tone = "default" }: HostIconProps) {
+  const dimension = size === "small" ? 18 : 22;
   return (
-    <Text
+    <View
       accessibilityElementsHidden
       accessible={false}
       importantForAccessibility="no-hide-descendants"
-      style={[
-        styles.icon,
-        size === "small" ? styles.small : styles.medium,
-        tone === "inverse"
-          ? styles.inverse
-          : tone === "danger"
-            ? styles.danger
-            : tone === "muted"
-              ? styles.muted
-              : styles.default,
-      ]}
+      style={[styles.icon, { height: dimension, width: dimension }]}
     >
-      {ICON_GLYPHS[name]}
-    </Text>
+      <Icon color={iconColor(tone)} name={ICON_SOURCES[name]} size={dimension} />
+    </View>
   );
+}
+
+function iconColor(tone: HostIconTone): ColorValue {
+  switch (tone) {
+    case "inverse":
+      return "#ffffff";
+    case "danger":
+      return "#b42318";
+    case "muted":
+      return "#667085";
+    case "default":
+      return "#344054";
+  }
 }
 
 const styles = StyleSheet.create({
   icon: {
+    alignItems: "center",
     flexShrink: 0,
-    fontWeight: "900",
-    textAlign: "center",
-  },
-  small: {
-    fontSize: 16,
-    lineHeight: 18,
-    width: 18,
-  },
-  medium: {
-    fontSize: 19,
-    lineHeight: 22,
-    width: 22,
-  },
-  default: {
-    color: "#344054",
-  },
-  inverse: {
-    color: "#ffffff",
-  },
-  danger: {
-    color: "#b42318",
-  },
-  muted: {
-    color: "#667085",
+    justifyContent: "center",
   },
 });
