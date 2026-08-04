@@ -10,6 +10,7 @@ import {
   isCanonicalDate,
   isCanonicalDateTime,
 } from "./date-values.ts";
+import { assertCanonicalMultiSelectValue } from "./sdk12-multiselect.ts";
 
 const RECORD_ID_PATTERN = /^[a-f0-9]{32}$/;
 const RESERVED_RECORD_FIELDS = new Set(["id", "createdAt", "updatedAt"]);
@@ -47,6 +48,10 @@ export function assertSettingValue(
       if (!definition.options.some((option) => option.value === value)) {
         fail(path, "Value is not one of the declared options.");
       }
+      return;
+    case "multi-select":
+      requireSdk12(sdkVersion ?? "1.2", path, "Multi-select settings");
+      assertCanonicalMultiSelectValue(definition, value, path);
       return;
     case "date":
       requireSdk12(sdkVersion ?? "1.2", path, "Date settings");
