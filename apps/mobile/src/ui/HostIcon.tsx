@@ -1,41 +1,27 @@
-import {
-  Calendar,
-  Check,
-  Clock,
-  Copy,
-  DollarSign,
-  Info,
-  List as ListIcon,
-  Pencil,
-  Plus,
-  RefreshCw,
-  Search,
-  Settings,
-  Share2,
-  Trash2,
-  TriangleAlert,
-  type LucideIcon,
-} from "lucide-react-native";
+import { Lucide } from "@react-native-vector-icons/lucide";
+import type { ComponentProps } from "react";
 import { StyleSheet, View } from "react-native";
 
 import type { UiIconName } from "../runtime/sdk12-icons.ts";
 
-const ICONS: Readonly<Record<UiIconName, LucideIcon>> = {
-  add: Plus,
-  edit: Pencil,
-  delete: Trash2,
-  check: Check,
-  calendar: Calendar,
-  clock: Clock,
-  copy: Copy,
-  share: Share2,
-  search: Search,
-  settings: Settings,
-  warning: TriangleAlert,
-  info: Info,
-  money: DollarSign,
-  list: ListIcon,
-  refresh: RefreshCw,
+type LucideName = ComponentProps<typeof Lucide>["name"];
+
+const ICON_NAMES: Readonly<Record<UiIconName, LucideName>> = {
+  add: "plus",
+  edit: "pencil",
+  delete: "trash-2",
+  check: "check",
+  calendar: "calendar",
+  clock: "clock",
+  copy: "copy",
+  share: "share-2",
+  search: "search",
+  settings: "settings",
+  warning: "triangle-alert",
+  info: "info",
+  money: "dollar-sign",
+  list: "list",
+  refresh: "refresh-cw",
 };
 
 export type HostIconTone = "default" | "inverse" | "danger" | "muted";
@@ -47,7 +33,6 @@ interface HostIconProps {
 }
 
 export function HostIcon({ name, size = "medium", tone = "default" }: HostIconProps) {
-  const IconComponent = ICONS[name];
   const dimension = size === "small" ? 18 : 22;
 
   return (
@@ -58,7 +43,7 @@ export function HostIcon({ name, size = "medium", tone = "default" }: HostIconPr
       pointerEvents="none"
       style={[styles.icon, { height: dimension, width: dimension }]}
     >
-      <IconComponent color={iconColor(tone)} size={dimension} strokeWidth={2.25} />
+      <Lucide color={iconColor(tone)} name={ICON_NAMES[name]} size={dimension} />
     </View>
   );
 }
