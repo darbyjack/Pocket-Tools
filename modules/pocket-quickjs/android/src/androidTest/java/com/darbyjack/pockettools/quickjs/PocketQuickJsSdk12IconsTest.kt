@@ -60,31 +60,28 @@ class PocketQuickJsSdk12IconsTest {
 
   @Test
   fun rejectsIconsBelowSdk12AndMalformedIconFields() {
-    val lowerVersion = definition().replace("sdkVersion: '1.2'", "sdkVersion: '1.1'")
+    val lowerVersion = singleIconDefinition("'add'", sdkVersion = "1.1")
     assertEquals(
       "VALIDATION_FAILED",
-      errorCode(run(lowerVersion, request("render").put("screen", "icons"))),
+      errorCode(run(lowerVersion, request("render").put("screen", "home"))),
     )
 
-    val unknown = definition().replace("icon: 'add'", "icon: 'download'")
+    val unknown = singleIconDefinition("'download'")
     assertEquals(
       "VALIDATION_FAILED",
-      errorCode(run(unknown, request("render").put("screen", "icons"))),
+      errorCode(run(unknown, request("render").put("screen", "home"))),
     )
 
-    val url = definition().replace("icon: 'add'", "icon: 'https://example.com/icon.svg'")
+    val url = singleIconDefinition("'https://example.com/icon.svg'")
     assertEquals(
       "VALIDATION_FAILED",
-      errorCode(run(url, request("render").put("screen", "icons"))),
+      errorCode(run(url, request("render").put("screen", "home"))),
     )
 
-    val customSize = definition().replace(
-      "icon: 'add'",
-      "icon: 'add', iconSize: 48",
-    )
+    val customSize = singleIconDefinition("'add'", extraProperty = ", iconSize: 48")
     assertEquals(
       "VALIDATION_FAILED",
-      errorCode(run(customSize, request("render").put("screen", "icons"))),
+      errorCode(run(customSize, request("render").put("screen", "home"))),
     )
   }
 
@@ -165,6 +162,33 @@ class PocketQuickJsSdk12IconsTest {
                     }),
                   ],
                 }),
+              ],
+            });
+          },
+        },
+        actions: { run() {} },
+      });
+    """.trimIndent()
+
+  private fun singleIconDefinition(
+    iconExpression: String,
+    sdkVersion: String = "1.2",
+    extraProperty: String = "",
+  ): String =
+    """
+      import { defineMiniApp, ui } from '@pocket-tools/sdk';
+      export default defineMiniApp({
+        manifest: {
+          id: 'single-icon-runtime-test',
+          name: 'Single Icon Runtime Test',
+          sdkVersion: '$sdkVersion',
+        },
+        screens: {
+          home() {
+            return ui.page({
+              title: 'Icon',
+              children: [
+                ui.button({ label: 'Run', action: 'run', icon: $iconExpression$extraProperty }),
               ],
             });
           },
