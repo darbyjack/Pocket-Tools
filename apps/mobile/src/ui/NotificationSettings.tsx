@@ -38,22 +38,19 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
     void refresh();
   }, [refresh]);
 
-  const run = useCallback(
-    async (action: () => Promise<unknown>) => {
-      setBusy(true);
-      setError(null);
-      try {
-        await action();
-        await reconcileHostNotifications();
-        setStatus(await getHostNotificationStatus());
-      } catch (caught) {
-        setError(errorMessage(caught));
-      } finally {
-        setBusy(false);
-      }
-    },
-    [],
-  );
+  const run = useCallback(async (action: () => Promise<unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      await reconcileHostNotifications();
+      setStatus(await getHostNotificationStatus());
+    } catch (caught) {
+      setError(errorMessage(caught));
+    } finally {
+      setBusy(false);
+    }
+  }, []);
 
   return (
     <ScreenScrollView contentContainerStyle={styles.content}>
@@ -176,9 +173,7 @@ function ActionButton({
 }
 
 function permissionLabel(status: HostNotificationStatus): string {
-  if (status.permission === "undetermined") return "Not requested";
-  if (status.permission === "denied") return "Denied";
-  return "Granted";
+  return status.permission === "granted" ? "Granted" : "Not allowed";
 }
 
 function errorMessage(caught: unknown): string {
