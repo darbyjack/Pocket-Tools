@@ -1,14 +1,26 @@
-import type { CollectionDefinition, SerializableValue, SettingDefinition } from "../model.ts";
+import type {
+  CollectionDefinition,
+  MiniAppInspection,
+  SerializableValue,
+  SettingDefinition,
+} from "../model.ts";
+import {
+  compareCanonicalTemporalValues,
+  isCanonicalDate,
+  isCanonicalDateTime,
+} from "./date-values.ts";
 
 const RECORD_ID_PATTERN = /^[a-f0-9]{32}$/;
 const RESERVED_RECORD_FIELDS = new Set(["id", "createdAt", "updatedAt"]);
 
 type RecordInput = Readonly<Record<string, SerializableValue>>;
+type SdkVersion = MiniAppInspection["manifest"]["sdkVersion"];
 
 export function assertSettingValue(
   definition: SettingDefinition,
   value: SerializableValue,
   path: string,
+  sdkVersion: SdkVersion = "1.1",
 ): void {
   switch (definition.type) {
     case "text":
@@ -34,6 +46,19 @@ export function assertSettingValue(
       if (!definition.options.some((option) => option.value === value)) {
         fail(path, "Value is not one of the declared options.");
       }
+      return;
+    case "date":
+      requireSdk12(sdkVersion, path, "Date settings");
+      assertTemporalValue(definition, value, path, "date");
+      return;
+    case "datetime":
+      if (sdkVersion !== "1.2") {
+        if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
+          fail(path, "Expected an ISO-compatible date-time string.");
+        }
+        return;
+      }
+      assertTemporalValue(definition, value, path, "datetime");
   }
 }
 
@@ -42,6 +67,7 @@ export function assertRecordInput(
   value: RecordInput,
   path: string,
   partial = false,
+  sdkVersion: SdkVersion = "1.1",
 ): void {
   const fieldNames = new Set(Object.keys(definition.fields));
   const entries = Object.entries(value);
@@ -50,7 +76,7 @@ export function assertRecordInput(
   for (const [name, fieldValue] of entries) {
     if (RESERVED_RECORD_FIELDS.has(name)) fail(`${path}.${name}`, "Record metadata is host-owned.");
     if (!fieldNames.has(name)) fail(`${path}.${name}`, "Unknown collection field.");
-    assertFieldValue(definition.fields[name]!, fieldValue, `${path}.${name}`);
+    assertFieldValue(definition.fields[name]!, fieldValue, `${path}.${name}`, sdkVersion);
   }
 
   if (!partial) {
@@ -70,6 +96,7 @@ function assertFieldValue(
   definition: CollectionDefinition["fields"][string],
   value: SerializableValue,
   path: string,
+  sdkVersion: SdkVersion,
 ): void {
   if (value === null) {
     if (!definition.optional) fail(path, "Required fields cannot be null.");
@@ -96,11 +123,54 @@ function assertFieldValue(
       if (definition.max !== undefined && value > definition.max)
         fail(path, "Value exceeds the maximum.");
       return;
+    case "date":
+      requireSdk12(sdkVersion, path, "Date fields");
+      assertTemporalValue(definition, value, path, "date");
+      return;
     case "datetime":
-      if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
-        fail(path, "Expected an ISO-compatible date-time string.");
+      if (sdkVersion !== "1.2") {
+        if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
+          fail(path, "Expected an ISO-compatible date-time string.");
+        }
+        return;
       }
+      assertTemporalValue(definition, value, path, "datetime");
   }
+}
+
+function assertTemporalValue(
+  definition: { readonly min?: string; readonly max?: string },
+  value: SerializableValue,
+  path: string,
+  type: "date" | "datetime",
+): void {
+  const valid = type === "date" ? isCanonicalDate(value) : isCanonicalDateTime(value);
+  if (!valid) {
+    fail(
+      path,
+      type === "date"
+        ? "Expected a canonical YYYY-MM-DD date."
+        : "Expected a canonical UTC date-time with millisecond precision.",
+    );
+  }
+
+  const text = value as string;
+  if (
+    definition.min !== undefined &&
+    compareCanonicalTemporalValues(text, definition.min) < 0
+  ) {
+    fail(path, "Value is below the minimum.");
+  }
+  if (
+    definition.max !== undefined &&
+    compareCanonicalTemporalValues(text, definition.max) > 0
+  ) {
+    fail(path, "Value exceeds the maximum.");
+  }
+}
+
+function requireSdk12(sdkVersion: SdkVersion, path: string, capability: string): void {
+  if (sdkVersion !== "1.2") fail(path, `${capability} require SDK 1.2.`);
 }
 
 function fail(path: string, message: string): never {
