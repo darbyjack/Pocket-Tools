@@ -69,12 +69,13 @@ Existing `sum(...)` is routed through the same numeric-value path.
 Rules:
 
 - `sum`, `min`, `max`, and `average` accept declared number or money fields only.
-- Aggregate field names must be strings.
+- Aggregate field names must be lower-camel-case strings that resolve to own declared fields.
 - Missing and `null` optional values are skipped.
 - `sum` returns `0` when no matching numeric values exist.
 - `min`, `max`, and `average` return `null` when no matching numeric values exist.
-- Every source value must be finite.
-- Intermediate sums and final results must remain finite.
+- Every source value and final aggregate result must be finite.
+- `sum` rejects a non-finite running or final result.
+- `average` uses a scaled running mean so a finite average remains available even when a naive intermediate sum would overflow.
 - Aggregate queries use the same validated operator matrix as ordinary queries.
 
 ## Same-action working state
@@ -117,17 +118,18 @@ This slice does not expose:
 - unbounded expression trees
 - native objects or callbacks
 
-Queries remain flat declarative objects with exact keys, declared fields, finite primitive values, validated operators, and bounded offset and limit values.
+Queries remain flat declarative objects with exact keys, own declared fields, finite primitive values, validated operators, and bounded offset and limit values.
 
 ## Coverage
 
 Connected Android instrumentation covers:
 
 - text equality, inequality, case-insensitive Unicode containment, and prefix matching
-- boolean inequality
-- numeric and temporal comparisons
+- boolean equality and inequality
+- the complete number, money, date, and date-time comparison surface
 - AND-combined filters
 - ordering, offset, and limit preservation
+- queries and aggregates during screen rendering
 - number and money aggregates
 - optional and missing value skipping
 - empty aggregate semantics
@@ -135,10 +137,11 @@ Connected Android instrumentation covers:
 - unsupported operator/type combinations
 - malformed query objects
 - invalid canonical date filters
-- unknown fields
+- unknown and inherited field names
 - non-finite query values
 - non-numeric and non-string aggregate fields
 - aggregate overflow
+- large finite averages that would overflow a naive sum
 - unchanged SDK 1.1 behavior
 - preservation of base definition validation
 
