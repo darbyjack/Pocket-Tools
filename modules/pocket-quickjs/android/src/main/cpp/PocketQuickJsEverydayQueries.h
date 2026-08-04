@@ -13,6 +13,8 @@ inline const char* everydayQueryRunner() {
   "use strict";
 
   const identifierPattern = /^[a-z][A-Za-z0-9]*$/;
+  const datePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const dateTimePattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/;
   const queryKeys = ["where", "orderBy", "limit", "offset"];
   const metadataFields = Object.freeze({
     id: Object.freeze({ type: "text", optional: false }),
@@ -38,14 +40,43 @@ inline const char* everydayQueryRunner() {
     }
   };
 
+  const isLeapYear = (year) => year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = (year, month) => {
+    if (month === 2) return isLeapYear(year) ? 29 : 28;
+    return month === 4 || month === 6 || month === 9 || month === 11 ? 30 : 31;
+  };
+  const isCanonicalDate = (value) => {
+    if (typeof value !== "string") return false;
+    const match = datePattern.exec(value);
+    if (match === null) return false;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    return year >= 1 && year <= 9999 && month >= 1 && month <= 12 &&
+      day >= 1 && day <= daysInMonth(year, month);
+  };
+  const isCanonicalDateTime = (value) => {
+    if (typeof value !== "string" || !dateTimePattern.test(value)) return false;
+    const year = Number(value.slice(0, 4));
+    if (year < 1 || year > 9999) return false;
+    const milliseconds = Date.parse(value);
+    if (!Number.isFinite(milliseconds)) return false;
+    try {
+      return new Date(milliseconds).toISOString() === value;
+    } catch {
+      return false;
+    }
+  };
+
   const fieldDefinition = (definition, collectionName, fieldName) => {
     if (!identifierPattern.test(collectionName)) {
       fail("Collection names must be lower camelCase identifiers.");
     }
+    if (typeof fieldName !== "string") fail("Field names must be text.");
     if (metadataFields[fieldName] !== undefined) return metadataFields[fieldName];
     const collection = definition.collections?.[collectionName];
     const field = collection?.fields?.[fieldName];
-    if (!isPlainObject(field)) fail(`Unknown field ${collectionName}.${String(fieldName)}.`);
+    if (!isPlainObject(field)) fail(`Unknown field ${collectionName}.${fieldName}.`);
     return field;
   };
 
@@ -71,7 +102,7 @@ inline const char* everydayQueryRunner() {
       return;
     }
 
-    if (field.type === "text" || field.type === "date" || field.type === "datetime") {
+    if (field.type === "text") {
       if (typeof value !== "string") fail(`${path} must be text.`);
       return;
     }
@@ -82,6 +113,16 @@ inline const char* everydayQueryRunner() {
     if (field.type === "number" || field.type === "money") {
       if (typeof value !== "number" || !Number.isFinite(value)) {
         fail(`${path} must be a finite number.`);
+      }
+      return;
+    }
+    if (field.type === "date") {
+      if (!isCanonicalDate(value)) fail(`${path} must be a canonical YYYY-MM-DD date.`);
+      return;
+    }
+    if (field.type === "datetime") {
+      if (!isCanonicalDateTime(value)) {
+        fail(`${path} must be a canonical UTC date-time with millisecond precision.`);
       }
       return;
     }
@@ -259,17 +300,23 @@ inline const char* everydayQueryRunner() {
     });
   };
 
-  const wrapFunctions = (functions, definition) => Object.fromEntries(
-    Object.entries(functions ?? {}).map(([name, original]) => [
-      name,
-      (context, input) => original(enhanceContext(context, definition), input),
-    ]),
-  );
+  const wrapFunctions = (functions, definition) => {
+    if (!isPlainObject(functions)) return functions;
+    return Object.fromEntries(
+      Object.entries(functions).map(([name, original]) => [
+        name,
+        typeof original === "function"
+          ? (context, input) => original(enhanceContext(context, definition), input)
+          : original,
+      ]),
+    );
+  };
 
   const wrapDefinition = (definition) => {
-    const sdkVersion = definition?.manifest?.sdkVersion === 1
+    if (!isPlainObject(definition) || !isPlainObject(definition.manifest)) return definition;
+    const sdkVersion = definition.manifest.sdkVersion === 1
       ? "1.0"
-      : definition?.manifest?.sdkVersion;
+      : definition.manifest.sdkVersion;
     if (sdkVersion !== "1.2") return definition;
     const wrapped = { ...definition };
     wrapped.screens = wrapFunctions(definition.screens, wrapped);
