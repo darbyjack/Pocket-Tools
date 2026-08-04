@@ -12,6 +12,7 @@ import {
 test("accepts real canonical calendar dates", () => {
   assert.equal(isCanonicalDate("2024-02-29"), true);
   assert.equal(isCanonicalDate("2026-08-03"), true);
+  assert.equal(isCanonicalDate("0001-01-01"), true);
   assert.equal(isCanonicalDate("2023-02-29"), false);
   assert.equal(isCanonicalDate("2026-13-01"), false);
   assert.equal(isCanonicalDate("2026-1-01"), false);
@@ -27,8 +28,8 @@ test("accepts only canonical UTC millisecond timestamps", () => {
 });
 
 test("round trips date-only values without UTC conversion", () => {
-  const date = dateStringToLocalDate("2026-08-03");
-  assert.equal(localDateToDateString(date), "2026-08-03");
+  assert.equal(localDateToDateString(dateStringToLocalDate("2026-08-03")), "2026-08-03");
+  assert.equal(localDateToDateString(dateStringToLocalDate("0001-01-01")), "0001-01-01");
 });
 
 test("combines a local date and time with zero seconds", () => {
