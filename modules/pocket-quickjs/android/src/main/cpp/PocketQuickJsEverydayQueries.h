@@ -34,6 +34,8 @@ inline const char* everydayQueryRunner() {
     return prototype === Object.prototype || prototype === null;
   };
 
+  const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+
   const exactKeys = (value, allowed, path) => {
     for (const key of Object.keys(value)) {
       if (!allowed.includes(key)) fail(`${path}.${key} is not supported.`);
@@ -69,13 +71,24 @@ inline const char* everydayQueryRunner() {
   };
 
   const fieldDefinition = (definition, collectionName, fieldName) => {
-    if (!identifierPattern.test(collectionName)) {
+    if (typeof collectionName !== "string" || !identifierPattern.test(collectionName)) {
       fail("Collection names must be lower camelCase identifiers.");
     }
-    if (typeof fieldName !== "string") fail("Field names must be text.");
-    if (metadataFields[fieldName] !== undefined) return metadataFields[fieldName];
-    const collection = definition.collections?.[collectionName];
-    const field = collection?.fields?.[fieldName];
+    if (typeof fieldName !== "string" || !identifierPattern.test(fieldName)) {
+      fail("Field names must be lower camelCase identifiers.");
+    }
+    if (hasOwn(metadataFields, fieldName)) return metadataFields[fieldName];
+
+    const collections = definition.collections;
+    const collection =
+      isPlainObject(collections) && hasOwn(collections, collectionName)
+        ? collections[collectionName]
+        : undefined;
+    const fields = isPlainObject(collection) ? collection.fields : undefined;
+    if (!isPlainObject(fields) || !hasOwn(fields, fieldName)) {
+      fail(`Unknown field ${collectionName}.${fieldName}.`);
+    }
+    const field = fields[fieldName];
     if (!isPlainObject(field)) fail(`Unknown field ${collectionName}.${fieldName}.`);
     return field;
   };
@@ -285,13 +298,9 @@ inline const char* everydayQueryRunner() {
   });
 
   const enhanceContext = (context, definition) => {
-    const collections = new Map();
     const data = Object.freeze({
       collection(name) {
-        if (collections.has(name)) return collections.get(name);
-        const wrapped = wrapCollection(context.data.collection(name), definition, name);
-        collections.set(name, wrapped);
-        return wrapped;
+        return wrapCollection(context.data.collection(name), definition, name);
       },
     });
     return Object.freeze({
