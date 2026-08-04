@@ -10,30 +10,30 @@ A complete-host backup contains:
 - Each installed app's active source and last-known-good source.
 - Manifest metadata and installation timestamps.
 - All isolated settings, records, and active timer start timestamps.
-- Retained settings, records, and timers for apps that were removed with **Remove app** rather than **Remove app and data**.
+- Retained settings, records, and timers for tools removed while keeping their data.
 
 Temporary preview namespaces, lifecycle-diagnostic namespaces, application binaries, signing material, and internal host metadata are not exported.
 
 ## Export
 
-1. Open the mini-app library.
-2. Choose **Back up all**.
+1. Open **Settings**.
+2. Choose **Back up everything**.
 3. Use the Android share sheet to preserve the JSON text.
 4. Keep the suggested name `Pocket Tools.pocket-tools-host-backup.json` when the destination supports naming shared text.
 
-The existing per-app **Backup** action remains available inside an installed app. **Back up all** is the complete recovery document.
+The per-tool **Back up tool** action remains available under **Manage**. **Back up everything** is the complete recovery document.
 
 ## Restore
 
-1. Open the mini-app library.
-2. Choose **Restore all**.
+1. Open **Settings**.
+2. Choose **Restore everything**.
 3. Paste one complete host-backup document.
-4. Choose **Validate complete backup**.
-5. Review the installed-app, retained-namespace, setting, record, and timer counts.
-6. Choose **Restore all data**.
-7. Confirm **Replace all data**.
+4. Choose **Check backup**.
+5. Review the tool, record, and timer counts.
+6. Choose **Restore everything**.
+7. Confirm **Replace everything**.
 
-Restore replaces every installed mini app and every user-owned settings, records, and timer namespace in one SQLite transaction. The current library remains unchanged if parsing, source inspection, validation, or a SQLite write fails.
+Restore replaces every installed mini app and every user-owned settings, records, and timer namespace in one SQLite transaction. The current tool collection remains unchanged if parsing, source inspection, validation, or a SQLite write fails.
 
 ## Validation boundary
 
@@ -101,9 +101,9 @@ Before this slice is marked device-verified:
 2. Keep at least two installed apps with recognizable settings and records.
 3. Start a durable timer in one installed app.
 4. Remove another test app while retaining its data.
-5. Choose **Back up all** and preserve the exact JSON.
+5. Choose **Back up everything** and preserve the exact JSON.
 6. Change or remove the installed apps and their state.
-7. Choose **Restore all**, validate the document, and cancel the replacement once to prove cancellation is non-mutating.
+7. Choose **Restore everything**, check the document, and cancel the replacement once to prove cancellation is non-mutating.
 8. Restore again and confirm all installed sources, settings, records, summaries, rollback sources, and timer timestamps return.
 9. Reinstall the removed test app and verify its retained namespace remains available.
 10. Attempt malformed, unsupported-version, duplicate-ID, internal-namespace, and invalid-source backups and confirm the current host state remains unchanged.
