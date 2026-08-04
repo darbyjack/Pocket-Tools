@@ -111,15 +111,17 @@ Normal runtime parsing remains closed to these fields until public activation. D
 
 ## Host-owned Android presentation
 
-Pocket Tools maps each semantic name to one fixed Google Material Symbol vector drawable imported from `@expo/material-symbols` and rendered through the platform-native `Icon` component from `@expo/ui`.
+Pocket Tools maps each semantic name to one fixed Lucide vector component rendered through `lucide-react-native` and Expo's supported `react-native-svg` runtime.
 
-Only the 15 imported assets are bundled. The host owns the exact asset mapping, dimensions, spacing, and color treatment; mini-app scripts continue to provide only a semantic `UiIconName`.
+Only the 15 imported Lucide components are referenced by the host mapping. The host owns the exact component mapping, dimensions, stroke width, spacing, and color treatment; mini-app scripts continue to provide only a semantic `UiIconName`.
+
+The renderer intentionally does not use Expo UI Jetpack Compose icons. Compose views require a dedicated `Host` composition boundary and did not embed reliably inside the existing React Native button and list-row hierarchy. Lucide renders as an ordinary React Native SVG child and therefore composes directly with the established controls.
 
 - Primary button icons use the button's fixed inverse treatment.
 - Destructive visible-action icons use the host danger treatment.
 - Other action and list icons use the host's default or muted treatment.
 - Leading list icons occupy a fixed host-controlled alignment area.
-- Primary row-action icons appear at the end of the row without replacing the action label announced by TalkBack.
+- Primary row-action icons appear in a trailing accessory area without squeezing the title at large Android font sizes.
 
 The icon container is hidden from accessibility. TalkBack continues to announce the existing action label, row-action label, disabled state, and confirmation flow without duplicate icon-name speech.
 
@@ -138,7 +140,7 @@ They are recalculated whenever the owning screen renders from its validated runt
 
 ## Automated validation
 
-Run from the repository root:
+Install dependencies and run repository checks:
 
 ```powershell
 pnpm install
@@ -146,7 +148,7 @@ pnpm format
 pnpm check
 ```
 
-Regenerate Android and run the connected suite because the embedded native runner source changes:
+Because `react-native-svg` contains native Android code, regenerate and rebuild the development client after first adding it:
 
 ```powershell
 pnpm --dir apps/mobile exec expo prebuild `
@@ -173,7 +175,7 @@ Use a temporary diagnostics-only fixture without enabling public SDK 1.2 authori
 
 Verify:
 
-1. All 15 icon names have distinct, readable host-owned Material Symbol presentations.
+1. All 15 icon names have distinct, readable, visually consistent Lucide presentations.
 2. Icon-bearing primary and destructive buttons retain their labels and established behavior.
 3. Leading list icons align consistently with one-line and multiline list content.
 4. A primary row-action icon does not replace or alter the row's TalkBack action label.
