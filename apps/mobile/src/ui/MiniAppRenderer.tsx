@@ -183,7 +183,8 @@ function NodeView(props: NodeViewProps) {
     case "toggle":
     case "select":
     case "date-input":
-    case "datetime-input": {
+    case "datetime-input":
+    case "multi-select": {
       const definition = settings[node.setting];
       if (definition === undefined || !settingIsVisible(definition, settingValues)) {
         return null;
