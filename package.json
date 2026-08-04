@@ -15,8 +15,8 @@
     "sdk:declarations:check": "node --experimental-strip-types packages/authoring-tools/src/declarations.ts check",
     "sync:mini-apps": "node scripts/sync-bundled-mini-apps.mjs",
     "sync:mini-apps:check": "node scripts/sync-bundled-mini-apps.mjs --check",
-    "test": "node --experimental-strip-types --test packages/sdk-contract/src/*.test.ts packages/authoring-tools/src/*.test.ts apps/mobile/src/installer/*.test.ts apps/mobile/src/runtime/*.test.ts apps/mobile/src/storage/*.test.ts modules/pocket-quickjs/src/*.test.ts",
-    "typecheck": "tsc --noEmit && pnpm --dir apps/mobile typecheck && pnpm --dir modules/pocket-quickjs typecheck",
+    "test": "node --experimental-strip-types --test packages/sdk-contract/src/*.test.ts packages/authoring-tools/src/*.test.ts apps/mobile/src/installer/*.test.ts apps/mobile/src/runtime/*.test.ts apps/mobile/src/storage/*.test.ts apps/mobile/src/notifications/*.test.ts modules/pocket-quickjs/src/*.test.ts modules/pocket-notifications/src/*.test.ts",
+    "typecheck": "tsc --noEmit && pnpm --dir apps/mobile typecheck && pnpm --dir modules/pocket-quickjs typecheck && pnpm --dir modules/pocket-notifications typecheck",
     "validate:mini-app": "pnpm --dir packages/authoring-tools mini-app validate"
   },
   "devDependencies": {
