@@ -146,13 +146,13 @@ Coverage includes:
 - dormant protocol preservation and normal-parser rejection;
 - exact UI keys and compatible binding;
 - embedded inspection, rendering, action writes, same-action reads, reset, and stored-snapshot validation;
-- SDK 1.0 and 1.1 rejection and regression coverage.
+- SDK 1.0 and SDK 1.1 rejection and regression coverage.
 
 ## Galaxy S24 Ultra acceptance
 
-Use a temporary local dormant SDK 1.2 fixture without committing public activation.
+Physical acceptance was completed with a temporary diagnostics-only dormant SDK 1.2 fixture. The fixture was removed before merge.
 
-Verify on the Galaxy S24 Ultra:
+Verified behavior:
 
 1. A multi-select control renders every option with the expected label.
 2. TalkBack announces each option as a checkbox and reports checked state.
@@ -163,8 +163,6 @@ Verify on the Galaxy S24 Ultra:
 7. **Discard** restores the last persisted selection.
 8. **Apply** persists values in declaration order, independent of tap order.
 9. The selection survives navigation, application background/foreground, force-stop, and relaunch.
-10. An action-driven `settings.set(...)` updates the control and an action-driven `settings.reset(...)` restores the default.
+10. Action-driven setting set/reset operations update the control and restore the default.
 11. Preview state remains isolated from installed state.
 12. Update, rollback, portable backup/restore, and complete-host backup/restore retain the same canonical array.
-
-Remove any temporary acceptance fixture before merging the dormant implementation branch.
