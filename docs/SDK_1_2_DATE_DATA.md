@@ -115,7 +115,7 @@ Dormant SDK 1.2 date and date-time fields support:
 - `lt`
 - `lte`
 
-Canonical string comparison supplies chronological ordering for filters and `orderBy`.
+Canonical string comparison supplies chronological ordering for filters and `orderBy`. Query values must use the canonical representation, but they are not restricted by a field's storage minimum or maximum.
 
 This slice does not expand other field types. Text, boolean, number, and money query behavior remains unchanged until the dedicated everyday-query slice.
 
@@ -136,16 +136,17 @@ Automated coverage includes:
 
 - Gregorian date and leap-year validation
 - canonical UTC date-time validation
-- local date-only round trips
+- local date-only round trips, including years below 100
 - dormant inspection normalization and activation-guard rejection
 - temporal definition exact keys, defaults, and bounds
 - date/date-time UI binding and unknown-property rejection
 - trusted setting and record validation
-- legacy date-time compatibility
+- legacy date-time field compatibility
 - embedded SDK builders
 - action-driven temporal setting writes
 - invalid, offset, and out-of-range value rejection
 - chronological `neq`, `gt`, and `lt` queries
+- query values outside storage bounds
 - native QuickJS inspection and render output
 
 ## Required local validation
@@ -162,14 +163,18 @@ Set-Location apps/mobile/android
 .\gradlew.bat :app:assembleDebug connectedDebugAndroidTest
 ```
 
-Physical Android acceptance must also verify:
+The Android build verifies that the native picker dependency and renderer compile. Connected instrumentation verifies the embedded SDK definitions, values, operations, UI output, and queries.
 
-1. Open and cancel both pickers; no setting changes.
-2. Confirm a date and verify the same calendar date persists after relaunch.
-3. Confirm a date-time and verify local display plus canonical UTC persistence.
-4. Verify declared minimum and maximum values constrain selection.
-5. Verify existing SDK 1.0 and 1.1 tools still render and edit settings normally.
+Interactive picker acceptance is deliberately deferred. Normal installation still rejects SDK 1.2, and this slice does not add a developer-only product route merely to expose unfinished APIs.
 
 ## Deferred to activation
 
 The final SDK 1.2 activation slice will publish the new TypeScript definitions, generated declarations, authoring documentation, templates, and normal installed-script support after every frozen SDK 1.2 capability is complete.
+
+That activation acceptance must physically verify:
+
+1. Canceling both picker dialogs changes no setting.
+2. A confirmed date preserves the same calendar date through relaunch and timezone changes.
+3. A confirmed date-time displays locally and persists as canonical UTC.
+4. Minimum and maximum values constrain native selection and trusted writes.
+5. Existing SDK 1.0 and 1.1 tools continue rendering and editing settings normally.
