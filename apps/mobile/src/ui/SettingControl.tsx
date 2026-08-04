@@ -8,11 +8,17 @@ import {
   dateTimeStringToDate,
   localDateToDateString,
 } from "../runtime/date-values.ts";
+import type { NumberInputDecimalPlaces } from "../runtime/sdk12-number-input-model.ts";
 import {
   DEFAULT_MULTILINE_LINES,
   multilineInputHeight,
   type MultilineLineCount,
 } from "./multiline-input-layout.ts";
+import {
+  formatNumberInputValue,
+  parseNumberInputDraft,
+  stepNumberInputValue,
+} from "./number-input-hints.ts";
 import { colors, radii } from "./theme.ts";
 
 interface SettingControlProps {
@@ -23,6 +29,8 @@ interface SettingControlProps {
   readonly placeholder?: string;
   readonly multiline?: boolean;
   readonly minLines?: MultilineLineCount;
+  readonly step?: number;
+  readonly decimalPlaces?: NumberInputDecimalPlaces;
   readonly onChange: (name: string, value: SerializableValue) => Promise<void>;
 }
 
@@ -34,6 +42,8 @@ export function SettingControl({
   placeholder,
   multiline = false,
   minLines,
+  step,
+  decimalPlaces,
   onChange,
 }: SettingControlProps) {
   if (definition.type === "boolean") {
@@ -117,6 +127,8 @@ export function SettingControl({
       definition={definition}
       value={typeof value === "number" ? value : definition.default}
       label={label}
+      {...(step === undefined ? {} : { step })}
+      {...(decimalPlaces === undefined ? {} : { decimalPlaces })}
       onChange={onChange}
     />
   );
@@ -267,25 +279,62 @@ interface NumberSettingProps {
   readonly definition: Extract<SettingDefinition, { readonly type: "number" | "money" }>;
   readonly value: number;
   readonly label: string;
+  readonly step?: number;
+  readonly decimalPlaces?: NumberInputDecimalPlaces;
   readonly onChange: (name: string, value: SerializableValue) => Promise<void>;
 }
 
-function NumberSetting({ name, definition, value, label, onChange }: NumberSettingProps) {
-  const [draft, setDraft] = useState(String(value));
-  useEffect(() => setDraft(String(value)), [value]);
+function NumberSetting({
+  name,
+  definition,
+  value,
+  label,
+  step,
+  decimalPlaces,
+  onChange,
+}: NumberSettingProps) {
+  const [draft, setDraft] = useState(formatNumberInputValue(value, decimalPlaces));
+  useEffect(() => setDraft(formatNumberInputValue(value, decimalPlaces)), [decimalPlaces, value]);
+
+  const normalizationOptions = {
+    ...(definition.min === undefined ? {} : { min: definition.min }),
+    ...(definition.max === undefined ? {} : { max: definition.max }),
+    ...(decimalPlaces === undefined ? {} : { decimalPlaces }),
+  };
+
+  const publish = (nextValue: number) => {
+    setDraft(formatNumberInputValue(nextValue, decimalPlaces));
+    void onChange(name, nextValue);
+  };
 
   const commit = () => {
-    const parsed = Number(draft);
-    if (!Number.isFinite(parsed)) {
-      setDraft(String(value));
+    const parsed = parseNumberInputDraft(draft, normalizationOptions);
+    if (parsed === undefined) {
+      setDraft(formatNumberInputValue(value, decimalPlaces));
       return;
     }
-    const minimum = definition.min ?? Number.NEGATIVE_INFINITY;
-    const maximum = definition.max ?? Number.POSITIVE_INFINITY;
-    const constrained = Math.min(maximum, Math.max(minimum, parsed));
-    setDraft(String(constrained));
-    void onChange(name, constrained);
+    publish(parsed);
   };
+
+  const adjust = (direction: -1 | 1) => {
+    if (step === undefined) return;
+    const draftValue = parseNumberInputDraft(draft, normalizationOptions) ?? value;
+    const nextValue = stepNumberInputValue(draftValue, direction, {
+      ...normalizationOptions,
+      step,
+    });
+    if (nextValue === undefined) {
+      setDraft(formatNumberInputValue(value, decimalPlaces));
+      return;
+    }
+    publish(nextValue);
+  };
+
+  const stepLabel = step === undefined ? undefined : formatNumberInputValue(step, decimalPlaces);
+  const accessibilityHint =
+    stepLabel === undefined
+      ? "Enter a numeric value"
+      : `Enter a numeric value or adjust it by ${stepLabel}`;
 
   return (
     <View style={styles.field}>
@@ -293,17 +342,39 @@ function NumberSetting({ name, definition, value, label, onChange }: NumberSetti
       {definition.description === undefined ? null : (
         <Text style={styles.description}>{definition.description}</Text>
       )}
-      <TextInput
-        accessibilityHint="Enter a numeric value"
-        accessibilityLabel={label}
-        inputMode="decimal"
-        onBlur={commit}
-        onChangeText={setDraft}
-        onSubmitEditing={commit}
-        selectTextOnFocus
-        style={styles.input}
-        value={draft}
-      />
+      <View style={styles.numberInputRow}>
+        {stepLabel === undefined ? null : (
+          <Pressable
+            accessibilityLabel={`Decrease ${label} by ${stepLabel}`}
+            accessibilityRole="button"
+            onPress={() => adjust(-1)}
+            style={styles.stepButton}
+          >
+            <Text style={styles.stepButtonText}>−</Text>
+          </Pressable>
+        )}
+        <TextInput
+          accessibilityHint={accessibilityHint}
+          accessibilityLabel={label}
+          inputMode={decimalPlaces === 0 ? "numeric" : "decimal"}
+          onBlur={commit}
+          onChangeText={setDraft}
+          onSubmitEditing={commit}
+          selectTextOnFocus
+          style={[styles.input, styles.numberInput]}
+          value={draft}
+        />
+        {stepLabel === undefined ? null : (
+          <Pressable
+            accessibilityLabel={`Increase ${label} by ${stepLabel}`}
+            accessibilityRole="button"
+            onPress={() => adjust(1)}
+            style={styles.stepButton}
+          >
+            <Text style={styles.stepButtonText}>+</Text>
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -343,6 +414,30 @@ const styles = StyleSheet.create({
   },
   multilineInput: {
     lineHeight: 24,
+  },
+  numberInputRow: {
+    alignItems: "stretch",
+    flexDirection: "row",
+    gap: 8,
+  },
+  numberInput: {
+    flex: 1,
+    minWidth: 0,
+  },
+  stepButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
+    borderRadius: radii.button,
+    borderWidth: 1,
+    justifyContent: "center",
+    minWidth: 48,
+    paddingHorizontal: 12,
+  },
+  stepButtonText: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: "700",
   },
   pickerButton: {
     backgroundColor: colors.surfaceMuted,

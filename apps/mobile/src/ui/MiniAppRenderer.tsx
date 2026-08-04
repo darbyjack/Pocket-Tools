@@ -11,6 +11,7 @@ import type {
 } from "../model.ts";
 import { formatDisplayValue, formatDuration } from "../runtime/display-format.ts";
 import { metricValue, settingIsVisible, timerElapsedSeconds } from "../runtime/protocol.ts";
+import type { DormantNumberInputNode } from "../runtime/sdk12-number-input-model.ts";
 import { ListItemControl } from "./ListItemControl.tsx";
 import { SettingControl } from "./SettingControl.tsx";
 
@@ -187,6 +188,8 @@ function NodeView(props: NodeViewProps) {
       if (definition === undefined || !settingIsVisible(definition, settingValues)) {
         return null;
       }
+      const numericNode =
+        node.type === "number-input" ? (node as DormantNumberInputNode) : undefined;
       return (
         <SettingControl
           name={node.setting}
@@ -202,6 +205,10 @@ function NodeView(props: NodeViewProps) {
           {...(node.type !== "text-input" || node.minLines === undefined
             ? {}
             : { minLines: node.minLines })}
+          {...(numericNode?.step === undefined ? {} : { step: numericNode.step })}
+          {...(numericNode?.decimalPlaces === undefined
+            ? {}
+            : { decimalPlaces: numericNode.decimalPlaces })}
           onChange={onSettingChange}
         />
       );
