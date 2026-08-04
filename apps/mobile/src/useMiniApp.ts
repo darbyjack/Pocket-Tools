@@ -200,7 +200,10 @@ export function useMiniApp(
             setSnapshot(rendered.snapshot);
             setPage(rendered.page);
           },
-          performHostOutput,
+          async (effect) => {
+            if (!isCurrent()) return;
+            await performHostOutput(effect);
+          },
         );
         if (!isCurrent()) return;
         if (message !== null) setPendingFeedback(message);
