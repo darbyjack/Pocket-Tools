@@ -183,6 +183,19 @@ function parseOperations(value: unknown): readonly RuntimeOperation[] {
       requireString(entry.id, `${path}.id`);
       return entry as unknown as RuntimeOperation;
     }
+    if (entry.type === "setting-set") {
+      exactKeys(entry, ["type", "setting", "value"], path);
+      requireIdentifier(entry.setting, `${path}.setting`);
+      if (!isSerializableValue(entry.value)) {
+        throw invalidNative(`${path}.value must be serializable.`);
+      }
+      return entry as unknown as RuntimeOperation;
+    }
+    if (entry.type === "setting-reset") {
+      exactKeys(entry, ["type", "setting"], path);
+      requireIdentifier(entry.setting, `${path}.setting`);
+      return entry as unknown as RuntimeOperation;
+    }
     if (entry.type === "timer-start") {
       exactKeys(entry, ["type", "timerId", "startedAt"], path);
       requireIdentifier(entry.timerId, `${path}.timerId`);
