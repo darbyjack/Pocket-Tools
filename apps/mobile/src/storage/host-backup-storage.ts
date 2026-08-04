@@ -114,6 +114,14 @@ export async function restoreHostBackup(
         `HOST_BACKUP_INVALID: Missing prepared inspections for ${appBackup.app.id}.`,
       );
     }
+    if (
+      preparedApp.backup.app.activeSource !== appBackup.app.activeSource ||
+      preparedApp.backup.app.lastKnownGoodSource !== appBackup.app.lastKnownGoodSource
+    ) {
+      throw new Error(
+        `HOST_BACKUP_INVALID: ${appBackup.app.id} source changed after validation.`,
+      );
+    }
     validateMiniAppBackupForRestore(
       appBackup,
       preparedApp.activeInspection,
