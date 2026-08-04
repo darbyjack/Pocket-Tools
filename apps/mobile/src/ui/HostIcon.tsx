@@ -14,11 +14,14 @@ import SettingsSymbol from "@expo/material-symbols/settings.xml";
 import ShareSymbol from "@expo/material-symbols/share.xml";
 import WarningSymbol from "@expo/material-symbols/warning.xml";
 import { Icon } from "@expo/ui";
+import type { ComponentProps } from "react";
 import { StyleSheet, View, type ColorValue } from "react-native";
 
 import type { UiIconName } from "../runtime/sdk12-icons.ts";
 
-const ICON_SOURCES = {
+type ExpoIconSource = ComponentProps<typeof Icon>["name"];
+
+const ICON_SOURCES: Readonly<Record<UiIconName, ExpoIconSource>> = {
   add: AddSymbol,
   edit: EditSymbol,
   delete: DeleteSymbol,
@@ -34,7 +37,7 @@ const ICON_SOURCES = {
   money: AttachMoneySymbol,
   list: FormatListBulletedSymbol,
   refresh: RefreshSymbol,
-} as const satisfies Readonly<Record<UiIconName, number>>;
+};
 
 export type HostIconTone = "default" | "inverse" | "danger" | "muted";
 
