@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { MiniAppInspection, PageNode, RuntimeSnapshot, SerializableValue } from "./model";
 import { completeRuntimeAction } from "./runtime/feedback";
@@ -48,13 +48,11 @@ export function useMiniApp(
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pendingFeedback, setPendingFeedback] = useState<string | null>(null);
-  const activeSource = useRef(source);
   const interactionRevision = useRef(0);
 
-  if (activeSource.current !== source) {
-    activeSource.current = source;
+  useLayoutEffect(() => {
     interactionRevision.current += 1;
-  }
+  }, [requestedStorageId, source]);
 
   const storageIdFor = useCallback(
     (currentInspection: MiniAppInspection) => requestedStorageId ?? currentInspection.manifest.id,
@@ -169,8 +167,7 @@ export function useMiniApp(
       const actionSource = source;
       const revision = interactionRevision.current + 1;
       interactionRevision.current = revision;
-      const isCurrent = () =>
-        activeSource.current === actionSource && interactionRevision.current === revision;
+      const isCurrent = () => interactionRevision.current === revision;
 
       setError(null);
       setFeedback(null);
