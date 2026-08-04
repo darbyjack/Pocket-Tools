@@ -25,11 +25,31 @@ export function assertNotificationId(value: unknown, path: string): string {
   return value;
 }
 
+export function parseNotificationRequestShape(
+  value: unknown,
+  path: string,
+): NotificationRequest {
+  return normalizeRequest(value, undefined, path, {});
+}
+
 export function normalizeNotificationRequest(
   value: unknown,
   inspection: MiniAppInspection,
   path: string,
   options: NotificationValidationOptions = {},
+): NotificationRequest {
+  return normalizeRequest(value, inspection, path, options);
+}
+
+export function notificationUsesExactDelivery(request: NotificationRequest): boolean {
+  return request.trigger.type !== "immediate" && request.trigger.delivery === "exact";
+}
+
+function normalizeRequest(
+  value: unknown,
+  inspection: MiniAppInspection | undefined,
+  path: string,
+  options: NotificationValidationOptions,
 ): NotificationRequest {
   const request = requireObject(value, path);
   exactKeys(request, ["id", "title", "trigger"], ["body", "open"], path);
@@ -51,10 +71,6 @@ export function normalizeNotificationRequest(
     trigger,
     ...(open === undefined ? {} : { open }),
   };
-}
-
-export function notificationUsesExactDelivery(request: NotificationRequest): boolean {
-  return request.trigger.type !== "immediate" && request.trigger.delivery === "exact";
 }
 
 function normalizeTrigger(
@@ -116,7 +132,7 @@ function normalizeTrigger(
 
 function normalizeOpenTarget(
   value: unknown,
-  inspection: MiniAppInspection,
+  inspection: MiniAppInspection | undefined,
   path: string,
 ): NotificationRequest["open"] {
   const open = requireObject(value, path);
@@ -124,7 +140,7 @@ function normalizeOpenTarget(
   if (typeof open.screen !== "string" || !IDENTIFIER_PATTERN.test(open.screen)) {
     throw validationError(`${path}.screen must be a lower camelCase identifier.`);
   }
-  if (!inspection.screens.includes(open.screen)) {
+  if (inspection !== undefined && !inspection.screens.includes(open.screen)) {
     throw validationError(`${path}.screen must name a declared screen.`);
   }
   if (open.input !== undefined && !isSerializableValue(open.input)) {
