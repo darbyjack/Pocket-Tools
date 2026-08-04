@@ -1,8 +1,14 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
+import type { OutputEffect } from "../model";
+import { performHostOutput } from "../runtime/host-output";
 import { ScreenScrollView } from "./ScreenScrollView";
 import { colors, radii, spacing } from "./theme";
+
+const ACCEPTANCE_COPY_TEXT = "Pocket Tools copy acceptance";
+const ACCEPTANCE_SHARE_TITLE = "Pocket Tools";
+const ACCEPTANCE_SHARE_TEXT = "Pocket Tools share acceptance";
 
 export interface HostSettingsProps {
   readonly onBack: () => void;
@@ -30,6 +36,23 @@ export function HostSettings({
         <Text style={styles.title}>Settings</Text>
       </View>
 
+      <SettingsSection title="Temporary output acceptance">
+        <SettingsRow
+          label="Copy acceptance text"
+          onPress={() => runAcceptanceOutput({ type: "copy", text: ACCEPTANCE_COPY_TEXT })}
+        />
+        <SettingsRow
+          label="Open share sheet"
+          onPress={() =>
+            runAcceptanceOutput({
+              type: "share",
+              title: ACCEPTANCE_SHARE_TITLE,
+              text: ACCEPTANCE_SHARE_TEXT,
+            })
+          }
+        />
+      </SettingsSection>
+
       <SettingsSection title="Notifications">
         <SettingsRow label="Notification settings" onPress={onNotifications} />
       </SettingsSection>
@@ -45,6 +68,15 @@ export function HostSettings({
       </SettingsSection>
     </ScreenScrollView>
   );
+}
+
+function runAcceptanceOutput(effect: OutputEffect): void {
+  void performHostOutput(effect).catch((caught: unknown) => {
+    Alert.alert(
+      "Output acceptance failed",
+      caught instanceof Error ? caught.message : String(caught),
+    );
+  });
 }
 
 function SettingsSection({
