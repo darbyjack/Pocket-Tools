@@ -108,7 +108,7 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       return false;
     }
   };
-  const assertTemporalValue = (definitionValue, value, path, type) => {
+  const assertTemporalValue = (definitionValue, value, path, type, enforceBounds = true) => {
     const valid = type === "date" ? isCanonicalDate(value) : isCanonicalDateTime(value);
     if (!valid) {
       fail(
@@ -118,10 +118,10 @@ inline constexpr char kRunner[] = R"POCKET_JS(
           : `${path} must be a canonical UTC date-time with millisecond precision.`,
       );
     }
-    if (definitionValue.min !== undefined && value < definitionValue.min) {
+    if (enforceBounds && definitionValue.min !== undefined && value < definitionValue.min) {
       fail("VALIDATION_FAILED", `${path} is below its minimum.`);
     }
-    if (definitionValue.max !== undefined && value > definitionValue.max) {
+    if (enforceBounds && definitionValue.max !== undefined && value > definitionValue.max) {
       fail("VALIDATION_FAILED", `${path} exceeds its maximum.`);
     }
   };
@@ -461,12 +461,12 @@ inline constexpr char kRunner[] = R"POCKET_JS(
     }
     if (field.type === "date") {
       if (!supportsSdk12) fail("VALIDATION_FAILED", `${path} requires SDK 1.2.`);
-      assertTemporalValue(field, value, path, "date");
+      assertTemporalValue(field, value, path, "date", false);
       return;
     }
     if (field.type === "datetime") {
       if (supportsSdk12) {
-        assertTemporalValue(field, value, path, "datetime");
+        assertTemporalValue(field, value, path, "datetime", false);
       } else if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
         fail("VALIDATION_FAILED", `${path} must be a date-time string.`);
       }
