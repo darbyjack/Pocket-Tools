@@ -7,9 +7,14 @@ import {
   MINI_APP_BACKUP_VERSION,
   parseMiniAppBackup,
   validateMiniAppBackupForRestore,
-  type MiniAppBackupV1,
+  type MiniAppBackupV2,
 } from "./backup";
 import { getInstalledMiniApp, type InstalledMiniApp } from "./database";
+import {
+  ensureNotificationRegistrySchema,
+  readDesiredNotificationRequests,
+  replaceDesiredNotificationsInTransaction,
+} from "./notification-registry";
 
 const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 
@@ -43,7 +48,7 @@ export type MiniAppRestoreConflict =
   | { readonly kind: "installed"; readonly app: InstalledMiniApp }
   | { readonly kind: "retained-data"; readonly appId: string };
 
-export async function createMiniAppBackup(appId: string): Promise<MiniAppBackupV1> {
+export async function createMiniAppBackup(appId: string): Promise<MiniAppBackupV2> {
   const app = await getInstalledMiniApp(appId);
   if (app === null) throw new Error(`BACKUP_NOT_FOUND: ${appId} is not installed.`);
 
@@ -53,6 +58,7 @@ export async function createMiniAppBackup(appId: string): Promise<MiniAppBackupV
   ]);
 
   const database = await databasePromise;
+  await ensureNotificationRegistrySchema(database);
   const settingRows = await database.getAllAsync<BackupSettingRow>(
     `SELECT name, value_json
      FROM settings
@@ -74,6 +80,7 @@ export async function createMiniAppBackup(appId: string): Promise<MiniAppBackupV
      ORDER BY timer_id ASC`,
     appId,
   );
+  const notifications = await readDesiredNotificationRequests(database, appId);
 
   const backup = parseMiniAppBackup({
     format: MINI_APP_BACKUP_FORMAT,
@@ -104,6 +111,7 @@ export async function createMiniAppBackup(appId: string): Promise<MiniAppBackupV
       id: row.timer_id,
       startedAt: row.started_at,
     })),
+    notifications,
   });
   validateMiniAppBackupForRestore(backup, activeInspection, lastKnownGoodInspection);
   return backup;
@@ -116,11 +124,12 @@ export async function getMiniAppRestoreConflict(
   if (installed !== null) return { kind: "installed", app: installed };
 
   const database = await databasePromise;
+  await ensureNotificationRegistrySchema(database);
   return (await hasStoredState(database, appId)) ? { kind: "retained-data", appId } : null;
 }
 
 export async function restoreMiniAppBackup(
-  backup: MiniAppBackupV1,
+  backup: MiniAppBackupV2,
   activeInspection: MiniAppInspection,
   lastKnownGoodInspection: MiniAppInspection,
   options: RestoreMiniAppBackupOptions = {},
@@ -129,6 +138,7 @@ export async function restoreMiniAppBackup(
   validateMiniAppBackupForRestore(parsed, activeInspection, lastKnownGoodInspection);
 
   const database = await databasePromise;
+  await ensureNotificationRegistrySchema(database);
   try {
     await database.withTransactionAsync(async () => {
       const existing = await database.getFirstAsync<{ readonly app_id: string }>(
@@ -144,6 +154,12 @@ export async function restoreMiniAppBackup(
 
       await database.runAsync("DELETE FROM installed_mini_apps WHERE app_id = ?", parsed.app.id);
       await clearStateInTransaction(database, parsed.app.id);
+      await replaceDesiredNotificationsInTransaction(
+        database,
+        parsed.app.id,
+        parsed.notifications,
+        new Date().toISOString(),
+      );
 
       await database.runAsync(
         `INSERT INTO installed_mini_apps (
@@ -212,7 +228,12 @@ async function hasStoredState(database: SQLite.SQLiteDatabase, appId: string): P
        EXISTS (SELECT 1 FROM settings WHERE app_id = ?)
        OR EXISTS (SELECT 1 FROM records WHERE app_id = ?)
        OR EXISTS (SELECT 1 FROM timers WHERE app_id = ?)
+       OR EXISTS (
+         SELECT 1 FROM notification_registry
+         WHERE storage_id = ? AND desired = 1
+       )
      THEN 1 ELSE 0 END AS has_state`,
+    appId,
     appId,
     appId,
     appId,
