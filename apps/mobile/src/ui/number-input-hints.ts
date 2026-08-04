@@ -19,7 +19,8 @@ export function formatNumberInputValue(
 ): string {
   if (!Number.isFinite(value)) return "";
   const normalized = Object.is(value, -0) ? 0 : value;
-  return decimalPlaces === undefined ? String(normalized) : normalized.toFixed(decimalPlaces);
+  if (decimalPlaces === undefined) return String(normalized);
+  return roundToDecimalPlaces(normalized, decimalPlaces).toFixed(decimalPlaces);
 }
 
 export function parseNumberInputDraft(
@@ -75,13 +76,23 @@ export function normalizeNumberInputValue(
   const rounded =
     options.decimalPlaces === undefined
       ? value
-      : Number(value.toFixed(options.decimalPlaces));
+      : roundToDecimalPlaces(value, options.decimalPlaces);
   if (!Number.isFinite(rounded)) return undefined;
 
   const minimum = options.min ?? Number.NEGATIVE_INFINITY;
   const maximum = options.max ?? Number.POSITIVE_INFINITY;
   const constrained = Math.min(maximum, Math.max(minimum, rounded));
   return Object.is(constrained, -0) ? 0 : constrained;
+}
+
+function roundToDecimalPlaces(value: number, decimalPlaces: number): number {
+  if (decimalPlaces === 0) return Math.round(value);
+  const [coefficient, exponentText = "0"] = value.toString().split("e");
+  const shifted = Math.round(Number(`${coefficient}e${Number(exponentText) + decimalPlaces}`));
+  const [roundedCoefficient, roundedExponentText = "0"] = shifted.toString().split("e");
+  return Number(
+    `${roundedCoefficient}e${Number(roundedExponentText) - decimalPlaces}`,
+  );
 }
 
 function decimalPlacesForNumber(value: number): number {
