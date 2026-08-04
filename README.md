@@ -4,14 +4,14 @@ Pocket Tools is an Android-first Expo host for small personal utilities authored
 
 The existing reference scripts are sufficient to exercise the platform:
 
-- **Bathroom Pay** uses multiple screens, navigation, conditional settings, actionable history, host-owned confirmation, records, aggregates, and a durable timer.
-- **Tip Splitter** remains an SDK 1.0 compatibility fixture using script-owned native input nodes, layout, host formatting, and deterministic rerendering.
+- **Bathroom Pay** uses multiple screens, navigation, conditional settings, actions, records, aggregates, and a durable timer.
+- **Tip Splitter** uses script-owned native input nodes, layout, host formatting, and deterministic rerendering.
 
 Their business logic lives only under `examples/*.miniapp.js`; the host contains no mini-app-specific runtime, storage, rendering, or hook code.
 
 ## Development rules
 
-Read [AGENTS.md](AGENTS.md) before changing the project. SDK 1.0 is the original frozen MVP surface and SDK 1.1 is the current additive action-presentation release. New public surface requires another explicit version decision.
+Read [AGENTS.md](AGENTS.md) before changing the project. SDK 1.0 is the original frozen MVP contract, and SDK 1.1 is the first explicit additive release. New public SDK surface requires another deliberate version decision.
 
 No GitHub Actions workflow is enabled. Repository checks and Android builds are run manually until CI is deliberately introduced later.
 
@@ -33,24 +33,26 @@ Bundled reference scripts are imported into the installed mini-app library only 
 
 The canonical delivery map is [Wayfinder: Deliver the Pocket Tools Android MVP](https://github.com/darbyjack/Pocket-Tools/issues/1).
 
-## Offline SDK 1.0 and 1.1
+## Offline SDK
 
-The supported SDK provides:
+Pocket Tools supports SDK 1.0 and SDK 1.1.
+
+SDK 1.0 provides:
 
 - Text, boolean, number, money, and select settings
 - Text, boolean, number, money, and datetime collection fields
 - Insert, get, update, remove, query, count, and sum
 - Typed equality and range filters, sorting, offset, and limit
 - Multiple synchronous screens and actions
-- Finite serializable input for record-targeted actions and navigation
+- Finite serializable input for record-targeted buttons and navigation
 - Host-owned navigation and deterministic rerendering
 - Native page, section, row, column, heading, text, input, toggle, select, button, metric, timer, summary, list, and empty-state nodes
 - Durable start/get/stop timers
 - Host-owned plain, number, USD money, and duration formatting with ISO datetime storage
 
-SDK 1.1 additionally provides reusable `ui.action(...)` descriptors, up to three actions per list item, destructive presentation, declarative disabled actions, and host-owned confirmation prompts. SDK 1.1 hosts continue to run SDK 1.0 and legacy numeric-v1 installed scripts.
+SDK 1.1 adds reusable action descriptors, actionable list items, destructive intent, disabled actions, and host-owned confirmation while retaining SDK 1.0 compatibility.
 
-The SDK intentionally excludes network, files, location, notifications, secrets, custom native modules, arbitrary background JavaScript, migrations, and compatibility shims.
+Both versions intentionally exclude network, files, location, notifications, secrets, custom native modules, arbitrary background JavaScript, and permission manifests.
 
 See [Pocket Tools Offline Mini-App SDK](docs/SDK_OVERVIEW.md) for the complete contract.
 
@@ -70,12 +72,12 @@ pnpm mini-app validate ./path/to/tool.miniapp.js --json
 pnpm mini-app inspect ./path/to/tool.miniapp.js --json
 ```
 
-These commands execute the exact SDK and runner source embedded in the Android native module under QuickJS-NG WASM, then apply the canonical SDK definition validator.
+These commands execute the same SDK and runner source embedded in the Android native module, then apply the canonical SDK definition validator.
 
 ## Install a mini-app on Android
 
 1. Open the mini-app library and choose **Add script**.
-2. Paste one supported SDK JavaScript module.
+2. Paste one SDK 1.0 or SDK 1.1 JavaScript module.
 3. Validate it.
 4. Preview it in a disposable storage namespace.
 5. Install it after the current exact source completes its first render.
@@ -84,21 +86,23 @@ Updates render against a cloned copy of current installed state before the activ
 
 See [Installed Mini-App Lifecycle](docs/INSTALLED_MINI_APPS.md) for storage, preview, update, rollback, export, duplication, and removal behavior.
 
-## Back up one installed mini app
+## Back up and restore
+
+### One installed mini app
 
 Open an installed app and choose **Backup** to share a versioned JSON document containing both saved sources, manifest metadata, settings, records, and active durable timer timestamps. Choose **Restore one app** from the library to paste, validate, and restore that document transactionally.
 
 Restoring over an existing manifest ID requires explicit confirmation. Invalid backups and failed SQLite writes leave the existing installation unchanged.
 
-See [Portable Mini-App Backups](docs/PORTABLE_BACKUPS.md) for the format, validation boundary, replacement behavior, and Android acceptance procedure.
+See [Portable Mini-App Backups](docs/PORTABLE_BACKUPS.md).
 
-## Back up the complete host
+### Complete Pocket Tools state
 
-Choose **Back up all** from the mini-app library to share one versioned document containing every installed mini app and every retained user-data namespace. Choose **Restore all** to validate every installed active and last-known-good source, review state counts, and explicitly confirm one atomic replacement of the complete user-owned host state.
+Choose **Back up all** from the library to share one versioned host backup containing every installed mini app plus retained settings, records, and timers for removed apps. Choose **Restore all** to validate every installed source and replace all user-owned state in one transaction after explicit confirmation.
 
-Temporary preview and lifecycle-diagnostic namespaces are excluded. Internal host metadata is preserved independently from portable user data.
+Preview and lifecycle-diagnostic namespaces are excluded. Internal host metadata is preserved.
 
-See [Complete-Host Backups](docs/HOST_BACKUPS.md) for format details, retained-state validation, replacement behavior, and Android acceptance.
+See [Complete Host Backups](docs/HOST_BACKUPS.md).
 
 ## Validate lifecycle and isolation
 
@@ -108,9 +112,17 @@ The immediate suite creates two temporary installed scripts with colliding setti
 
 See [Lifecycle and Namespace Diagnostics](docs/LIFECYCLE_DIAGNOSTICS.md) for the complete evidence procedure and current verification boundary.
 
-## Ordinary script workflow
+## Ordinary script acceptance
 
-[Ordinary Agent-Script Acceptance](docs/ORDINARY_SCRIPT_ACCEPTANCE.md) documents the complete authoring-to-install path. Physical Android testing has also confirmed that an agent can receive only the published SDK material, produce a working script, and have it installed and run through the ordinary workflow.
+The ordinary authoring path has been physically proven: an agent given the published SDK material produced a script that installed and ran through the normal Android workflow without host-specific code.
+
+The repeatable procedure remains documented in [Ordinary Agent-Script Acceptance](docs/ORDINARY_SCRIPT_ACCEPTANCE.md).
+
+## Android build target
+
+The project is configured for the Samsung Galaxy S24 Ultra's `arm64-v8a` runtime. Clean prebuilds produce ARM64-only native builds, and release builds enable R8 minification plus unused-resource shrinking. This reduces native build work and APK size, but generated APKs will not install on x86 emulators or 32-bit ARM devices.
+
+See [Pocket Tools Mobile](apps/mobile/README.md#galaxy-s24-ultra-build-target) for regeneration, build, ABI verification, and APK output commands.
 
 ## Requirements
 
@@ -169,8 +181,8 @@ The host rejects unsupported imports, ambient native access, unknown SDK propert
 - [Canonical agent prompt](docs/AGENT_PROMPT.md)
 - [Authoring error codes](docs/AUTHORING_ERRORS.md)
 - [Installed mini-app lifecycle](docs/INSTALLED_MINI_APPS.md)
-- [Portable mini-app backups](docs/PORTABLE_BACKUPS.md)
-- [Complete-host backups](docs/HOST_BACKUPS.md)
+- [Portable single-app backups](docs/PORTABLE_BACKUPS.md)
+- [Complete host backups](docs/HOST_BACKUPS.md)
 - [Lifecycle and namespace diagnostics](docs/LIFECYCLE_DIAGNOSTICS.md)
 - [Ordinary agent-script acceptance](docs/ORDINARY_SCRIPT_ACCEPTANCE.md)
 - [SDK overview](docs/SDK_OVERVIEW.md)
