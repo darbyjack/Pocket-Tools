@@ -50,7 +50,9 @@ export interface PreparedHostBackup {
 }
 
 export async function createHostBackup(): Promise<HostBackupV1> {
-  const installed = await listInstalledMiniApps();
+  const installed = (await listInstalledMiniApps()).filter(
+    (app) => !isPreviewStorageId(app.id) && !isDiagnosticAppId(app.id),
+  );
   const apps = await Promise.all(installed.map(async (app) => createMiniAppBackup(app.id)));
   const installedIds = new Set(installed.map((app) => app.id));
 
@@ -149,7 +151,9 @@ export async function restoreHostBackup(
   }
 
   const restored = await listInstalledMiniApps();
-  if (restored.length !== backup.apps.length) {
+  const restoredIds = restored.map((app) => app.id).sort();
+  const expectedIds = backup.apps.map((app) => app.app.id).sort();
+  if (JSON.stringify(restoredIds) !== JSON.stringify(expectedIds)) {
     throw new Error(
       "HOST_BACKUP_RESTORE_FAILED: The restored mini-app library could not be reloaded.",
     );
