@@ -9,13 +9,6 @@
     "icon": "./assets/icon.png",
     "plugins": [
       "expo-dev-client",
-      [
-        "expo-notifications",
-        {
-          "color": "#175CD3",
-          "defaultChannel": "pocket-tools-reminders"
-        }
-      ],
       "./plugins/with-short-cmake-staging.cjs",
       "./plugins/with-arm64-release-optimization.cjs"
     ],
