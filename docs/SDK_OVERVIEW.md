@@ -11,6 +11,19 @@ Pocket Tools currently supports SDK 1.0 and SDK 1.1. The canonical TypeScript de
 
 A script must declare the lowest SDK version whose features it uses. Unsupported versions are rejected before installation.
 
+## SDK 1.2 planning status
+
+The complete [SDK 1.2 contract](SDK_1_2_CONTRACT.md) is frozen for implementation planning, but SDK 1.2 is **not yet supported**.
+
+Until the final activation slice is complete:
+
+- `SDK_VERSION` remains `"1.1"`.
+- Manifests must continue to declare `"1.0"` or `"1.1"`.
+- Generated declarations and the embedded QuickJS module do not expose 1.2 APIs.
+- Individual implementation slices may add internal support, but no incomplete public capability may be advertised to scripts or authoring agents.
+
+The frozen 1.2 scope covers transactional form-state writes, date-aware inputs, tappable rows, richer bounded queries and aggregates, host feedback, copy/share output, local reminders, Android notification recovery, and phone notification bridging to a paired Galaxy Watch. The contract defines the exact public shapes, operation and effect ordering, persistence rules, limits, exclusions, compatibility matrix, and activation boundary.
+
 ## Common offline surface
 
 Both supported versions provide:
@@ -22,7 +35,7 @@ Both supported versions provide:
 - Durable host-managed timers.
 - Exact validation of definitions, values, operations, UI trees, action targets, screen targets, size limits, and bridge values.
 
-The SDK remains offline-only. It exposes no network, filesystem, location, notification, secret, native-module, arbitrary component, or arbitrary background-JavaScript access.
+The supported SDK remains offline-only. It exposes no network, filesystem, location, notification, secret, native-module, arbitrary component, or arbitrary background-JavaScript access.
 
 ## Version declarations
 
@@ -122,11 +135,12 @@ SDK 1.1 does not add:
 - Network, filesystem, location, notification, secret, or custom-native APIs.
 - Pause/resume timer APIs or arbitrary background execution.
 
-Future public surface requires another explicit SDK version decision and must be implemented through the entire contract path.
+Future public surface requires another explicit SDK version decision and must be implemented through the entire contract path. SDK 1.2 follows that rule and remains disabled until its complete frozen contract is implemented.
 
 ## Authoritative references
 
 - [`AGENT_AUTHORING.md`](AGENT_AUTHORING.md)
+- [`SDK_1_2_CONTRACT.md`](SDK_1_2_CONTRACT.md)
 - [`packages/sdk-contract/dist/index.d.ts`](../packages/sdk-contract/dist/index.d.ts)
 - [`SECURITY_MODEL.md`](SECURITY_MODEL.md)
 - [`AUTHORING_ERRORS.md`](AUTHORING_ERRORS.md)
