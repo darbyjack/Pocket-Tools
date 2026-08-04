@@ -3,10 +3,24 @@ import test from "node:test";
 
 import { readEmbeddedRuntimeSources } from "./runtime-sources.ts";
 
-test("reads the exact SDK and runner embedded by the Android module", async () => {
+test("reconstructs the exact composed Android SDK 1.2 runtime", async () => {
   const sources = await readEmbeddedRuntimeSources();
-  assert.match(sources.sdk, /export const defineMiniApp/);
-  assert.match(sources.sdk, /export const ui/);
-  assert.match(sources.runner, /^\(\(definition, request\) => \{/);
+
+  for (const builder of [
+    "multiSelect",
+    "badge",
+    "progress",
+    "dateInput",
+    "datetimeInput",
+  ]) {
+    assert.match(sources.sdk, new RegExp(`\\b${builder}:`));
+  }
+
+  assert.match(sources.runner, /^\(\(baseRunner\) => \{/);
   assert.match(sources.runner, /request\.mode === "inspect"/);
+  assert.match(sources.runner, /notification-schedule/);
+  assert.match(sources.runner, /feedback/);
+  assert.match(sources.runner, /output\.share/);
+  assert.match(sources.runner, /Fixed host icons require SDK 1\.2/);
+  assert.match(sources.runner, /Progress nodes require SDK 1\.2/);
 });
