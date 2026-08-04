@@ -10,6 +10,8 @@ import type {
   PageNode as PublicPageNode,
   RowNode as PublicRowNode,
   SectionNode as PublicSectionNode,
+  SelectOption,
+  SelectValue,
   SerializableValue,
   SettingDefinition as PublicSettingDefinition,
   StoredRecord,
@@ -23,6 +25,8 @@ export type {
   ActionControl,
   ActionIntent,
   MetricNode,
+  SelectOption,
+  SelectValue,
   SerializableValue,
   StoredRecord,
   TimerSnapshot,
@@ -52,7 +56,22 @@ export interface DateTimeSetting extends DormantSdk12Definition {
   readonly max?: string;
 }
 
-export type SettingDefinition = PublicSettingDefinition | DateSetting | DateTimeSetting;
+export interface MultiSelectSetting extends DormantSdk12Definition {
+  readonly type: "multi-select";
+  readonly label: string;
+  readonly description?: string;
+  readonly default: readonly SelectValue[];
+  readonly visibleWhen?: PublicSettingDefinition["visibleWhen"];
+  readonly options: readonly SelectOption[];
+  readonly minSelections?: number;
+  readonly maxSelections?: number;
+}
+
+export type SettingDefinition =
+  | PublicSettingDefinition
+  | DateSetting
+  | DateTimeSetting
+  | MultiSelectSetting;
 
 export interface DateField extends DormantSdk12Definition {
   readonly type: "date";
@@ -105,6 +124,12 @@ export interface DateTimeInputNode {
   readonly label?: string;
 }
 
+export interface MultiSelectInputNode {
+  readonly type: "multi-select";
+  readonly setting: string;
+  readonly label?: string;
+}
+
 export interface ListItemNode extends PublicListItemNode {
   readonly primaryAction?: ActionControl;
 }
@@ -151,6 +176,7 @@ export type UiNode =
   | NumberInputNode
   | DateInputNode
   | DateTimeInputNode
+  | MultiSelectInputNode
   | ListItemNode
   | ListNode;
 
