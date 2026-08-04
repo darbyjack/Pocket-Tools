@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type {
+  ActionControl,
   PageNode,
   SerializableValue,
   SettingDefinition,
   TimerSnapshot,
   UiNode,
-} from "../model";
-import { formatDateTime, formatDisplayValue, formatDuration } from "../runtime/display-format";
-import { metricValue, settingIsVisible, timerElapsedSeconds } from "../runtime/protocol";
-import { SettingControl } from "./SettingControl";
+} from "../model.ts";
+import { formatDateTime, formatDisplayValue, formatDuration } from "../runtime/display-format.ts";
+import { metricValue, settingIsVisible, timerElapsedSeconds } from "../runtime/protocol.ts";
+import { SettingControl } from "./SettingControl.tsx";
 
 interface MiniAppRendererProps {
   readonly page: PageNode;
@@ -102,6 +103,32 @@ function NodeView(props: NodeViewProps) {
       />
     ));
 
+  const invokeAction = (control: ActionControl) => {
+    if (control.disabled === true) return;
+    const run = () => void onAction(control.action, control.input);
+    if (control.confirmation === undefined) {
+      run();
+      return;
+    }
+
+    Alert.alert(
+      control.confirmation.title,
+      control.confirmation.message,
+      [
+        {
+          text: control.confirmation.cancelLabel ?? "Cancel",
+          style: "cancel",
+        },
+        {
+          text: control.confirmation.confirmLabel ?? "Confirm",
+          style: control.intent === "destructive" ? "destructive" : "default",
+          onPress: run,
+        },
+      ],
+      { cancelable: true },
+    );
+  };
+
   switch (node.type) {
     case "section":
       return (
@@ -174,8 +201,14 @@ function NodeView(props: NodeViewProps) {
       return (
         <Pressable
           accessibilityRole="button"
-          onPress={() => void onAction(node.action, node.input)}
-          style={styles.primaryButton}
+          accessibilityState={{ disabled: node.disabled === true }}
+          disabled={node.disabled === true}
+          onPress={() => invokeAction(node)}
+          style={[
+            styles.primaryButton,
+            node.intent === "destructive" ? styles.destructiveButton : null,
+            node.disabled === true ? styles.disabledAction : null,
+          ]}
         >
           <Text style={styles.primaryButtonText}>{node.label}</Text>
         </Pressable>
@@ -222,14 +255,43 @@ function NodeView(props: NodeViewProps) {
     case "list-item":
       return (
         <View style={styles.listItem}>
-          <View style={styles.listCopy}>
-            <Text style={styles.listTitle}>{formatDateTime(node.title)}</Text>
-            {node.subtitle === undefined ? null : (
-              <Text style={styles.listSubtitle}>{node.subtitle}</Text>
+          <View style={styles.listItemSummary}>
+            <View style={styles.listCopy}>
+              <Text style={styles.listTitle}>{formatDateTime(node.title)}</Text>
+              {node.subtitle === undefined ? null : (
+                <Text style={styles.listSubtitle}>{node.subtitle}</Text>
+              )}
+            </View>
+            {node.trailing === undefined ? null : (
+              <Text style={styles.listTrailing}>{node.trailing}</Text>
             )}
           </View>
-          {node.trailing === undefined ? null : (
-            <Text style={styles.listTrailing}>{node.trailing}</Text>
+          {node.actions === undefined ? null : (
+            <View style={styles.listActions}>
+              {node.actions.map((action, index) => (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: action.disabled === true }}
+                  disabled={action.disabled === true}
+                  key={`${action.action}-${index}`}
+                  onPress={() => invokeAction(action)}
+                  style={[
+                    styles.listAction,
+                    action.intent === "destructive" ? styles.destructiveListAction : null,
+                    action.disabled === true ? styles.disabledAction : null,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.listActionText,
+                      action.intent === "destructive" ? styles.destructiveListActionText : null,
+                    ]}
+                  >
+                    {action.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           )}
         </View>
       );
@@ -325,6 +387,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 14,
   },
+  destructiveButton: {
+    backgroundColor: "#b42318",
+  },
+  disabledAction: {
+    opacity: 0.45,
+  },
   primaryButtonText: {
     color: "#ffffff",
     fontSize: 17,
@@ -368,12 +436,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   listItem: {
-    alignItems: "center",
     borderTopColor: "#eaecf0",
     borderTopWidth: 1,
+    gap: 10,
+    paddingTop: 12,
+  },
+  listItemSummary: {
+    alignItems: "center",
     flexDirection: "row",
     gap: 12,
-    paddingTop: 12,
   },
   listCopy: {
     flex: 1,
@@ -392,6 +463,30 @@ const styles = StyleSheet.create({
     color: "#172033",
     fontSize: 15,
     fontWeight: "700",
+  },
+  listActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "flex-end",
+  },
+  listAction: {
+    borderColor: "#98a2b3",
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  destructiveListAction: {
+    borderColor: "#d92d20",
+  },
+  listActionText: {
+    color: "#344054",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  destructiveListActionText: {
+    color: "#b42318",
   },
   emptyState: {
     alignItems: "center",

@@ -6,6 +6,21 @@ interface ChildrenNode<TType extends string> extends UiNodeBase<TType> {
     readonly children: readonly UiNode[];
 }
 export type DisplayFormat = "plain" | "money" | "duration" | "number";
+export type ActionIntent = "default" | "destructive";
+export interface ActionConfirmation {
+    readonly title: string;
+    readonly message?: string;
+    readonly confirmLabel?: string;
+    readonly cancelLabel?: string;
+}
+export interface ActionControl {
+    readonly label: string;
+    readonly action: string;
+    readonly input?: SerializableValue;
+    readonly intent?: ActionIntent;
+    readonly disabled?: boolean;
+    readonly confirmation?: ActionConfirmation;
+}
 export interface PageNode extends ChildrenNode<"page"> {
     readonly title: string;
 }
@@ -49,10 +64,7 @@ export interface ToggleNode extends SettingInputNode<"toggle"> {
 }
 export interface SelectInputNode extends SettingInputNode<"select"> {
 }
-export interface ButtonNode extends UiNodeBase<"button"> {
-    readonly label: string;
-    readonly action: string;
-    readonly input?: SerializableValue;
+export interface ButtonNode extends UiNodeBase<"button">, ActionControl {
 }
 export interface NavigationNode extends UiNodeBase<"navigation"> {
     readonly label: string;
@@ -67,6 +79,7 @@ export interface ListItemNode extends UiNodeBase<"list-item"> {
     readonly title: string;
     readonly subtitle?: string;
     readonly trailing?: string;
+    readonly actions?: readonly ActionControl[];
 }
 export interface ListNode extends UiNodeBase<"list"> {
     readonly title?: string;
@@ -83,6 +96,7 @@ export interface SummaryNode extends UiNodeBase<"summary"> {
 }
 export type UiNode = PageNode | SectionNode | RowNode | ColumnNode | HeadingNode | TextNode | MetricNode | TimerNode | TextInputNode | NumberInputNode | ToggleNode | SelectInputNode | ButtonNode | NavigationNode | EmptyStateNode | ListItemNode | ListNode | SummaryNode;
 export declare const ui: {
+    readonly action: (definition: ActionControl) => ActionControl;
     readonly page: (definition: Omit<PageNode, "type">) => PageNode;
     readonly section: (definition: Omit<SectionNode, "type">) => SectionNode;
     readonly row: (definition: Omit<RowNode, "type">) => RowNode;

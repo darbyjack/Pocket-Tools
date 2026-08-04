@@ -7,7 +7,7 @@ export default defineMiniApp({
     id: "replace-with-tool-id",
     name: "Replace With Tool Name",
     description: "Replace with one sentence describing the utility.",
-    sdkVersion: 1,
+    sdkVersion: "1.1",
   },
 
   settings: {

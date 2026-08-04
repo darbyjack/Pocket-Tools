@@ -4,14 +4,23 @@ import type { TimerClient } from "./timers.ts";
 import type { PageNode } from "./ui.ts";
 import type { SerializableValue } from "./values.ts";
 
-export const SDK_VERSION = 1 as const;
+export const SDK_VERSION = "1.1" as const;
+export const SUPPORTED_SDK_VERSIONS = ["1.0", SDK_VERSION] as const;
+export type SdkVersion = (typeof SUPPORTED_SDK_VERSIONS)[number];
+
+export function normalizeSdkVersion(value: unknown): SdkVersion | null {
+  if (value === 1) return "1.0";
+  return typeof value === "string" && SUPPORTED_SDK_VERSIONS.includes(value as SdkVersion)
+    ? (value as SdkVersion)
+    : null;
+}
 
 export interface MiniAppManifest {
   readonly id: string;
   readonly name: string;
   readonly description?: string;
   readonly icon?: string;
-  readonly sdkVersion: typeof SDK_VERSION;
+  readonly sdkVersion: SdkVersion;
 }
 
 export interface MiniAppContext {

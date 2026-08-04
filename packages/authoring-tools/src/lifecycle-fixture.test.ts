@@ -4,7 +4,7 @@ import test from "node:test";
 import { createLifecycleDiagnosticSource } from "../../../apps/mobile/src/diagnostics/fixtures.ts";
 import { inspectMiniAppSource } from "./inspection.ts";
 
-test("lifecycle diagnostics use valid SDK v1 scripts with colliding names", async () => {
+test("lifecycle diagnostics remain valid SDK 1.0 compatibility scripts", async () => {
   const [first, second] = await Promise.all([
     inspectMiniAppSource(
       createLifecycleDiagnosticSource("lifecycle-diagnostic-test-a", "Diagnostic A"),
@@ -16,6 +16,8 @@ test("lifecycle diagnostics use valid SDK v1 scripts with colliding names", asyn
 
   assert.equal(first.manifest.id, "lifecycle-diagnostic-test-a");
   assert.equal(second.manifest.id, "lifecycle-diagnostic-test-b");
+  assert.equal(first.manifest.sdkVersion, "1.0");
+  assert.equal(second.manifest.sdkVersion, "1.0");
   assert.deepEqual(Object.keys(first.settings), ["sharedValue"]);
   assert.deepEqual(Object.keys(second.settings), ["sharedValue"]);
   assert.deepEqual(Object.keys(first.collections), ["sharedRecords"]);

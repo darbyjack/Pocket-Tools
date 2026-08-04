@@ -3,13 +3,16 @@ import type { SettingDefinition, SettingsClient } from "./settings.js";
 import type { TimerClient } from "./timers.js";
 import type { PageNode } from "./ui.js";
 import type { SerializableValue } from "./values.js";
-export declare const SDK_VERSION: 1;
+export declare const SDK_VERSION: "1.1";
+export declare const SUPPORTED_SDK_VERSIONS: readonly ["1.0", "1.1"];
+export type SdkVersion = (typeof SUPPORTED_SDK_VERSIONS)[number];
+export declare function normalizeSdkVersion(value: unknown): SdkVersion | null;
 export interface MiniAppManifest {
     readonly id: string;
     readonly name: string;
     readonly description?: string;
     readonly icon?: string;
-    readonly sdkVersion: typeof SDK_VERSION;
+    readonly sdkVersion: SdkVersion;
 }
 export interface MiniAppContext {
     readonly settings: SettingsClient;

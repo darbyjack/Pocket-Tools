@@ -14,7 +14,7 @@ export default defineMiniApp({
     name: "Tip Splitter",
     description: "Calculate a tip and split the total across a party.",
     icon: "calculator",
-    sdkVersion: 1,
+    sdkVersion: "1.0",
   },
 
   settings: {

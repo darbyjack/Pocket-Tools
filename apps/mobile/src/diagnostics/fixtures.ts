@@ -24,7 +24,7 @@ export default defineMiniApp({
     id: ${JSON.stringify(appId)},
     name: ${JSON.stringify(appName)},
     description: "Internal lifecycle and isolation diagnostic fixture.",
-    sdkVersion: 1,
+    sdkVersion: "1.0",
   },
   settings: {
     sharedValue: setting.text({
