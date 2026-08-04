@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  MiniAppRuntimeError,
-  parseDormantSdk12RuntimeResponse,
-  parseRuntimeResponse,
-} from "./protocol.ts";
+import { MiniAppRuntimeError, parseRuntimeResponse } from "./protocol.ts";
 
 function response(page: unknown): string {
   return JSON.stringify({
@@ -24,7 +20,7 @@ function invalidUiTree(error: unknown): boolean {
   return error instanceof MiniAppRuntimeError && error.code === "INVALID_UI_TREE";
 }
 
-test("parses dormant SDK 1.2 numeric input hints without changing their shape", () => {
+test("parses public SDK 1.2 numeric input hints without changing their shape", () => {
   const value = page({
     type: "number-input",
     setting: "amount",
@@ -33,11 +29,10 @@ test("parses dormant SDK 1.2 numeric input hints without changing their shape", 
     decimalPlaces: 2,
   });
 
-  assert.throws(() => parseRuntimeResponse(response(value)), invalidUiTree);
-  assert.deepEqual(parseDormantSdk12RuntimeResponse(response(value)).value.page, value);
+  assert.deepEqual(parseRuntimeResponse(response(value)).value.page, value);
 });
 
-test("rejects malformed dormant numeric input hint properties", () => {
+test("rejects malformed public numeric input hint properties", () => {
   for (const input of [
     { type: "number-input", setting: "amount", step: 0 },
     { type: "number-input", setting: "amount", step: -1 },
@@ -46,11 +41,11 @@ test("rejects malformed dormant numeric input hint properties", () => {
     { type: "number-input", setting: "amount", decimalPlaces: 7 },
     { type: "number-input", setting: "amount", decimalPlaces: 2.5 },
   ]) {
-    assert.throws(() => parseDormantSdk12RuntimeResponse(response(page(input))), invalidUiTree);
+    assert.throws(() => parseRuntimeResponse(response(page(input))), invalidUiTree);
   }
 });
 
-test("keeps ordinary numeric input responses compatible with the normal parser", () => {
+test("keeps ordinary numeric input responses compatible", () => {
   const value = page({ type: "number-input", setting: "amount", label: "Amount" });
   assert.deepEqual(parseRuntimeResponse(response(value)).value.page, value);
 });
