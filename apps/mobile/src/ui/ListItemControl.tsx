@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { ActionControl, ListItemNode } from "../model.ts";
 import { formatDateTime } from "../runtime/display-format.ts";
 import { invokeIsolatedListAction } from "./list-row-action.ts";
+import { colors, radii, spacing } from "./theme.ts";
 
 interface ListItemControlProps {
   readonly node: ListItemNode;
@@ -84,24 +85,24 @@ export function ListItemControl({ node, onInvokeAction }: ListItemControlProps) 
 
 const styles = StyleSheet.create({
   listItem: {
-    borderTopColor: "#eaecf0",
+    borderTopColor: colors.border,
     borderTopWidth: 1,
-    gap: 10,
-    paddingTop: 12,
+    gap: spacing.item,
+    paddingTop: spacing.item,
   },
   primaryAction: {
-    borderRadius: 10,
+    borderRadius: radii.button,
     marginHorizontal: -8,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   primaryActionPressed: {
-    backgroundColor: "#f3f5f8",
+    backgroundColor: colors.surfaceMuted,
   },
   listItemSummary: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 12,
+    gap: spacing.item,
   },
   disabledSummary: {
     opacity: 0.45,
@@ -111,16 +112,16 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   listTitle: {
-    color: "#172033",
+    color: colors.text,
     fontSize: 15,
     fontWeight: "600",
   },
   listSubtitle: {
-    color: "#667085",
+    color: colors.textMuted,
     fontSize: 13,
   },
   listTrailing: {
-    color: "#172033",
+    color: colors.text,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -131,24 +132,24 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   listAction: {
-    borderColor: "#98a2b3",
-    borderRadius: 10,
+    borderColor: colors.border,
+    borderRadius: radii.button,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   destructiveListAction: {
-    borderColor: "#d92d20",
+    borderColor: colors.dangerBorder,
   },
   disabledAction: {
     opacity: 0.45,
   },
   listActionText: {
-    color: "#344054",
+    color: colors.textMuted,
     fontSize: 14,
     fontWeight: "700",
   },
   destructiveListActionText: {
-    color: "#b42318",
+    color: colors.danger,
   },
 });
