@@ -12,11 +12,13 @@ test("formats numeric input values with optional fixed decimal precision", () =>
   assert.equal(formatNumberInputValue(12.5), "12.5");
   assert.equal(formatNumberInputValue(12.5, 2), "12.50");
   assert.equal(formatNumberInputValue(12.6, 0), "13");
+  assert.equal(formatNumberInputValue(-1.5, 0), "-2");
   assert.equal(formatNumberInputValue(-0, 2), "0.00");
 });
 
 test("parses, rounds, and constrains committed drafts", () => {
   assert.equal(parseNumberInputDraft(" 1.235 ", { decimalPlaces: 2 }), 1.24);
+  assert.equal(parseNumberInputDraft(" -1.235 ", { decimalPlaces: 2 }), -1.24);
   assert.equal(parseNumberInputDraft("-5", { min: 0 }), 0);
   assert.equal(parseNumberInputDraft("15", { max: 10 }), 10);
   assert.equal(parseNumberInputDraft(""), undefined);
