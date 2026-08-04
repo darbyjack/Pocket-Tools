@@ -6,12 +6,13 @@ import {
   parseDormantSdk12RuntimeResponse,
   parseRuntimeResponse,
 } from "./protocol.ts";
+import { parseDormantSdk12NotificationRuntimeResponse } from "./sdk12-notification-protocol.ts";
 
-function response(effects: unknown): string {
+function response(effects: unknown, operations: unknown = []): string {
   return JSON.stringify({
     ok: true,
     value: {
-      operations: [],
+      operations,
       effects,
     },
     logs: [],
@@ -35,6 +36,27 @@ test("parses dormant copy and share effects", () => {
     { type: "feedback", message: "Ready" },
     { type: "share", title: "Pocket Tools", text: "Shared value" },
   ]);
+});
+
+test("preserves output while parsing dormant notification operations", () => {
+  const parsed = parseDormantSdk12NotificationRuntimeResponse(
+    response(
+      [{ type: "copy", text: "Reminder created" }],
+      [
+        {
+          type: "notification-schedule",
+          request: {
+            id: "followUp",
+            title: "Follow up",
+            trigger: { type: "immediate" },
+          },
+        },
+      ],
+    ),
+  );
+
+  assert.equal(parsed.value.operations[0]?.type, "notification-schedule");
+  assert.deepEqual(parsed.value.effects, [{ type: "copy", text: "Reminder created" }]);
 });
 
 test("counts output limits by Unicode code point", () => {
