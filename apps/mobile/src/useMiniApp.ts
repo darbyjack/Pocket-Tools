@@ -9,7 +9,7 @@ import {
   invokeMiniAppAction,
   renderMiniApp,
 } from "./runtime/quickjs";
-import { validatePageNode } from "./runtime/ui-validation";
+import { validateSdkPageNode } from "./runtime/sdk12-multiline-ui";
 import {
   applyRuntimeOperations,
   ensureSettingDefaults,
@@ -85,7 +85,7 @@ export function useMiniApp(
       if (response.value.page === undefined) {
         throw new Error("QuickJS did not return a page.");
       }
-      validatePageNode(response.value.page, currentInspection);
+      validateSdkPageNode(response.value.page, currentInspection);
 
       return {
         page: response.value.page,
