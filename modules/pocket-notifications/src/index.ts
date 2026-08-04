@@ -1,42 +1,21 @@
 import { requireNativeModule } from "expo-modules-core";
 
+import type {
+  NativeNotificationOpenTarget,
+  NativeNotificationReconciliationResult,
+  NativeNotificationRegistryEntry,
+} from "./types.ts";
 import {
   parseNativeNotificationOpenTarget,
   parseNativeNotificationResults,
 } from "./validation.ts";
 
-export type NativeNotificationResultStatus =
-  | "scheduled"
-  | "blocked"
-  | "failed"
-  | "cancelled"
-  | "delivered"
-  | "expired";
-
-export interface NativeNotificationRegistryEntry {
-  readonly hostId: string;
-  readonly storageId: string;
-  readonly notificationId: string;
-  readonly desired: boolean;
-  readonly request?: Readonly<Record<string, unknown>>;
-}
-
-export interface NativeNotificationReconciliationResult {
-  readonly hostId: string;
-  readonly storageId: string;
-  readonly notificationId: string;
-  readonly status: NativeNotificationResultStatus;
-  readonly platformId?: string;
-  readonly message?: string;
-}
-
-export interface NativeNotificationOpenTarget {
-  readonly hostId: string;
-  readonly storageId: string;
-  readonly notificationId: string;
-  readonly screen?: string;
-  readonly input?: unknown;
-}
+export type {
+  NativeNotificationOpenTarget,
+  NativeNotificationReconciliationResult,
+  NativeNotificationRegistryEntry,
+  NativeNotificationResultStatus,
+} from "./types.ts";
 
 interface PocketNotificationsNativeModule {
   readonly ensureChannel: () => void;
