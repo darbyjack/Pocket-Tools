@@ -7,10 +7,15 @@ import type {
   SerializableValue,
   SettingDefinition,
   TimerSnapshot,
-  UiNode,
 } from "../model.ts";
 import { formatDisplayValue, formatDuration } from "../runtime/display-format.ts";
 import { metricValue, settingIsVisible, timerElapsedSeconds } from "../runtime/protocol.ts";
+import {
+  badgeAccessibilityLabel,
+  badgeTone,
+  type BadgeTone,
+  type DormantRenderableNode,
+} from "../runtime/sdk12-badge.ts";
 import type { DormantNumberInputNode } from "../runtime/sdk12-number-input-model.ts";
 import { ListItemControl } from "./ListItemControl.tsx";
 import { SettingControl } from "./SettingControl.tsx";
@@ -42,7 +47,7 @@ export function MiniAppRenderer({
       {page.children.map((node, index) => (
         <NodeView
           key={`${node.type}-${index}`}
-          node={node}
+          node={node as DormantRenderableNode}
           settings={settings}
           settingValues={settingValues}
           timers={timers}
@@ -68,7 +73,7 @@ function useClock(active: boolean): number {
 }
 
 interface NodeViewProps {
-  readonly node: UiNode;
+  readonly node: DormantRenderableNode;
   readonly settings: Readonly<Record<string, SettingDefinition>>;
   readonly settingValues: Readonly<Record<string, SerializableValue>>;
   readonly timers: Readonly<Record<string, TimerSnapshot>>;
@@ -90,7 +95,7 @@ function NodeView(props: NodeViewProps) {
     onSettingChange,
   } = props;
 
-  const renderChildren = (children: readonly UiNode[]) =>
+  const renderChildren = (children: readonly DormantRenderableNode[]) =>
     children.map((child, index) => (
       <NodeView
         key={`${child.type}-${index}`}
@@ -160,6 +165,19 @@ function NodeView(props: NodeViewProps) {
       );
     case "text":
       return <Text style={styles.bodyText}>{node.text}</Text>;
+    case "badge": {
+      const tone = badgeTone(node);
+      return (
+        <View
+          accessible
+          accessibilityLabel={badgeAccessibilityLabel(node)}
+          accessibilityRole="text"
+          style={[styles.badge, badgeContainerStyle(tone)]}
+        >
+          <Text style={[styles.badgeText, badgeTextStyle(tone)]}>{node.text}</Text>
+        </View>
+      );
+    }
     case "metric": {
       const value = metricValue(node, timers, nowMilliseconds);
       return (
@@ -285,6 +303,36 @@ function NodeView(props: NodeViewProps) {
   }
 }
 
+function badgeContainerStyle(tone: BadgeTone) {
+  switch (tone) {
+    case "info":
+      return styles.badgeInfo;
+    case "success":
+      return styles.badgeSuccess;
+    case "warning":
+      return styles.badgeWarning;
+    case "danger":
+      return styles.badgeDanger;
+    case "neutral":
+      return styles.badgeNeutral;
+  }
+}
+
+function badgeTextStyle(tone: BadgeTone) {
+  switch (tone) {
+    case "info":
+      return styles.badgeTextInfo;
+    case "success":
+      return styles.badgeTextSuccess;
+    case "warning":
+      return styles.badgeTextWarning;
+    case "danger":
+      return styles.badgeTextDanger;
+    case "neutral":
+      return styles.badgeTextNeutral;
+  }
+}
+
 const styles = StyleSheet.create({
   page: {
     gap: 16,
@@ -332,6 +380,52 @@ const styles = StyleSheet.create({
   bodyText: {
     color: "#344054",
     fontSize: 16,
+  },
+  badge: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  badgeNeutral: {
+    backgroundColor: "#f2f4f7",
+    borderColor: "#d0d5dd",
+  },
+  badgeInfo: {
+    backgroundColor: "#eff8ff",
+    borderColor: "#b2ddff",
+  },
+  badgeSuccess: {
+    backgroundColor: "#ecfdf3",
+    borderColor: "#abefc6",
+  },
+  badgeWarning: {
+    backgroundColor: "#fffaeb",
+    borderColor: "#fedf89",
+  },
+  badgeDanger: {
+    backgroundColor: "#fef3f2",
+    borderColor: "#fecdca",
+  },
+  badgeText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  badgeTextNeutral: {
+    color: "#344054",
+  },
+  badgeTextInfo: {
+    color: "#175cd3",
+  },
+  badgeTextSuccess: {
+    color: "#067647",
+  },
+  badgeTextWarning: {
+    color: "#b54708",
+  },
+  badgeTextDanger: {
+    color: "#b42318",
   },
   timer: {
     color: "#101828",
