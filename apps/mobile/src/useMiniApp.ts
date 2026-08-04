@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 
 import type { MiniAppInspection, PageNode, RuntimeSnapshot, SerializableValue } from "./model";
 import { completeRuntimeAction } from "./runtime/feedback";
+import { performHostOutput } from "./runtime/host-output";
 import {
   formatMiniAppError,
   inspectMiniApp,
@@ -199,6 +200,7 @@ export function useMiniApp(
             setSnapshot(rendered.snapshot);
             setPage(rendered.page);
           },
+          performHostOutput,
         );
         if (!isCurrent()) return;
         if (message !== null) setPendingFeedback(message);
