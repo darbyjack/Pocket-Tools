@@ -13,13 +13,13 @@ import SearchSymbol from "@expo/material-symbols/search.xml";
 import SettingsSymbol from "@expo/material-symbols/settings.xml";
 import ShareSymbol from "@expo/material-symbols/share.xml";
 import WarningSymbol from "@expo/material-symbols/warning.xml";
-import { Icon } from "@expo/ui";
+import { Host, Icon } from "@expo/ui/jetpack-compose";
 import type { ComponentProps } from "react";
-import { StyleSheet, View, type ColorValue } from "react-native";
+import type { ColorValue } from "react-native";
 
 import type { UiIconName } from "../runtime/sdk12-icons.ts";
 
-type ExpoIconSource = ComponentProps<typeof Icon>["name"];
+type ExpoIconSource = ComponentProps<typeof Icon>["source"];
 
 const ICON_SOURCES: Readonly<Record<UiIconName, ExpoIconSource>> = {
   add: AddSymbol,
@@ -50,14 +50,12 @@ interface HostIconProps {
 export function HostIcon({ name, size = "medium", tone = "default" }: HostIconProps) {
   const dimension = size === "small" ? 18 : 22;
   return (
-    <View
-      accessibilityElementsHidden
-      accessible={false}
-      importantForAccessibility="no-hide-descendants"
-      style={[styles.icon, { height: dimension, width: dimension }]}
+    <Host
+      pointerEvents="none"
+      style={{ flexShrink: 0, height: dimension, width: dimension }}
     >
-      <Icon color={iconColor(tone)} name={ICON_SOURCES[name]} size={dimension} />
-    </View>
+      <Icon source={ICON_SOURCES[name]} size={dimension} tint={iconColor(tone)} />
+    </Host>
   );
 }
 
@@ -73,11 +71,3 @@ function iconColor(tone: HostIconTone): ColorValue {
       return "#344054";
   }
 }
-
-const styles = StyleSheet.create({
-  icon: {
-    alignItems: "center",
-    flexShrink: 0,
-    justifyContent: "center",
-  },
-});
