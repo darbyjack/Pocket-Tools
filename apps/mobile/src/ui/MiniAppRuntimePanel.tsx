@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
-import type { MiniAppInspection } from "../model";
+import type { MiniAppInspection, SerializableValue } from "../model";
 import { useMiniApp } from "../useMiniApp";
 import { ErrorNotice } from "./ErrorNotice";
 import { FeedbackNotice } from "./FeedbackNotice";
@@ -11,6 +11,8 @@ import { colors, spacing } from "./theme";
 export interface MiniAppRuntimePanelProps {
   readonly source: string | null;
   readonly storageId: string | null;
+  readonly initialScreen?: string;
+  readonly initialScreenInput?: SerializableValue;
   readonly onReady?: (inspection: MiniAppInspection) => void;
   readonly onError?: (message: string) => void;
 }
@@ -18,6 +20,8 @@ export interface MiniAppRuntimePanelProps {
 export function MiniAppRuntimePanel({
   source,
   storageId,
+  initialScreen = "home",
+  initialScreenInput,
   onReady,
   onError,
 }: MiniAppRuntimePanelProps) {
@@ -32,7 +36,7 @@ export function MiniAppRuntimePanel({
     invokeAction,
     navigate,
     updateSetting,
-  } = useMiniApp(source, storageId);
+  } = useMiniApp(source, storageId, initialScreen, initialScreenInput);
 
   useEffect(() => {
     if (error !== null) {
