@@ -37,6 +37,7 @@ interface PocketNotificationsNativeModule {
   readonly ensureChannel: () => void;
   readonly notificationsEnabled: () => boolean;
   readonly canScheduleExactAlarms: () => boolean;
+  readonly openNotificationSettings: () => Promise<boolean>;
   readonly openExactAlarmSettings: () => Promise<boolean>;
   readonly reconcile: (entriesJson: string) => Promise<string>;
   readonly getOpenTarget: (hostId: string) => string | null;
@@ -54,6 +55,10 @@ export function nativeNotificationsEnabled(): boolean {
 
 export function canScheduleExactAlarms(): boolean {
   return nativeModule.canScheduleExactAlarms();
+}
+
+export function openNotificationSettings(): Promise<boolean> {
+  return nativeModule.openNotificationSettings();
 }
 
 export function openExactAlarmSettings(): Promise<boolean> {
