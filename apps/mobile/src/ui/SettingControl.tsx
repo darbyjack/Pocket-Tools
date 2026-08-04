@@ -169,29 +169,40 @@ function MultiSelectSetting({
   label,
   onChange,
 }: MultiSelectSettingProps) {
-  let selectedValues = definition.default;
+  let persistedValues = definition.default;
   try {
-    selectedValues = normalizeMultiSelectValue(definition, value, `settings.${name}`);
+    persistedValues = normalizeMultiSelectValue(definition, value, `settings.${name}`);
   } catch {
-    selectedValues = definition.default;
+    persistedValues = definition.default;
   }
 
-  const selectedKeys = new Set(selectedValues.map(selectValueKey));
+  const persistedSignature = JSON.stringify(persistedValues.map(selectValueKey));
+  const [draftSignature, setDraftSignature] = useState(persistedSignature);
+  useEffect(() => setDraftSignature(persistedSignature), [persistedSignature]);
+
+  const draftKeys = new Set<string>(JSON.parse(draftSignature) as string[]);
+  const draftValues = definition.options
+    .filter((option) => draftKeys.has(selectValueKey(option.value)))
+    .map((option) => option.value);
   const minimum = definition.minSelections ?? 0;
   const maximum = definition.maxSelections ?? definition.options.length;
+  const valid = draftValues.length >= minimum && draftValues.length <= maximum;
+  const changed = draftSignature !== persistedSignature;
   const selectionHint =
     minimum === maximum
       ? `Select exactly ${minimum} option${minimum === 1 ? "" : "s"}`
       : `Select between ${minimum} and ${maximum} options`;
 
   const toggle = (key: string, selected: boolean) => {
-    const nextKeys = new Set(selectedKeys);
+    const nextKeys = new Set(draftKeys);
     if (selected) nextKeys.delete(key);
     else nextKeys.add(key);
-    const nextValue = definition.options
-      .filter((option) => nextKeys.has(selectValueKey(option.value)))
-      .map((option) => option.value);
-    void onChange(name, nextValue);
+    setDraftSignature(JSON.stringify([...nextKeys]));
+  };
+
+  const commit = () => {
+    if (!changed || !valid) return;
+    void onChange(name, draftValues);
   };
 
   return (
@@ -200,16 +211,14 @@ function MultiSelectSetting({
       {definition.description === undefined ? null : (
         <Text style={styles.description}>{definition.description}</Text>
       )}
-      <Text style={styles.selectionSummary}>
-        {selectedValues.length} selected. {selectionHint}.
+      <Text accessibilityLiveRegion="polite" style={styles.selectionSummary}>
+        {draftValues.length} selected. {selectionHint}.
       </Text>
       <View style={styles.optionRow}>
         {definition.options.map((option) => {
           const key = selectValueKey(option.value);
-          const selected = selectedKeys.has(key);
-          const disabled = selected
-            ? selectedValues.length <= minimum
-            : selectedValues.length >= maximum;
+          const selected = draftKeys.has(key);
+          const disabled = !selected && draftValues.length >= maximum;
           return (
             <Pressable
               key={key}
@@ -231,6 +240,27 @@ function MultiSelectSetting({
             </Pressable>
           );
         })}
+      </View>
+      <View style={styles.multiSelectActions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !changed }}
+          disabled={!changed}
+          onPress={() => setDraftSignature(persistedSignature)}
+          style={[styles.secondaryAction, !changed && styles.optionDisabled]}
+        >
+          <Text style={styles.secondaryActionText}>Discard</Text>
+        </Pressable>
+        <Pressable
+          accessibilityHint={valid ? "Save selected options" : selectionHint}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !changed || !valid }}
+          disabled={!changed || !valid}
+          onPress={commit}
+          style={[styles.applyAction, (!changed || !valid) && styles.optionDisabled]}
+        >
+          <Text style={styles.applyActionText}>Apply</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -586,5 +616,35 @@ const styles = StyleSheet.create({
   },
   optionTextSelected: {
     color: colors.surface,
+  },
+  multiSelectActions: {
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "flex-end",
+  },
+  secondaryAction: {
+    alignItems: "center",
+    borderColor: colors.border,
+    borderRadius: radii.button,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  secondaryActionText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  applyAction: {
+    alignItems: "center",
+    backgroundColor: colors.brand,
+    borderRadius: radii.button,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  applyActionText: {
+    color: colors.surface,
+    fontSize: 14,
+    fontWeight: "700",
   },
 });
