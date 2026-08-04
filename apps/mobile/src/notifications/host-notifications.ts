@@ -9,11 +9,10 @@ import {
   type NativeNotificationRegistryEntry,
   type NativeNotificationReconciliationResult,
 } from "@pocket-tools/notifications-runtime";
-import * as Notifications from "expo-notifications";
 import * as SQLite from "expo-sqlite";
+import { PermissionsAndroid, Platform } from "react-native";
 
 import {
-  describeNotificationTrigger,
   extractNotificationHostId,
   normalizeNotificationOpenTarget,
   type NotificationRouteTarget,
@@ -30,10 +29,9 @@ import {
 export { describeNotificationTrigger } from "./notification-routing.ts";
 export type { NotificationRouteTarget } from "./notification-routing.ts";
 
-const CHANNEL_ID = "pocket-tools-reminders";
 const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 
-export type HostNotificationPermission = "granted" | "denied" | "undetermined";
+export type HostNotificationPermission = "granted" | "denied";
 
 export interface HostNotificationStatus {
   readonly permission: HostNotificationPermission;
@@ -49,24 +47,22 @@ let reconciliationTail: Promise<void> = Promise.resolve();
 
 export async function ensureHostNotificationInfrastructure(): Promise<void> {
   ensureNativeNotificationChannel();
-  await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-    name: "Pocket Tools reminders",
-    importance: Notifications.AndroidImportance.DEFAULT,
-  });
 }
 
 export async function getHostNotificationStatus(): Promise<HostNotificationStatus> {
   await ensureHostNotificationInfrastructure();
-  const [permissions, entries] = await Promise.all([
-    Notifications.getPermissionsAsync(),
+  const [permission, entries] = await Promise.all([
+    getAndroidNotificationPermission(),
     listRegistryEntries(),
   ]);
-  return summarizeStatus(normalizePermission(permissions.status), entries);
+  return summarizeStatus(permission, entries);
 }
 
 export async function requestHostNotificationPermission(): Promise<HostNotificationStatus> {
   await ensureHostNotificationInfrastructure();
-  await Notifications.requestPermissionsAsync();
+  if (requiresRuntimeNotificationPermission()) {
+    await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+  }
   await reconcileHostNotifications();
   return getHostNotificationStatus();
 }
@@ -121,6 +117,18 @@ export function resolveNotificationUrl(url: string): NotificationRouteTarget | n
   const hostId = extractNotificationHostId(url);
   if (hostId === null) return null;
   return normalizeNotificationOpenTarget(getNativeNotificationOpenTarget(hostId));
+}
+
+async function getAndroidNotificationPermission(): Promise<HostNotificationPermission> {
+  if (!requiresRuntimeNotificationPermission()) return "granted";
+  const granted = await PermissionsAndroid.check(
+    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+  );
+  return granted ? "granted" : "denied";
+}
+
+function requiresRuntimeNotificationPermission(): boolean {
+  return Platform.OS === "android" && typeof Platform.Version === "number" && Platform.Version >= 33;
 }
 
 async function listRegistryEntries(): Promise<readonly NotificationRegistryEntry[]> {
@@ -191,10 +199,4 @@ function summarizeStatus(
     blocked: entries.filter((entry) => entry.desired && entry.status === "blocked").length,
     failed: entries.filter((entry) => entry.desired && entry.status === "failed").length,
   };
-}
-
-function normalizePermission(status: string): HostNotificationPermission {
-  if (status === "granted") return "granted";
-  if (status === "denied") return "denied";
-  return "undetermined";
 }
