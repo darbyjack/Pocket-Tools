@@ -11,7 +11,7 @@ Their business logic lives only under `examples/*.miniapp.js`; the host contains
 
 ## Development rules
 
-Read [AGENTS.md](AGENTS.md) before changing the project. SDK 1.0 is the original frozen MVP contract, and SDK 1.1 is the first explicit additive release. New public SDK surface requires another deliberate version decision.
+Read [AGENTS.md](AGENTS.md) before changing the project. SDK 1.0 is the original frozen MVP contract, SDK 1.1 is the first explicit additive release, and the future SDK 1.2 surface is frozen in [its implementation contract](docs/SDK_1_2_CONTRACT.md). SDK 1.2 remains unsupported until the full contract is implemented and activated end to end.
 
 No GitHub Actions workflow is enabled. Repository checks and Android builds are run manually until CI is deliberately introduced later.
 
@@ -31,11 +31,11 @@ single-file mini-app source
 
 Bundled reference scripts are imported into the installed tool collection only once. Pasted and bundled scripts then use the same installed-source runtime path. A user can paste, preview, install, run, edit, update, roll back, export, duplicate, back up, restore, and remove a script entirely on Android without rebuilding Pocket Tools.
 
-The canonical delivery map is [Wayfinder: Deliver the Pocket Tools Android MVP](https://github.com/darbyjack/Pocket-Tools/issues/1).
+The canonical delivery map is [Wayfinder: Pocket Tools Android and SDK roadmap](https://github.com/darbyjack/Pocket-Tools/issues/1).
 
 ## Offline SDK
 
-Pocket Tools supports SDK 1.0 and SDK 1.1.
+Pocket Tools currently supports SDK 1.0 and SDK 1.1.
 
 SDK 1.0 provides:
 
@@ -52,9 +52,11 @@ SDK 1.0 provides:
 
 SDK 1.1 adds reusable action descriptors, actionable list items, destructive intent, disabled actions, and host-owned confirmation while retaining SDK 1.0 compatibility.
 
-Both versions intentionally exclude network, files, location, notifications, secrets, custom native modules, arbitrary background JavaScript, and permission manifests.
+SDK 1.2 is planned for transactional form-state writes, date-aware inputs, tappable rows, richer local queries and aggregates, host feedback, copy/share output, local reminders, Android notification recovery, and phone notification bridging to a paired Galaxy Watch. Its complete public and host behavior is frozen in [Pocket Tools SDK 1.2 Contract](docs/SDK_1_2_CONTRACT.md), but manifests must not declare `"1.2"` yet.
 
-See [Pocket Tools Offline Mini-App SDK](docs/SDK_OVERVIEW.md) for the complete contract.
+The currently supported versions intentionally exclude network, files, location, notifications, secrets, custom native modules, arbitrary background JavaScript, and permission manifests.
+
+See [Pocket Tools Offline Mini-App SDK](docs/SDK_OVERVIEW.md) for the supported contract.
 
 ## Author a mini-app
 
@@ -188,6 +190,7 @@ The host rejects unsupported imports, ambient native access, unknown SDK propert
 - [Lifecycle and namespace diagnostics](docs/LIFECYCLE_DIAGNOSTICS.md)
 - [Ordinary agent-script acceptance](docs/ORDINARY_SCRIPT_ACCEPTANCE.md)
 - [SDK overview](docs/SDK_OVERVIEW.md)
+- [SDK 1.2 frozen contract](docs/SDK_1_2_CONTRACT.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security model](docs/SECURITY_MODEL.md)
 - [Android slice](docs/ANDROID_SLICE.md)
