@@ -5,6 +5,7 @@ import type {
   CollectionDefinition as PublicCollectionDefinition,
   ColumnNode as PublicColumnNode,
   FieldDefinition as PublicFieldDefinition,
+  ListItemNode as PublicListItemNode,
   MetricNode,
   MiniAppManifest as PublicMiniAppManifest,
   PageNode as PublicPageNode,
@@ -93,9 +94,13 @@ export interface DateTimeInputNode {
   readonly label?: string;
 }
 
+export interface ListItemNode extends PublicListItemNode {
+  readonly primaryAction?: ActionControl;
+}
+
 type PublicLeafUiNode = Exclude<
   PublicUiNode,
-  PublicPageNode | PublicSectionNode | PublicRowNode | PublicColumnNode
+  PublicPageNode | PublicSectionNode | PublicRowNode | PublicColumnNode | PublicListItemNode
 >;
 
 export interface PageNode extends Omit<PublicPageNode, "children"> {
@@ -121,7 +126,8 @@ export type UiNode =
   | ColumnNode
   | PublicLeafUiNode
   | DateInputNode
-  | DateTimeInputNode;
+  | DateTimeInputNode
+  | ListItemNode;
 
 export interface MiniAppInspection {
   readonly manifest: MiniAppManifest;
