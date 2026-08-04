@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors, radii } from "./theme";
@@ -10,11 +10,8 @@ export interface ErrorNoticeProps {
 }
 
 export function ErrorNotice({ detail, message, title }: ErrorNoticeProps) {
-  const [showDetails, setShowDetails] = useState(false);
-
-  useEffect(() => {
-    setShowDetails(false);
-  }, [detail]);
+  const [visibleDetail, setVisibleDetail] = useState<string | null>(null);
+  const showDetails = visibleDetail === detail;
 
   return (
     <View accessibilityRole="alert" style={styles.card}>
@@ -22,7 +19,7 @@ export function ErrorNotice({ detail, message, title }: ErrorNoticeProps) {
       {message === undefined ? null : <Text style={styles.message}>{message}</Text>}
       <Pressable
         accessibilityRole="button"
-        onPress={() => setShowDetails((current) => !current)}
+        onPress={() => setVisibleDetail(showDetails ? null : detail)}
         style={styles.detailsButton}
       >
         <Text style={styles.detailsButtonText}>
