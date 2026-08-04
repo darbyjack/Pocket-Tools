@@ -8,7 +8,9 @@ import {
   type PreparedHostBackup,
 } from "../storage/host-backup-storage.ts";
 import type { InstalledMiniApp } from "../storage/database.ts";
+import { ErrorNotice } from "./ErrorNotice.tsx";
 import { ScreenScrollView } from "./ScreenScrollView.tsx";
+import { colors, radii, spacing } from "./theme.ts";
 
 export interface HostBackupEditorProps {
   readonly onCancel: () => void;
@@ -39,22 +41,20 @@ export function HostBackupEditor({ onCancel, onRestored }: HostBackupEditorProps
       setCandidate(prepared);
       const installedState = prepared.backup.apps.reduce(
         (totals, app) => ({
-          settings: totals.settings + app.settings.length,
           records: totals.records + app.records.length,
           timers: totals.timers + app.timers.length,
         }),
-        { settings: 0, records: 0, timers: 0 },
+        { records: 0, timers: 0 },
       );
       const retainedState = prepared.backup.retained.reduce(
         (totals, state) => ({
-          settings: totals.settings + state.settings.length,
           records: totals.records + state.records.length,
           timers: totals.timers + state.timers.length,
         }),
-        { settings: 0, records: 0, timers: 0 },
+        { records: 0, timers: 0 },
       );
       setMessage(
-        `Valid host backup: ${prepared.backup.apps.length} installed apps, ${prepared.backup.retained.length} retained namespaces, ${installedState.settings + retainedState.settings} settings, ${installedState.records + retainedState.records} records, and ${installedState.timers + retainedState.timers} active timers.`,
+        `Backup ready: ${prepared.backup.apps.length} tools, ${installedState.records + retainedState.records} records, ${installedState.timers + retainedState.timers} active timers.`,
       );
     } catch (caught) {
       setError(formatHostBackupError(caught));
@@ -79,16 +79,16 @@ export function HostBackupEditor({ onCancel, onRestored }: HostBackupEditorProps
 
   const restore = useCallback(() => {
     if (candidate === null) {
-      setError("HOST_BACKUP_INVALID: Validate the current backup before restoring it.");
+      setError("HOST_BACKUP_INVALID: Check the current backup before restoring it.");
       return;
     }
     Alert.alert(
-      "Replace all Pocket Tools data?",
-      "This will atomically replace every installed mini app and every retained settings, records, and timer namespace. Internal host metadata is preserved.",
+      "Replace everything?",
+      "This replaces all tools and saved data with the backup.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Replace all data",
+          text: "Replace everything",
           style: "destructive",
           onPress: () => void performRestore(),
         },
@@ -106,15 +106,7 @@ export function HostBackupEditor({ onCancel, onRestored }: HostBackupEditorProps
         <Pressable accessibilityRole="button" onPress={onCancel} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>Cancel</Text>
         </Pressable>
-        <Text style={styles.title}>Restore complete backup</Text>
-      </View>
-
-      <View style={styles.notice}>
-        <Text style={styles.noticeTitle}>Complete local recovery</Text>
-        <Text style={styles.noticeText}>
-          Paste one Pocket Tools host backup. Every installed source is inspected before the current
-          mini-app library and retained user data can be replaced in one SQLite transaction.
-        </Text>
+        <Text style={styles.title}>Restore everything</Text>
       </View>
 
       <TextInput
@@ -122,7 +114,8 @@ export function HostBackupEditor({ onCancel, onRestored }: HostBackupEditorProps
         autoCorrect={false}
         multiline
         onChangeText={invalidateSource}
-        placeholder="Paste one .pocket-tools-host-backup.json document"
+        placeholder="Paste a Pocket Tools backup"
+        placeholderTextColor="#98a2b3"
         style={styles.editor}
         textAlignVertical="top"
         value={source}
@@ -131,12 +124,12 @@ export function HostBackupEditor({ onCancel, onRestored }: HostBackupEditorProps
       <View style={styles.buttonRow}>
         <ActionButton
           disabled={busy || source.length === 0}
-          label="Validate complete backup"
+          label="Check backup"
           onPress={validate}
         />
         <ActionButton
           disabled={busy || candidate === null}
-          label={busy ? "Working…" : "Restore all data"}
+          label={busy ? "Working…" : "Restore everything"}
           onPress={restore}
           primary
         />
@@ -149,12 +142,11 @@ export function HostBackupEditor({ onCancel, onRestored }: HostBackupEditorProps
       )}
 
       {error === null ? null : (
-        <View accessibilityRole="alert" style={styles.errorCard}>
-          <Text style={styles.errorTitle}>The complete backup cannot be restored</Text>
-          <Text selectable style={styles.errorText}>
-            {error}
-          </Text>
-        </View>
+        <ErrorNotice
+          detail={error}
+          message="Check the backup and try again."
+          title="This backup can’t be restored"
+        />
       )}
     </ScreenScrollView>
   );
@@ -176,10 +168,11 @@ function ActionButton({
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         styles.actionButton,
         primary ? styles.actionButtonPrimary : null,
         disabled ? styles.actionButtonDisabled : null,
+        pressed && !disabled ? styles.pressed : null,
       ]}
     >
       <Text style={[styles.actionButtonText, primary ? styles.actionButtonPrimaryText : null]}>
@@ -199,7 +192,7 @@ function formatHostBackupError(caught: unknown): string {
 const styles = StyleSheet.create({
   content: {
     gap: 16,
-    padding: 18,
+    padding: spacing.screen,
     paddingBottom: 48,
   },
   toolbar: {
@@ -208,46 +201,28 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   title: {
-    color: "#101828",
+    color: colors.text,
     flex: 1,
     fontSize: 22,
     fontWeight: "800",
   },
   secondaryButton: {
-    backgroundColor: "#ffffff",
-    borderColor: "#d0d5dd",
-    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.button,
     borderWidth: 1,
     paddingHorizontal: 13,
     paddingVertical: 9,
   },
   secondaryButtonText: {
-    color: "#344054",
+    color: colors.brand,
     fontSize: 14,
     fontWeight: "700",
   },
-  notice: {
-    backgroundColor: "#fff6ed",
-    borderColor: "#ffd6ae",
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 5,
-    padding: 14,
-  },
-  noticeTitle: {
-    color: "#b93815",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  noticeText: {
-    color: "#93370d",
-    fontSize: 13,
-    lineHeight: 19,
-  },
   editor: {
-    backgroundColor: "#101828",
+    backgroundColor: colors.text,
     borderColor: "#344054",
-    borderRadius: 14,
+    borderRadius: radii.card,
     borderWidth: 1,
     color: "#f2f4f7",
     fontFamily: "monospace",
@@ -262,57 +237,40 @@ const styles = StyleSheet.create({
     gap: 9,
   },
   actionButton: {
-    backgroundColor: "#ffffff",
-    borderColor: "#d0d5dd",
-    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.button,
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   actionButtonPrimary: {
-    backgroundColor: "#912018",
-    borderColor: "#912018",
+    backgroundColor: colors.danger,
+    borderColor: colors.danger,
   },
   actionButtonDisabled: {
     opacity: 0.45,
   },
   actionButtonText: {
-    color: "#344054",
+    color: colors.brand,
     fontSize: 14,
     fontWeight: "700",
   },
   actionButtonPrimaryText: {
-    color: "#ffffff",
+    color: colors.surface,
+  },
+  pressed: {
+    opacity: 0.72,
   },
   successCard: {
-    backgroundColor: "#ecfdf3",
-    borderColor: "#abefc6",
-    borderRadius: 12,
+    backgroundColor: colors.successBackground,
+    borderColor: colors.successBorder,
+    borderRadius: radii.button,
     borderWidth: 1,
     padding: 13,
   },
   successText: {
-    color: "#067647",
+    color: colors.success,
     fontSize: 13,
-    lineHeight: 19,
-  },
-  errorCard: {
-    backgroundColor: "#fff1f0",
-    borderColor: "#fda29b",
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 5,
-    padding: 14,
-  },
-  errorTitle: {
-    color: "#912018",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  errorText: {
-    color: "#b42318",
-    fontFamily: "monospace",
-    fontSize: 13,
-    lineHeight: 18,
   },
 });
