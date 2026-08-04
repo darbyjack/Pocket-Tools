@@ -1,6 +1,16 @@
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ActivityIndicator, Alert, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  AppState,
+  Linking,
+  Pressable,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import {
   initialWindowMetrics,
   SafeAreaProvider,
@@ -10,6 +20,12 @@ import {
 import { DIAGNOSTIC_APP_ID_PREFIX } from "./src/diagnostics/fixtures";
 import { cleanupAbandonedLifecycleDiagnostics } from "./src/diagnostics/startup";
 import bundledMiniApps from "./src/generated/bundled-mini-apps.json";
+import type { SerializableValue } from "./src/model";
+import {
+  ensureHostNotificationInfrastructure,
+  reconcileHostNotifications,
+  resolveNotificationUrl,
+} from "./src/notifications/host-notifications";
 import { inspectMiniApp } from "./src/runtime/quickjs";
 import { stringifyMiniAppBackup } from "./src/storage/backup";
 import { createMiniAppBackup } from "./src/storage/backup-storage";
@@ -32,16 +48,26 @@ import { MiniAppBackupEditor } from "./src/ui/MiniAppBackupEditor";
 import { MiniAppEditor, type MiniAppEditorMode } from "./src/ui/MiniAppEditor";
 import { MiniAppLibrary } from "./src/ui/MiniAppLibrary";
 import { MiniAppManagement } from "./src/ui/MiniAppManagement";
+import { NotificationSettings } from "./src/ui/NotificationSettings";
+import { ToolNotificationSettings } from "./src/ui/ToolNotificationSettings";
 import { colors, radii } from "./src/ui/theme";
 
 type Route =
   | { readonly name: "library" }
   | { readonly name: "settings" }
+  | { readonly name: "notifications" }
   | { readonly name: "backup" }
   | { readonly name: "hostBackup" }
   | { readonly name: "diagnostics" }
-  | { readonly name: "run"; readonly appId: string }
+  | {
+      readonly name: "run";
+      readonly appId: string;
+      readonly initialScreen?: string;
+      readonly initialInput?: SerializableValue;
+      readonly notificationKey?: string;
+    }
   | { readonly name: "manage"; readonly appId: string }
+  | { readonly name: "toolNotifications"; readonly appId: string }
   | {
       readonly name: "editor";
       readonly mode: MiniAppEditorMode;
@@ -53,6 +79,7 @@ export default function App() {
   const [route, setRoute] = useState<Route>({ name: "library" });
   const [loading, setLoading] = useState(true);
   const [startupError, setStartupError] = useState<string | null>(null);
+  const [pendingNotificationUrl, setPendingNotificationUrl] = useState<string | null>(null);
 
   const refreshApps = useCallback(async () => {
     const installed = visibleInstalledApps(await listInstalledMiniApps());
@@ -74,6 +101,12 @@ export default function App() {
         );
         await seedBundledMiniAppsOnce(seeds);
         const installed = visibleInstalledApps(await listInstalledMiniApps());
+        await ensureHostNotificationInfrastructure();
+        try {
+          await reconcileHostNotifications();
+        } catch (caught) {
+          console.warn("Notification reconciliation failed during startup.", caught);
+        }
         if (!cancelled) setApps(installed);
       } catch (caught) {
         if (!cancelled) {
@@ -87,6 +120,57 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    void Linking.getInitialURL().then((url) => {
+      if (url !== null) setPendingNotificationUrl(url);
+    });
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      setPendingNotificationUrl(url);
+    });
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      void reconcileHostNotifications().catch((caught: unknown) => {
+        console.warn("Notification reconciliation failed after resume.", caught);
+      });
+    });
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (loading || pendingNotificationUrl === null) return;
+    const url = pendingNotificationUrl;
+    setPendingNotificationUrl(null);
+    void (async () => {
+      try {
+        const target = resolveNotificationUrl(url);
+        if (target === null) return;
+        const installed = await refreshApps();
+        if (!installed.some((app) => app.id === target.storageId)) {
+          setRoute({ name: "library" });
+          Alert.alert("Tool unavailable", "The tool for this reminder is no longer installed.");
+          return;
+        }
+        setRoute({
+          name: "run",
+          appId: target.storageId,
+          initialScreen: target.screen,
+          ...(target.input === undefined ? {} : { initialInput: target.input }),
+          notificationKey: target.hostId,
+        });
+      } catch (caught) {
+        setRoute({ name: "library" });
+        Alert.alert(
+          "Reminder could not open",
+          caught instanceof Error ? caught.message : String(caught),
+        );
+      }
+    })();
+  }, [loading, pendingNotificationUrl, refreshApps]);
 
   const exportSource = useCallback(async (app: InstalledMiniApp) => {
     try {
@@ -128,6 +212,7 @@ export default function App() {
       const remove = async (deleteData: boolean) => {
         try {
           await deleteInstalledMiniAppWithNotifications(app.id, deleteData);
+          await reconcileHostNotifications();
           await refreshApps();
           setRoute({ name: "library" });
         } catch (caught) {
@@ -181,6 +266,7 @@ export default function App() {
 
   const handleSaved = useCallback(
     async (saved: InstalledMiniApp) => {
+      await reconcileHostNotifications();
       await refreshApps();
       setRoute({ name: "run", appId: saved.id });
     },
@@ -188,17 +274,24 @@ export default function App() {
   );
 
   const handleHostRestored = useCallback(async () => {
+    await reconcileHostNotifications();
     await refreshApps();
     setRoute({ name: "library" });
   }, [refreshApps]);
 
-  const selectedApp =
-    route.name === "run" || route.name === "manage" || route.name === "editor"
-      ? (apps.find((app) => app.id === route.appId) ?? null)
+  const routeAppId =
+    route.name === "run" ||
+    route.name === "manage" ||
+    route.name === "toolNotifications" ||
+    route.name === "editor"
+      ? route.appId
       : null;
+  const selectedApp =
+    routeAppId === null ? null : (apps.find((app) => app.id === routeAppId) ?? null);
   const routeRequiresMissingApp =
     route.name === "run" ||
     route.name === "manage" ||
+    route.name === "toolNotifications" ||
     (route.name === "editor" && route.mode !== "create");
 
   let content: ReactNode;
@@ -234,10 +327,13 @@ export default function App() {
         onBack={() => setRoute({ name: "library" })}
         onBackupAll={() => void exportAllBackup()}
         onDiagnostics={() => setRoute({ name: "diagnostics" })}
+        onNotifications={() => setRoute({ name: "notifications" })}
         onRestoreAll={() => setRoute({ name: "hostBackup" })}
         onRestoreOne={() => setRoute({ name: "backup" })}
       />
     );
+  } else if (route.name === "notifications") {
+    content = <NotificationSettings onBack={() => setRoute({ name: "settings" })} />;
   } else if (route.name === "backup") {
     content = (
       <MiniAppBackupEditor
@@ -298,18 +394,27 @@ export default function App() {
         onBack={() => setRoute({ name: "run", appId: selectedApp.id })}
         onBackup={() => void exportBackup(selectedApp)}
         onDelete={() => removeApp(selectedApp)}
-        onDuplicate={() =>
-          setRoute({ name: "editor", mode: "duplicate", appId: selectedApp.id })
-        }
+        onDuplicate={() => setRoute({ name: "editor", mode: "duplicate", appId: selectedApp.id })}
         onEdit={() => setRoute({ name: "editor", mode: "edit", appId: selectedApp.id })}
         onExport={() => void exportSource(selectedApp)}
+        onNotifications={() => setRoute({ name: "toolNotifications", appId: selectedApp.id })}
         onRollback={() => rollback(selectedApp)}
+      />
+    );
+  } else if (route.name === "toolNotifications" && selectedApp !== null) {
+    content = (
+      <ToolNotificationSettings
+        app={selectedApp}
+        onBack={() => setRoute({ name: "manage", appId: selectedApp.id })}
       />
     );
   } else if (route.name === "run" && selectedApp !== null) {
     content = (
       <InstalledMiniAppRunner
         app={selectedApp}
+        initialScreen={route.initialScreen}
+        initialScreenInput={route.initialInput}
+        key={`${selectedApp.id}:${route.notificationKey ?? "ordinary"}`}
         onBack={() => setRoute({ name: "library" })}
         onManage={() => setRoute({ name: "manage", appId: selectedApp.id })}
       />

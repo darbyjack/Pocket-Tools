@@ -82,18 +82,14 @@ export function HostBackupEditor({ onCancel, onRestored }: HostBackupEditorProps
       setError("HOST_BACKUP_INVALID: Check the current backup before restoring it.");
       return;
     }
-    Alert.alert(
-      "Replace everything?",
-      "This replaces all tools and saved data with the backup.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Replace everything",
-          style: "destructive",
-          onPress: () => void performRestore(),
-        },
-      ],
-    );
+    Alert.alert("Replace everything?", "This replaces all tools and saved data with the backup.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Replace everything",
+        style: "destructive",
+        onPress: () => void performRestore(),
+      },
+    ]);
   }, [candidate, performRestore]);
 
   return (

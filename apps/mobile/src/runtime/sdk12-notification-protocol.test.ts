@@ -70,10 +70,7 @@ test("normal response parsing rejects dormant notification operations", () => {
 });
 
 const invalidOperations: readonly [string, unknown][] = [
-  [
-    "missing request",
-    [{ type: "notification-schedule" }],
-  ],
+  ["missing request", [{ type: "notification-schedule" }]],
   [
     "extra schedule key",
     [

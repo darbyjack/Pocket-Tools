@@ -27,9 +27,10 @@ interface DormantDefinitionInput {
   readonly actions: readonly string[];
 }
 
-export function validateDormantSdk12Definition(
-  input: DormantDefinitionInput,
-): { readonly inspection?: MiniAppInspection; readonly issues: readonly ValidationIssue[] } {
+export function validateDormantSdk12Definition(input: DormantDefinitionInput): {
+  readonly inspection?: MiniAppInspection;
+  readonly issues: readonly ValidationIssue[];
+} {
   const issues: ValidationIssue[] = [];
   const normalizedSettings: Record<string, SettingDefinition> = {};
   const transformedSettings: Record<string, unknown> = {};
@@ -177,14 +178,17 @@ function validateTemporalDefinition(
 }
 
 function transformTemporalSetting(value: PlainObject): PlainObject {
-  const transformed = { ...value, type: "text" };
+  const transformed: PlainObject = { ...value, type: "text" };
   delete transformed.min;
   delete transformed.max;
   return transformed;
 }
 
 function transformTemporalField(value: PlainObject): PlainObject {
-  const transformed = { ...value, type: value.type === "date" ? "text" : "datetime" };
+  const transformed: PlainObject = {
+    ...value,
+    type: value.type === "date" ? "text" : "datetime",
+  };
   delete transformed.min;
   delete transformed.max;
   return transformed;

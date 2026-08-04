@@ -108,11 +108,9 @@ test("requires confirmation for destructive row actions", () => {
 test("rejects unknown actions, invalid inputs, and extra properties", () => {
   assert.throws(
     () =>
-      validatePageNode(
-        page({ label: "Open Entry", action: "missingAction" }),
-        sdk12Inspection,
-        { allowDormantSdk12: true },
-      ),
+      validatePageNode(page({ label: "Open Entry", action: "missingAction" }), sdk12Inspection, {
+        allowDormantSdk12: true,
+      }),
     /Unknown declared action/,
   );
 

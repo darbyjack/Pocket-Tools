@@ -13,6 +13,7 @@ export interface MiniAppManagementProps {
   readonly onDuplicate: () => void;
   readonly onEdit: () => void;
   readonly onExport: () => void;
+  readonly onNotifications: () => void;
   readonly onRollback: () => void;
 }
 
@@ -24,6 +25,7 @@ export function MiniAppManagement({
   onDuplicate,
   onEdit,
   onExport,
+  onNotifications,
   onRollback,
 }: MiniAppManagementProps) {
   const canRollback = app.activeSource !== app.lastKnownGoodSource;
@@ -49,6 +51,7 @@ export function MiniAppManagement({
       <ManagementSection title="Tool">
         <ManagementRow label="Edit" onPress={onEdit} />
         <ManagementRow label="Duplicate" onPress={onDuplicate} />
+        <ManagementRow label="Reminders" onPress={onNotifications} />
       </ManagementSection>
 
       <ManagementSection title="Data">

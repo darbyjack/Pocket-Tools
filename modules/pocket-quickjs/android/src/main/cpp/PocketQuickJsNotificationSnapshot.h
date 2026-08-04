@@ -9,7 +9,7 @@ namespace pocket_tools::quickjs::sources {
 inline const char* notificationSnapshotRunner() {
   static const std::string source =
       R"POCKET_JS(
-((baseRunner) => {
+((baseRunner, legacyRunner) => {
   "use strict";
 
   const identifierPattern = /^[a-z][A-Za-z0-9]*$/;
@@ -60,7 +60,14 @@ inline const char* notificationSnapshotRunner() {
         if (!alreadyDesired) desired.delete(id);
         fail("NOTIFICATION_LIMIT_EXCEEDED", "A tool may own at most 64 desired schedules.");
       }
-      return notifications.schedule(request);
+      try {
+        return notifications.schedule(request);
+      } catch (error) {
+        if (error?.code === "INVALID_BRIDGE_VALUE") {
+          fail("VALIDATION_FAILED", error.message);
+        }
+        throw error;
+      }
     },
     cancel(id) {
       const normalized = notificationId(id, "notifications.cancel.id");
@@ -99,12 +106,15 @@ inline const char* notificationSnapshotRunner() {
 
   return (definition, request) => {
     if (!isPlainObject(definition) || !isPlainObject(definition.manifest)) {
-      return baseRunner(definition, request);
+      return legacyRunner(definition, request);
     }
     const sdkVersion = definition.manifest.sdkVersion === 1
       ? "1.0"
       : definition.manifest.sdkVersion;
-    if (sdkVersion !== "1.2" || request?.mode !== "action") {
+    if (sdkVersion !== "1.2") {
+      return legacyRunner(definition, request);
+    }
+    if (request?.mode !== "action") {
       return baseRunner(definition, request);
     }
 
@@ -120,6 +130,10 @@ inline const char* notificationSnapshotRunner() {
 })(
 )POCKET_JS" +
       std::string(notificationRunner()) +
+      R"POCKET_JS(
+,
+)POCKET_JS" +
+      std::string(feedbackRunner()) +
       R"POCKET_JS(
 )
 )POCKET_JS";

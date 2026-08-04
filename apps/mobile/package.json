@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@expo/ui": "~57.0.7",
+    "@pocket-tools/notifications-runtime": "workspace:*",
     "@pocket-tools/quickjs-runtime": "workspace:*",
     "@pocket-tools/sdk-contract": "workspace:*",
     "expo": "~57.0.9",

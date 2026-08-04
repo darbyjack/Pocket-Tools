@@ -38,11 +38,13 @@ interface RenderedMiniApp {
 export function useMiniApp(
   source: string | null,
   requestedStorageId: string | null = null,
+  initialScreen = "home",
+  initialScreenInput?: SerializableValue,
 ): MiniAppState {
   const [inspection, setInspection] = useState<MiniAppInspection | null>(null);
   const [page, setPage] = useState<PageNode | null>(null);
-  const [screen, setScreen] = useState("home");
-  const [screenInput, setScreenInput] = useState<SerializableValue | undefined>(undefined);
+  const [screen, setScreen] = useState(initialScreen);
+  const [screenInput, setScreenInput] = useState<SerializableValue | undefined>(initialScreenInput);
   const [snapshot, setSnapshot] = useState<RuntimeSnapshot | null>(null);
   const [loading, setLoading] = useState(source !== null);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export function useMiniApp(
 
   useLayoutEffect(() => {
     interactionRevision.current += 1;
-  }, [requestedStorageId, source]);
+  }, [initialScreen, initialScreenInput, requestedStorageId, source]);
 
   const storageIdFor = useCallback(
     (currentInspection: MiniAppInspection) => requestedStorageId ?? currentInspection.manifest.id,
@@ -116,8 +118,8 @@ export function useMiniApp(
 
     setInspection(null);
     setPage(null);
-    setScreen("home");
-    setScreenInput(undefined);
+    setScreen(initialScreen);
+    setScreenInput(initialScreenInput);
     setSnapshot(null);
     setError(null);
     setFeedback(null);
@@ -138,10 +140,16 @@ export function useMiniApp(
           throw new Error("INVALID_SCRIPT: A home screen is required.");
         }
         await ensureSettingDefaults(nextInspection, storageIdFor(nextInspection));
-        const rendered = await render(nextInspection, "home");
+        const targetScreen = nextInspection.screens.includes(initialScreen)
+          ? initialScreen
+          : "home";
+        const targetInput = targetScreen === initialScreen ? initialScreenInput : undefined;
+        const rendered = await render(nextInspection, targetScreen, targetInput);
 
         if (cancelled) return;
         setInspection(nextInspection);
+        setScreen(targetScreen);
+        setScreenInput(targetInput);
         setSnapshot(rendered.snapshot);
         setPage(rendered.page);
       } catch (caught) {
@@ -154,7 +162,7 @@ export function useMiniApp(
     return () => {
       cancelled = true;
     };
-  }, [render, source, storageIdFor]);
+  }, [initialScreen, initialScreenInput, render, source, storageIdFor]);
 
   const dismissFeedback = useCallback(() => {
     setFeedback(null);

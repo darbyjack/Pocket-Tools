@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { RuntimeValue } from "../model";
-import { completeRuntimeAction, feedbackMessage } from "./feedback";
+import type { RuntimeValue } from "../model.ts";
+import { completeRuntimeAction, feedbackMessage } from "./feedback.ts";
 
 const value: RuntimeValue = {
   operations: [],

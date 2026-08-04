@@ -2,6 +2,7 @@
   "expo": {
     "name": "Pocket Tools",
     "slug": "pocket-tools",
+    "scheme": "pocket-tools",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -13,6 +14,7 @@
     ],
     "android": {
       "package": "com.darbyjack.pockettools",
+      "permissions": ["android.permission.SCHEDULE_EXACT_ALARM"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#EEF1F5"
