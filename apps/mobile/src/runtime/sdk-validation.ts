@@ -23,7 +23,6 @@ export function assertSettingValue(
   path: string,
   sdkVersion?: SdkVersion,
 ): void {
-  const effectiveVersion = resolveDefinitionVersion(definition, sdkVersion);
   switch (definition.type) {
     case "text":
       if (typeof value !== "string") fail(path, "Expected text.");
@@ -50,16 +49,11 @@ export function assertSettingValue(
       }
       return;
     case "date":
-      requireSdk12(effectiveVersion, path, "Date settings");
+      requireSdk12(sdkVersion ?? "1.2", path, "Date settings");
       assertTemporalValue(definition, value, path, "date");
       return;
     case "datetime":
-      if (effectiveVersion !== "1.2") {
-        if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
-          fail(path, "Expected an ISO-compatible date-time string.");
-        }
-        return;
-      }
+      requireSdk12(sdkVersion ?? "1.2", path, "Date-time settings");
       assertTemporalValue(definition, value, path, "datetime");
   }
 }
@@ -105,7 +99,7 @@ function assertFieldValue(
     return;
   }
 
-  const effectiveVersion = resolveDefinitionVersion(definition, sdkVersion);
+  const effectiveVersion = resolveFieldVersion(definition, sdkVersion);
   switch (definition.type) {
     case "text":
       if (typeof value !== "string") fail(path, "Expected text.");
@@ -172,8 +166,8 @@ function assertTemporalValue(
   }
 }
 
-function resolveDefinitionVersion(
-  definition: SettingDefinition | FieldDefinition,
+function resolveFieldVersion(
+  definition: FieldDefinition,
   explicit: SdkVersion | undefined,
 ): SdkVersion {
   if (explicit !== undefined) return explicit;
