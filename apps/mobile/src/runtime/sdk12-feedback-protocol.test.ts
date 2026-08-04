@@ -5,7 +5,7 @@ import {
   MiniAppRuntimeError,
   parseDormantSdk12RuntimeResponse,
   parseRuntimeResponse,
-} from "./protocol";
+} from "./protocol.ts";
 
 function response(effects: unknown): string {
   return JSON.stringify({
