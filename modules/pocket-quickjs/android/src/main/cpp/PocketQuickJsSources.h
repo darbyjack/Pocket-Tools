@@ -13,6 +13,7 @@ export const field = Object.freeze({
   boolean: (definition) => typed("boolean", definition),
   number: (definition) => typed("number", definition),
   money: (definition) => typed("money", definition),
+  date: (definition) => typed("date", definition),
   datetime: (definition) => typed("datetime", definition),
 });
 
@@ -22,6 +23,8 @@ export const setting = Object.freeze({
   number: (definition) => typed("number", definition),
   money: (definition) => typed("money", definition),
   select: (definition) => typed("select", definition),
+  date: (definition) => typed("date", definition),
+  datetime: (definition) => typed("datetime", definition),
 });
 
 export const ui = Object.freeze({
@@ -38,6 +41,8 @@ export const ui = Object.freeze({
   numberInput: (definition) => typed("number-input", definition),
   toggle: (definition) => typed("toggle", definition),
   select: (definition) => typed("select", definition),
+  dateInput: (definition) => typed("date-input", definition),
+  datetimeInput: (definition) => typed("datetime-input", definition),
   button: (definition) => typed("button", definition),
   navigation: (definition) => typed("navigation", definition),
   emptyState: (definition) => typed("empty-state", definition),
@@ -71,8 +76,55 @@ inline constexpr char kRunner[] = R"POCKET_JS(
   const identifierPattern = /^[a-z][A-Za-z0-9]*$/;
   const appIdPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
   const recordIdPattern = /^[a-f0-9]{32}$/;
+  const datePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const dateTimePattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/;
   const systemFields = new Set(["id", "createdAt", "updatedAt"]);
   const actionKeys = ["label", "action", "input", "intent", "disabled", "confirmation"];
+
+  const isLeapYear = (year) => year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = (year, month) => {
+    if (month === 2) return isLeapYear(year) ? 29 : 28;
+    return month === 4 || month === 6 || month === 9 || month === 11 ? 30 : 31;
+  };
+  const isCanonicalDate = (value) => {
+    if (typeof value !== "string") return false;
+    const match = datePattern.exec(value);
+    if (match === null) return false;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    return year >= 1 && year <= 9999 && month >= 1 && month <= 12 &&
+      day >= 1 && day <= daysInMonth(year, month);
+  };
+  const isCanonicalDateTime = (value) => {
+    if (typeof value !== "string" || !dateTimePattern.test(value)) return false;
+    const year = Number(value.slice(0, 4));
+    if (year < 1 || year > 9999) return false;
+    const milliseconds = Date.parse(value);
+    if (!Number.isFinite(milliseconds)) return false;
+    try {
+      return new Date(milliseconds).toISOString() === value;
+    } catch {
+      return false;
+    }
+  };
+  const assertTemporalValue = (definitionValue, value, path, type, enforceBounds = true) => {
+    const valid = type === "date" ? isCanonicalDate(value) : isCanonicalDateTime(value);
+    if (!valid) {
+      fail(
+        "VALIDATION_FAILED",
+        type === "date"
+          ? `${path} must be a canonical YYYY-MM-DD date.`
+          : `${path} must be a canonical UTC date-time with millisecond precision.`,
+      );
+    }
+    if (enforceBounds && definitionValue.min !== undefined && value < definitionValue.min) {
+      fail("VALIDATION_FAILED", `${path} is below its minimum.`);
+    }
+    if (enforceBounds && definitionValue.max !== undefined && value > definitionValue.max) {
+      fail("VALIDATION_FAILED", `${path} exceeds its maximum.`);
+    }
+  };
 
   const assertSerializable = (value, path) => {
     const seen = new Set();
@@ -175,6 +227,57 @@ inline constexpr char kRunner[] = R"POCKET_JS(
     if (typeof action !== "function") fail("INVALID_SCRIPT", `actions.${name} must be a function.`);
   }
 
+  for (const [name, settingValue] of Object.entries(settingDefinitions)) {
+    if (!isPlainObject(settingValue)) {
+      fail("VALIDATION_FAILED", `settings.${name} must be a plain object.`);
+    }
+    if (settingValue.type === "date" || settingValue.type === "datetime") {
+      if (!supportsSdk12) {
+        fail("VALIDATION_FAILED", `settings.${name}.${settingValue.type} requires SDK 1.2.`);
+      }
+      exactKeys(
+        settingValue,
+        ["type", "label", "description", "default", "visibleWhen", "min", "max"],
+        `settings.${name}`,
+      );
+      if (typeof settingValue.label !== "string" || settingValue.label.length < 1 || settingValue.label.length > 120) {
+        fail("VALIDATION_FAILED", `settings.${name}.label must contain 1 to 120 characters.`);
+      }
+      for (const key of ["default", "min", "max"]) {
+        if (settingValue[key] === undefined && key !== "default") continue;
+        assertTemporalValue(settingValue, settingValue[key], `settings.${name}.${key}`, settingValue.type);
+      }
+      if (settingValue.min !== undefined && settingValue.max !== undefined && settingValue.min > settingValue.max) {
+        fail("VALIDATION_FAILED", `settings.${name} minimum cannot exceed maximum.`);
+      }
+    }
+  }
+
+  for (const [collectionName, collectionValue] of Object.entries(collectionDefinitions)) {
+    if (!isPlainObject(collectionValue) || !isPlainObject(collectionValue.fields)) continue;
+    for (const [fieldName, fieldValue] of Object.entries(collectionValue.fields)) {
+      if (!isPlainObject(fieldValue)) continue;
+      if (fieldValue.type === "date" || (supportsSdk12 && fieldValue.type === "datetime")) {
+        if (!supportsSdk12) {
+          fail("VALIDATION_FAILED", `collections.${collectionName}.fields.${fieldName}.date requires SDK 1.2.`);
+        }
+        exactKeys(fieldValue, ["type", "optional", "min", "max"], `collections.${collectionName}.fields.${fieldName}`);
+        for (const key of ["min", "max"]) {
+          if (fieldValue[key] === undefined) continue;
+          assertTemporalValue(
+            fieldValue,
+            fieldValue[key],
+            `collections.${collectionName}.fields.${fieldName}.${key}`,
+            fieldValue.type,
+          );
+        }
+        if (fieldValue.min !== undefined && fieldValue.max !== undefined && fieldValue.min > fieldValue.max) {
+          fail("VALIDATION_FAILED", `collections.${collectionName}.fields.${fieldName} minimum cannot exceed maximum.`);
+        }
+      }
+    }
+  }
+
   const recordsByCollection = request.records ?? {};
   const timersById = request.timers ?? {};
   const settings = { ...(request.settings ?? {}) };
@@ -196,38 +299,42 @@ inline constexpr char kRunner[] = R"POCKET_JS(
     if (!isPlainObject(value)) fail("VALIDATION_FAILED", `Unknown setting: ${name}`);
     return value;
   };
-  const assertSettingValue = (setting, value, path) => {
-    if (setting.type === "text") {
+  const assertSettingValue = (settingValue, value, path) => {
+    if (settingValue.type === "text") {
       if (typeof value !== "string") fail("VALIDATION_FAILED", `${path} must be text.`);
       if (
-        value.length < (setting.minLength ?? 0) ||
-        value.length > (setting.maxLength ?? 10_000)
+        value.length < (settingValue.minLength ?? 0) ||
+        value.length > (settingValue.maxLength ?? 10_000)
       ) {
         fail("VALIDATION_FAILED", `${path} violates text length bounds.`);
       }
       return;
     }
-    if (setting.type === "boolean") {
+    if (settingValue.type === "boolean") {
       if (typeof value !== "boolean") fail("VALIDATION_FAILED", `${path} must be a boolean.`);
       return;
     }
-    if (setting.type === "number" || setting.type === "money") {
+    if (settingValue.type === "number" || settingValue.type === "money") {
       if (typeof value !== "number" || !Number.isFinite(value)) {
         fail("VALIDATION_FAILED", `${path} must be a finite number.`);
       }
-      if (setting.min !== undefined && value < setting.min) {
+      if (settingValue.min !== undefined && value < settingValue.min) {
         fail("VALIDATION_FAILED", `${path} is below its minimum.`);
       }
-      if (setting.max !== undefined && value > setting.max) {
+      if (settingValue.max !== undefined && value > settingValue.max) {
         fail("VALIDATION_FAILED", `${path} exceeds its maximum.`);
       }
       return;
     }
-    if (setting.type === "select") {
-      const options = Array.isArray(setting.options) ? setting.options : [];
+    if (settingValue.type === "select") {
+      const options = Array.isArray(settingValue.options) ? settingValue.options : [];
       if (!options.some((option) => isPlainObject(option) && option.value === value)) {
         fail("VALIDATION_FAILED", `${path} must match one declared option value.`);
       }
+      return;
+    }
+    if (supportsSdk12 && (settingValue.type === "date" || settingValue.type === "datetime")) {
+      assertTemporalValue(settingValue, value, path, settingValue.type);
       return;
     }
     fail("VALIDATION_FAILED", `${path} has an unsupported setting type.`);
@@ -284,8 +391,15 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       }
       return;
     }
+    if (field.type === "date") {
+      if (!supportsSdk12) fail("VALIDATION_FAILED", `${path} requires SDK 1.2.`);
+      assertTemporalValue(field, value, path, "date");
+      return;
+    }
     if (field.type === "datetime") {
-      if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
+      if (supportsSdk12) {
+        assertTemporalValue(field, value, path, "datetime");
+      } else if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
         fail("VALIDATION_FAILED", `${path} must be a date-time string.`);
       }
       return;
@@ -345,8 +459,15 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       }
       return;
     }
+    if (field.type === "date") {
+      if (!supportsSdk12) fail("VALIDATION_FAILED", `${path} requires SDK 1.2.`);
+      assertTemporalValue(field, value, path, "date", false);
+      return;
+    }
     if (field.type === "datetime") {
-      if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
+      if (supportsSdk12) {
+        assertTemporalValue(field, value, path, "datetime", false);
+      } else if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
         fail("VALIDATION_FAILED", `${path} must be a date-time string.`);
       }
       return;
@@ -367,10 +488,19 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       if (!isPlainObject(filter)) fail("VALIDATION_FAILED", `${path} is invalid.`);
       exactKeys(filter, ["field", "operator", "value"], path);
       if (typeof filter.field !== "string") fail("VALIDATION_FAILED", `${path}.field must be text.`);
-      if (filter.operator !== "eq" && filter.operator !== "gte" && filter.operator !== "lte") {
+      const field = fieldDefinition(collectionName, filter.field);
+      const expandedTemporalOperator =
+        supportsSdk12 &&
+        (field.type === "date" || field.type === "datetime") &&
+        ["neq", "gt", "lt"].includes(filter.operator);
+      if (
+        filter.operator !== "eq" &&
+        filter.operator !== "gte" &&
+        filter.operator !== "lte" &&
+        !expandedTemporalOperator
+      ) {
         fail("VALIDATION_FAILED", `${path}.operator is unsupported.`);
       }
-      const field = fieldDefinition(collectionName, filter.field);
       assertQueryValue(field, filter.value, filter.operator, `${path}.value`);
     }
     for (const [index, order] of orderBy.entries()) {
@@ -399,7 +529,10 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       records = records.filter((record) => {
         const value = record[filter.field];
         if (filter.operator === "eq") return value === filter.value;
+        if (filter.operator === "neq") return value !== filter.value;
+        if (filter.operator === "gt") return value > filter.value;
         if (filter.operator === "gte") return value >= filter.value;
+        if (filter.operator === "lt") return value < filter.value;
         return value <= filter.value;
       });
     }
@@ -497,8 +630,8 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       if (request.mode !== "action") {
         fail("INVALID_CONTEXT_OPERATION", "settings.set is available only during actions.");
       }
-      const setting = settingDefinition(name);
-      assertSettingValue(setting, value, `settings.${name}`);
+      const settingValue = settingDefinition(name);
+      assertSettingValue(settingValue, value, `settings.${name}`);
       assertSerializable(value, `settings.${name}`);
       settings[name] = value;
       pushOperation({ type: "setting-set", setting: name, value });
@@ -507,10 +640,10 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       if (request.mode !== "action") {
         fail("INVALID_CONTEXT_OPERATION", "settings.reset is available only during actions.");
       }
-      const setting = settingDefinition(name);
-      assertSettingValue(setting, setting.default, `settings.${name}.default`);
-      assertSerializable(setting.default, `settings.${name}.default`);
-      settings[name] = setting.default;
+      const settingValue = settingDefinition(name);
+      assertSettingValue(settingValue, settingValue.default, `settings.${name}.default`);
+      assertSerializable(settingValue.default, `settings.${name}.default`);
+      settings[name] = settingValue.default;
       pushOperation({ type: "setting-reset", setting: name });
     };
   }
@@ -606,8 +739,8 @@ inline constexpr char kRunner[] = R"POCKET_JS(
   const validateUiTree = (page) => {
     const allowed = new Set([
       "page", "section", "row", "column", "heading", "text", "metric", "timer",
-      "text-input", "number-input", "toggle", "select", "button", "navigation",
-      "empty-state", "list-item", "list", "summary",
+      "text-input", "number-input", "toggle", "select", "date-input", "datetime-input",
+      "button", "navigation", "empty-state", "list-item", "list", "summary",
     ]);
     let count = 0;
     const visit = (node, depth, path = "page") => {
@@ -617,6 +750,9 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       count += 1;
       if (count > 512 || depth > 16) {
         fail("INVALID_UI_TREE", "The rendered UI tree exceeds host limits.");
+      }
+      if ((node.type === "date-input" || node.type === "datetime-input") && !supportsSdk12) {
+        fail("INVALID_UI_TREE", "Date and date-time inputs require SDK 1.2.");
       }
       if (node.type === "button") {
         validateActionControl(node, path, true);
@@ -633,9 +769,9 @@ inline constexpr char kRunner[] = R"POCKET_JS(
           validateActionControl(node.actions[index], `${path}.actions[${index}]`);
         }
       }
-      if (["text-input", "number-input", "toggle", "select"].includes(node.type)) {
-        const setting = settingDefinitions[node.setting];
-        if (!isPlainObject(setting)) {
+      if (["text-input", "number-input", "toggle", "select", "date-input", "datetime-input"].includes(node.type)) {
+        const settingValue = settingDefinitions[node.setting];
+        if (!isPlainObject(settingValue)) {
           fail("INVALID_UI_TREE", `Unknown setting binding: ${String(node.setting)}`);
         }
         const expected = {
@@ -643,8 +779,10 @@ inline constexpr char kRunner[] = R"POCKET_JS(
           "number-input": ["number", "money"],
           toggle: ["boolean"],
           select: ["select"],
+          "date-input": ["date"],
+          "datetime-input": ["datetime"],
         }[node.type];
-        if (!expected.includes(setting.type)) {
+        if (!expected.includes(settingValue.type)) {
           fail("INVALID_UI_TREE", `Incompatible setting binding: ${String(node.setting)}`);
         }
       }

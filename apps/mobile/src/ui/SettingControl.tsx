@@ -1,7 +1,13 @@
+import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
 import type { SerializableValue, SettingDefinition } from "../model";
+import {
+  dateStringToLocalDate,
+  dateTimeStringToDate,
+  localDateToDateString,
+} from "../runtime/date-values.ts";
 
 interface SettingControlProps {
   readonly name: string;
@@ -68,6 +74,18 @@ export function SettingControl({
     );
   }
 
+  if (definition.type === "date" || definition.type === "datetime") {
+    return (
+      <TemporalSetting
+        name={name}
+        definition={definition}
+        value={typeof value === "string" ? value : definition.default}
+        label={label}
+        onChange={onChange}
+      />
+    );
+  }
+
   if (definition.type === "text") {
     return (
       <TextSetting
@@ -89,6 +107,81 @@ export function SettingControl({
       label={label}
       onChange={onChange}
     />
+  );
+}
+
+interface TemporalSettingProps {
+  readonly name: string;
+  readonly definition: Extract<SettingDefinition, { readonly type: "date" | "datetime" }>;
+  readonly value: string;
+  readonly label: string;
+  readonly onChange: (name: string, value: SerializableValue) => Promise<void>;
+}
+
+function TemporalSetting({ name, definition, value, label, onChange }: TemporalSettingProps) {
+  const [showPicker, setShowPicker] = useState(false);
+  const selectedDate =
+    definition.type === "date" ? dateStringToLocalDate(value) : dateTimeStringToDate(value);
+  const minimumDate =
+    definition.min === undefined
+      ? undefined
+      : definition.type === "date"
+        ? dateStringToLocalDate(definition.min)
+        : dateTimeStringToDate(definition.min);
+  const maximumDate =
+    definition.max === undefined
+      ? undefined
+      : definition.type === "date"
+        ? dateStringToLocalDate(definition.max)
+        : dateTimeStringToDate(definition.max);
+
+  const displayValue =
+    definition.type === "date"
+      ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(selectedDate)
+      : new Intl.DateTimeFormat(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(selectedDate);
+
+  const commit = (nextDate: Date) => {
+    setShowPicker(false);
+    if (definition.type === "date") {
+      void onChange(name, localDateToDateString(nextDate));
+      return;
+    }
+
+    const normalized = new Date(nextDate);
+    normalized.setSeconds(0, 0);
+    void onChange(name, normalized.toISOString());
+  };
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      {definition.description === undefined ? null : (
+        <Text style={styles.description}>{definition.description}</Text>
+      )}
+      <Pressable
+        accessibilityHint={definition.type === "date" ? "Choose a date" : "Choose a date and time"}
+        accessibilityLabel={`${label}: ${displayValue}`}
+        accessibilityRole="button"
+        onPress={() => setShowPicker(true)}
+        style={styles.pickerButton}
+      >
+        <Text style={styles.pickerValue}>{displayValue}</Text>
+      </Pressable>
+      {showPicker ? (
+        <DateTimePicker
+          {...(maximumDate === undefined ? {} : { maximumDate })}
+          {...(minimumDate === undefined ? {} : { minimumDate })}
+          mode={definition.type === "date" ? "date" : "datetime"}
+          onDismiss={() => setShowPicker(false)}
+          onValueChange={(_event, nextDate) => commit(nextDate)}
+          presentation="dialog"
+          value={selectedDate}
+        />
+      ) : null}
+    </View>
   );
 }
 
@@ -214,6 +307,19 @@ const styles = StyleSheet.create({
     fontSize: 17,
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  pickerButton: {
+    backgroundColor: "#f3f5f8",
+    borderColor: "#d5dae3",
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  pickerValue: {
+    color: "#172033",
+    fontSize: 17,
+    fontWeight: "600",
   },
   optionRow: {
     flexDirection: "row",

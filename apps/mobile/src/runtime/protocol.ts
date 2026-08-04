@@ -9,10 +9,15 @@ import type {
   SettingDefinition,
   TimerSnapshot,
 } from "../model.ts";
+import { validateDormantSdk12Definition } from "./sdk12-date-definition.ts";
 import { validatePageNode } from "./ui-validation.ts";
 
 const LOG_LEVELS = new Set(["log", "info", "warn", "error"]);
 const IDENTIFIER_PATTERN = /^[a-z][A-Za-z0-9]*$/;
+
+interface RuntimeParseOptions {
+  readonly allowDormantSdk12?: boolean;
+}
 
 export class MiniAppRuntimeError extends Error {
   readonly code: string;
@@ -39,7 +44,10 @@ export class MiniAppRuntimeError extends Error {
   }
 }
 
-export function parseRuntimeResponse(json: string): RuntimeSuccess {
+export function parseRuntimeResponse(
+  json: string,
+  options: RuntimeParseOptions = {},
+): RuntimeSuccess {
   let parsed: unknown;
   try {
     parsed = JSON.parse(json);
@@ -84,10 +92,14 @@ export function parseRuntimeResponse(json: string): RuntimeSuccess {
 
   const operations = parseOperations(parsed.value.operations);
   const inspection =
-    parsed.value.inspection === undefined ? undefined : parseInspection(parsed.value.inspection);
+    parsed.value.inspection === undefined
+      ? undefined
+      : parseInspection(parsed.value.inspection, options.allowDormantSdk12 === true);
   if (parsed.value.page !== undefined) {
     try {
-      validatePageNode(parsed.value.page);
+      validatePageNode(parsed.value.page, undefined, {
+        allowDormantSdk12: options.allowDormantSdk12 === true,
+      });
     } catch (cause) {
       throw new MiniAppRuntimeError(
         "INVALID_UI_TREE",
@@ -109,7 +121,11 @@ export function parseRuntimeResponse(json: string): RuntimeSuccess {
   } as RuntimeSuccess;
 }
 
-function parseInspection(value: unknown): MiniAppInspection {
+export function parseDormantSdk12RuntimeResponse(json: string): RuntimeSuccess {
+  return parseRuntimeResponse(json, { allowDormantSdk12: true });
+}
+
+function parseInspection(value: unknown, allowDormantSdk12: boolean): MiniAppInspection {
   if (!isRecord(value)) throw invalidNative("The runtime inspection must be a plain object.");
   exactKeys(value, ["manifest", "settings", "collections", "screens", "actions"], "inspection");
   if (!isRecord(value.manifest) || !isRecord(value.settings) || !isRecord(value.collections)) {
@@ -117,6 +133,22 @@ function parseInspection(value: unknown): MiniAppInspection {
   }
   const screens = parseIdentifierList(value.screens, "inspection.screens");
   const actions = parseIdentifierList(value.actions, "inspection.actions");
+
+  if (allowDormantSdk12 && value.manifest.sdkVersion === "1.2") {
+    const result = validateDormantSdk12Definition({
+      manifest: value.manifest,
+      settings: value.settings,
+      collections: value.collections,
+      screens,
+      actions,
+    });
+    if (result.inspection !== undefined) return result.inspection;
+    throw new MiniAppRuntimeError(
+      "VALIDATION_FAILED",
+      result.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n"),
+    );
+  }
+
   const dummyPage = { type: "page" as const, title: "Validation", children: [] };
   const definition = {
     manifest: value.manifest,
@@ -138,7 +170,7 @@ function parseInspection(value: unknown): MiniAppInspection {
     collections: definition.collections ?? {},
     screens,
     actions,
-  };
+  } as MiniAppInspection;
 }
 
 function parseIdentifierList(value: unknown, path: string): readonly string[] {
