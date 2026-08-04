@@ -9,8 +9,10 @@ export interface FeedbackNoticeProps {
 
 export function FeedbackNotice({ message, onDismiss }: FeedbackNoticeProps) {
   return (
-    <View accessibilityLiveRegion="polite" accessibilityRole="alert" style={styles.notice}>
-      <Text style={styles.message}>{message}</Text>
+    <View style={styles.notice}>
+      <Text accessibilityLiveRegion="polite" style={styles.message}>
+        {message}
+      </Text>
       <Pressable
         accessibilityLabel="Dismiss message"
         accessibilityRole="button"
