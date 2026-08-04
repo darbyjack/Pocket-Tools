@@ -2,6 +2,11 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ActionControl, ListItemNode } from "../model.ts";
 import { formatDateTime } from "../runtime/display-format.ts";
+import type {
+  DormantIconActionControl,
+  DormantIconListItemNode,
+} from "../runtime/sdk12-icons.ts";
+import { HostIcon } from "./HostIcon.tsx";
 import { invokeIsolatedListAction } from "./list-row-action.ts";
 import { colors, radii, spacing } from "./theme.ts";
 
@@ -11,7 +16,8 @@ interface ListItemControlProps {
 }
 
 export function ListItemControl({ node, onInvokeAction }: ListItemControlProps) {
-  const primaryAction = node.primaryAction;
+  const iconNode = node as DormantIconListItemNode;
+  const primaryAction = iconNode.primaryAction;
   const summary = (
     <View
       style={[
@@ -19,14 +25,22 @@ export function ListItemControl({ node, onInvokeAction }: ListItemControlProps) 
         primaryAction?.disabled === true ? styles.disabledSummary : null,
       ]}
     >
+      {iconNode.leadingIcon === undefined ? null : (
+        <View style={styles.leadingIcon}>
+          <HostIcon name={iconNode.leadingIcon} tone="muted" />
+        </View>
+      )}
       <View style={styles.listCopy}>
-        <Text style={styles.listTitle}>{formatDateTime(node.title)}</Text>
-        {node.subtitle === undefined ? null : (
-          <Text style={styles.listSubtitle}>{node.subtitle}</Text>
+        <Text style={styles.listTitle}>{formatDateTime(iconNode.title)}</Text>
+        {iconNode.subtitle === undefined ? null : (
+          <Text style={styles.listSubtitle}>{iconNode.subtitle}</Text>
         )}
       </View>
-      {node.trailing === undefined ? null : (
-        <Text style={styles.listTrailing}>{node.trailing}</Text>
+      {iconNode.trailing === undefined ? null : (
+        <Text style={styles.listTrailing}>{iconNode.trailing}</Text>
+      )}
+      {primaryAction?.icon === undefined ? null : (
+        <HostIcon name={primaryAction.icon} tone="muted" />
       )}
     </View>
   );
@@ -50,34 +64,59 @@ export function ListItemControl({ node, onInvokeAction }: ListItemControlProps) 
           {summary}
         </Pressable>
       )}
-      {node.actions === undefined ? null : (
+      {iconNode.actions === undefined ? null : (
         <View style={styles.listActions}>
-          {node.actions.map((action, index) => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ disabled: action.disabled === true }}
-              disabled={action.disabled === true}
+          {iconNode.actions.map((action, index) => (
+            <ListActionButton
+              action={action}
+              index={index}
               key={`${action.action}-${index}`}
-              onPress={(event) => invokeIsolatedListAction(event, () => onInvokeAction(action))}
-              style={[
-                styles.listAction,
-                action.intent === "destructive" ? styles.destructiveListAction : null,
-                action.disabled === true ? styles.disabledAction : null,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.listActionText,
-                  action.intent === "destructive" ? styles.destructiveListActionText : null,
-                ]}
-              >
-                {action.label}
-              </Text>
-            </Pressable>
+              onInvokeAction={onInvokeAction}
+            />
           ))}
         </View>
       )}
     </View>
+  );
+}
+
+function ListActionButton({
+  action,
+  index,
+  onInvokeAction,
+}: {
+  readonly action: DormantIconActionControl;
+  readonly index: number;
+  readonly onInvokeAction: (control: ActionControl) => void;
+}) {
+  const destructive = action.intent === "destructive";
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: action.disabled === true }}
+      disabled={action.disabled === true}
+      key={`${action.action}-${index}`}
+      onPress={(event) => invokeIsolatedListAction(event, () => onInvokeAction(action))}
+      style={[
+        styles.listAction,
+        destructive ? styles.destructiveListAction : null,
+        action.disabled === true ? styles.disabledAction : null,
+      ]}
+    >
+      <View style={styles.actionContent}>
+        {action.icon === undefined ? null : (
+          <HostIcon name={action.icon} size="small" tone={destructive ? "danger" : "muted"} />
+        )}
+        <Text
+          style={[
+            styles.listActionText,
+            destructive ? styles.destructiveListActionText : null,
+          ]}
+        >
+          {action.label}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -101,6 +140,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     gap: spacing.item,
+  },
+  leadingIcon: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 32,
+    width: 32,
   },
   disabledSummary: {
     opacity: 0.45,
@@ -135,6 +180,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  actionContent: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 5,
   },
   destructiveListAction: {
     borderColor: colors.dangerBorder,
