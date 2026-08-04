@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, AppState, Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
   getHostNotificationStatus,
@@ -36,6 +36,16 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
 
   useEffect(() => {
     void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      void reconcileHostNotifications()
+        .then(refresh)
+        .catch((caught: unknown) => setError(errorMessage(caught)));
+    });
+    return () => subscription.remove();
   }, [refresh]);
 
   const run = useCallback(async (action: () => Promise<unknown>) => {
