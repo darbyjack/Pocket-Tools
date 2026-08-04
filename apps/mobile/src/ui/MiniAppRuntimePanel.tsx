@@ -4,8 +4,9 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import type { MiniAppInspection } from "../model";
 import { useMiniApp } from "../useMiniApp";
 import { ErrorNotice } from "./ErrorNotice";
+import { FeedbackNotice } from "./FeedbackNotice";
 import { MiniAppRenderer } from "./MiniAppRenderer";
-import { colors } from "./theme";
+import { colors, spacing } from "./theme";
 
 export interface MiniAppRuntimePanelProps {
   readonly source: string | null;
@@ -20,8 +21,18 @@ export function MiniAppRuntimePanel({
   onReady,
   onError,
 }: MiniAppRuntimePanelProps) {
-  const { error, inspection, loading, page, snapshot, invokeAction, navigate, updateSetting } =
-    useMiniApp(source, storageId);
+  const {
+    error,
+    feedback,
+    inspection,
+    loading,
+    page,
+    snapshot,
+    dismissFeedback,
+    invokeAction,
+    navigate,
+    updateSetting,
+  } = useMiniApp(source, storageId);
 
   useEffect(() => {
     if (error !== null) {
@@ -65,15 +76,20 @@ export function MiniAppRuntimePanel({
   }
 
   return (
-    <MiniAppRenderer
-      page={page}
-      settings={inspection.settings}
-      settingValues={snapshot.settings}
-      timers={snapshot.timers}
-      onAction={invokeAction}
-      onNavigate={navigate}
-      onSettingChange={updateSetting}
-    />
+    <View style={styles.runtime}>
+      {feedback === null ? null : (
+        <FeedbackNotice message={feedback} onDismiss={dismissFeedback} />
+      )}
+      <MiniAppRenderer
+        page={page}
+        settings={inspection.settings}
+        settingValues={snapshot.settings}
+        timers={snapshot.timers}
+        onAction={invokeAction}
+        onNavigate={navigate}
+        onSettingChange={updateSetting}
+      />
+    </View>
   );
 }
 
@@ -87,5 +103,8 @@ const styles = StyleSheet.create({
   loadingText: {
     color: colors.textMuted,
     fontSize: 15,
+  },
+  runtime: {
+    gap: spacing.item,
   },
 });
