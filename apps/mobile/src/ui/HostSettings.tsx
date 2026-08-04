@@ -8,6 +8,7 @@ export interface HostSettingsProps {
   readonly onBack: () => void;
   readonly onBackupAll: () => void;
   readonly onDiagnostics: () => void;
+  readonly onNotifications: () => void;
   readonly onRestoreAll: () => void;
   readonly onRestoreOne: () => void;
 }
@@ -16,6 +17,7 @@ export function HostSettings({
   onBack,
   onBackupAll,
   onDiagnostics,
+  onNotifications,
   onRestoreAll,
   onRestoreOne,
 }: HostSettingsProps) {
@@ -27,6 +29,10 @@ export function HostSettings({
         </Pressable>
         <Text style={styles.title}>Settings</Text>
       </View>
+
+      <SettingsSection title="Notifications">
+        <SettingsRow label="Notification settings" onPress={onNotifications} />
+      </SettingsSection>
 
       <SettingsSection title="Data">
         <SettingsRow label="Back up everything" onPress={onBackupAll} />
