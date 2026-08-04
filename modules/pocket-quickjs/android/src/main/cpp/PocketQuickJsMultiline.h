@@ -25,17 +25,25 @@ inline const char* multilineRunner() {
   };
 
   const sanitizeNode = (value, path, sdkVersion, state, depth) => {
-    if (depth > 16) fail("INVALID_UI_TREE", "The UI tree exceeds 16 levels.");
+    if (depth > 32) fail("INVALID_BRIDGE_VALUE", `${path} exceeds bridge depth limits.`);
     state.visited += 1;
-    if (state.visited > 512) fail("INVALID_UI_TREE", "The UI tree exceeds 512 nodes.");
+    if (state.visited > 10_000) {
+      fail("INVALID_BRIDGE_VALUE", `${path} exceeds bridge complexity limits.`);
+    }
+    if (value === null || typeof value !== "object") return value;
+    if (state.seen.has(value)) fail("INVALID_BRIDGE_VALUE", `${path} contains a circular reference.`);
+    state.seen.add(value);
 
     if (Array.isArray(value)) {
-      return value.map((entry, index) =>
+      const sanitized = value.map((entry, index) =>
         sanitizeNode(entry, `${path}[${index}]`, sdkVersion, state, depth + 1));
+      state.seen.delete(value);
+      return sanitized;
     }
-    if (!isPlainObject(value)) return value;
-    if (state.seen.has(value)) fail("INVALID_UI_TREE", `${path} contains a circular reference.`);
-    state.seen.add(value);
+    if (!isPlainObject(value)) {
+      state.seen.delete(value);
+      return value;
+    }
 
     const isTextInput = value.type === "text-input";
     const hasMultiline = Object.prototype.hasOwnProperty.call(value, "multiline");
