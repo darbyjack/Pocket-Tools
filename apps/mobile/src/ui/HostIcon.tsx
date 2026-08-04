@@ -1,42 +1,41 @@
-import AddSymbol from "@expo/material-symbols/add.xml";
-import AttachMoneySymbol from "@expo/material-symbols/attach_money.xml";
-import CalendarMonthSymbol from "@expo/material-symbols/calendar_month.xml";
-import CheckSymbol from "@expo/material-symbols/check.xml";
-import ContentCopySymbol from "@expo/material-symbols/content_copy.xml";
-import DeleteSymbol from "@expo/material-symbols/delete.xml";
-import EditSymbol from "@expo/material-symbols/edit.xml";
-import FormatListBulletedSymbol from "@expo/material-symbols/format_list_bulleted.xml";
-import InfoSymbol from "@expo/material-symbols/info.xml";
-import RefreshSymbol from "@expo/material-symbols/refresh.xml";
-import ScheduleSymbol from "@expo/material-symbols/schedule.xml";
-import SearchSymbol from "@expo/material-symbols/search.xml";
-import SettingsSymbol from "@expo/material-symbols/settings.xml";
-import ShareSymbol from "@expo/material-symbols/share.xml";
-import WarningSymbol from "@expo/material-symbols/warning.xml";
-import { Host, Icon } from "@expo/ui/jetpack-compose";
-import type { ComponentProps } from "react";
-import type { ColorValue } from "react-native";
+import {
+  CalendarDays,
+  Check,
+  Clock3,
+  Copy,
+  DollarSign,
+  Info,
+  List as ListIcon,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Settings,
+  Share2,
+  Trash2,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react-native";
+import { StyleSheet, View, type ColorValue } from "react-native";
 
 import type { UiIconName } from "../runtime/sdk12-icons.ts";
 
-type ExpoIconSource = ComponentProps<typeof Icon>["source"];
-
-const ICON_SOURCES: Readonly<Record<UiIconName, ExpoIconSource>> = {
-  add: AddSymbol,
-  edit: EditSymbol,
-  delete: DeleteSymbol,
-  check: CheckSymbol,
-  calendar: CalendarMonthSymbol,
-  clock: ScheduleSymbol,
-  copy: ContentCopySymbol,
-  share: ShareSymbol,
-  search: SearchSymbol,
-  settings: SettingsSymbol,
-  warning: WarningSymbol,
-  info: InfoSymbol,
-  money: AttachMoneySymbol,
-  list: FormatListBulletedSymbol,
-  refresh: RefreshSymbol,
+const ICONS: Readonly<Record<UiIconName, LucideIcon>> = {
+  add: Plus,
+  edit: Pencil,
+  delete: Trash2,
+  check: Check,
+  calendar: CalendarDays,
+  clock: Clock3,
+  copy: Copy,
+  share: Share2,
+  search: Search,
+  settings: Settings,
+  warning: TriangleAlert,
+  info: Info,
+  money: DollarSign,
+  list: ListIcon,
+  refresh: RefreshCw,
 };
 
 export type HostIconTone = "default" | "inverse" | "danger" | "muted";
@@ -48,14 +47,19 @@ interface HostIconProps {
 }
 
 export function HostIcon({ name, size = "medium", tone = "default" }: HostIconProps) {
+  const IconComponent = ICONS[name];
   const dimension = size === "small" ? 18 : 22;
+
   return (
-    <Host
+    <View
+      accessibilityElementsHidden
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
-      style={{ flexShrink: 0, height: dimension, width: dimension }}
+      style={[styles.icon, { height: dimension, width: dimension }]}
     >
-      <Icon source={ICON_SOURCES[name]} size={dimension} tint={iconColor(tone)} />
-    </Host>
+      <IconComponent color={iconColor(tone)} size={dimension} strokeWidth={2.25} />
+    </View>
   );
 }
 
@@ -71,3 +75,11 @@ function iconColor(tone: HostIconTone): ColorValue {
       return "#344054";
   }
 }
+
+const styles = StyleSheet.create({
+  icon: {
+    alignItems: "center",
+    flexShrink: 0,
+    justifyContent: "center",
+  },
+});
