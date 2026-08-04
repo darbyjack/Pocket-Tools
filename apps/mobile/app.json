@@ -5,14 +5,18 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
     "plugins": [
       "expo-dev-client",
       "./plugins/with-short-cmake-staging.cjs",
       "./plugins/with-arm64-release-optimization.cjs"
     ],
     "android": {
-      "package": "com.darbyjack.pockettools"
+      "package": "com.darbyjack.pockettools",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#EEF1F5"
+      }
     }
   }
 }
