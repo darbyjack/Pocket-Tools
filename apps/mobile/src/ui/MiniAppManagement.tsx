@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { InstalledMiniApp } from "../storage/database";
@@ -72,7 +73,7 @@ function ManagementSection({
   children,
   title,
 }: {
-  readonly children: React.ReactNode;
+  readonly children: ReactNode;
   readonly title: string;
 }) {
   return (
