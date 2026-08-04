@@ -115,20 +115,25 @@ internal object PocketNotificationScheduler {
   }
 
   fun getOpenTarget(context: Context, hostId: String): String? {
+    val prefs = preferences(context)
     val key = ROUTE_PREFIX + hostId
-    val json = preferences(context).getString(key, null) ?: return null
+    val json = prefs.getString(key, null) ?: return null
     return try {
       val route = JSONObject(json)
+      val hasActiveSchedule = prefs.contains(SCHEDULE_PREFIX + hostId)
       val storedAt = route.optLong("storedAt", 0L)
-      if (storedAt <= 0L || System.currentTimeMillis() - storedAt > ROUTE_RETENTION_MILLISECONDS) {
-        preferences(context).edit().remove(key).remove(DELIVERED_PREFIX + hostId).apply()
+      if (
+        !hasActiveSchedule &&
+        (storedAt <= 0L || System.currentTimeMillis() - storedAt > ROUTE_RETENTION_MILLISECONDS)
+      ) {
+        prefs.edit().remove(key).remove(DELIVERED_PREFIX + hostId).apply()
         null
       } else {
         route.remove("storedAt")
         route.toString()
       }
     } catch (_: Exception) {
-      preferences(context).edit().remove(key).remove(DELIVERED_PREFIX + hostId).apply()
+      prefs.edit().remove(key).remove(DELIVERED_PREFIX + hostId).apply()
       null
     }
   }
@@ -375,8 +380,7 @@ internal object PocketNotificationScheduler {
       if (!key.startsWith(SCHEDULE_PREFIX)) continue
       val hostId = key.removePrefix(SCHEDULE_PREFIX)
       if (hostId !in incomingHostIds) {
-        cancelAlarm(context, hostId)
-        removeSchedule(context, hostId)
+        cancelHost(context, hostId, removeRoute = true)
       }
     }
   }
