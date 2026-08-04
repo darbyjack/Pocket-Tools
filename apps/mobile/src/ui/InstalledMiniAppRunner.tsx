@@ -3,41 +3,27 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { InstalledMiniApp } from "../storage/database";
 import { MiniAppRuntimePanel } from "./MiniAppRuntimePanel";
 import { ScreenScrollView } from "./ScreenScrollView";
+import { colors, radii, spacing } from "./theme";
 
 export interface InstalledMiniAppRunnerProps {
   readonly app: InstalledMiniApp;
   readonly onBack: () => void;
-  readonly onBackup: () => void;
-  readonly onDuplicate: () => void;
-  readonly onEdit: () => void;
-  readonly onExport: () => void;
-  readonly onRollback: () => void;
+  readonly onManage: () => void;
 }
 
-export function InstalledMiniAppRunner({
-  app,
-  onBack,
-  onBackup,
-  onDuplicate,
-  onEdit,
-  onExport,
-  onRollback,
-}: InstalledMiniAppRunnerProps) {
-  const canRollback = app.activeSource !== app.lastKnownGoodSource;
-
+export function InstalledMiniAppRunner({ app, onBack, onManage }: InstalledMiniAppRunnerProps) {
   return (
     <ScreenScrollView contentContainerStyle={styles.content}>
       <View style={styles.toolbar}>
-        <Pressable accessibilityRole="button" onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Library</Text>
+        <Pressable accessibilityRole="button" onPress={onBack} style={styles.toolbarButton}>
+          <Text style={styles.toolbarButtonText}>Back</Text>
         </Pressable>
-        <View style={styles.toolbarActions}>
-          <ToolbarAction label="Edit" onPress={onEdit} />
-          <ToolbarAction label="Duplicate" onPress={onDuplicate} />
-          <ToolbarAction label="Export" onPress={onExport} />
-          <ToolbarAction label="Backup" onPress={onBackup} />
-          {canRollback ? <ToolbarAction label="Roll back" onPress={onRollback} /> : null}
-        </View>
+        <Text numberOfLines={1} style={styles.title}>
+          {app.name}
+        </Text>
+        <Pressable accessibilityRole="button" onPress={onManage} style={styles.toolbarButton}>
+          <Text style={styles.toolbarButtonText}>Manage</Text>
+        </Pressable>
       </View>
 
       <MiniAppRuntimePanel source={app.activeSource} storageId={app.id} />
@@ -45,60 +31,37 @@ export function InstalledMiniAppRunner({
   );
 }
 
-function ToolbarAction({
-  label,
-  onPress,
-}: {
-  readonly label: string;
-  readonly onPress: () => void;
-}) {
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.actionButton}>
-      <Text style={styles.actionButtonText}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   content: {
-    gap: 16,
-    padding: 18,
+    gap: spacing.item,
+    padding: spacing.screen,
     paddingBottom: 48,
   },
   toolbar: {
     alignItems: "center",
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    justifyContent: "space-between",
+    gap: 12,
   },
-  backButton: {
-    backgroundColor: "#ffffff",
-    borderColor: "#d0d5dd",
-    borderRadius: 10,
+  title: {
+    color: colors.text,
+    flex: 1,
+    fontSize: 20,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  toolbarButton: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.button,
     borderWidth: 1,
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-  },
-  backButtonText: {
-    color: "#344054",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  toolbarActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 7,
-  },
-  actionButton: {
-    backgroundColor: "#172033",
-    borderRadius: 10,
+    minWidth: 70,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
-  actionButtonText: {
-    color: "#ffffff",
-    fontSize: 13,
+  toolbarButtonText: {
+    color: colors.brand,
+    fontSize: 14,
     fontWeight: "700",
+    textAlign: "center",
   },
 });
