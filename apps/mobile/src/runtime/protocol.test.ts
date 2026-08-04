@@ -4,7 +4,6 @@ import test from "node:test";
 import {
   metricValue,
   MiniAppRuntimeError,
-  parseDormantSdk12RuntimeResponse,
   parseRuntimeResponse,
   settingIsVisible,
   timerElapsedSeconds,
@@ -144,7 +143,7 @@ test("parses an SDK 1.1 inspection and CRUD operations", () => {
   assert.equal(response.value.operations.length, 2);
 });
 
-test("parses dormant SDK 1.2 setting operations structurally", () => {
+test("parses public SDK 1.2 setting operations", () => {
   const response = parseRuntimeResponse(
     success({
       operations: [
@@ -160,46 +159,68 @@ test("parses dormant SDK 1.2 setting operations structurally", () => {
   ]);
 });
 
-test("parses dormant SDK 1.2 date definitions and nodes only through the guarded path", () => {
-  const inspectionJson = success({ inspection: sdk12DateInspection() });
-  assert.throws(
-    () => parseRuntimeResponse(inspectionJson),
-    (error: unknown) => error instanceof MiniAppRuntimeError && error.code === "VALIDATION_FAILED",
-  );
-
-  const inspection = parseDormantSdk12RuntimeResponse(inspectionJson).value.inspection;
+test("parses public SDK 1.2 date definitions and nodes through the normal path", () => {
+  const inspection = parseRuntimeResponse(
+    success({ inspection: sdk12DateInspection() }),
+  ).value.inspection;
   assert.equal(inspection?.manifest.sdkVersion, "1.2");
   assert.equal(inspection?.settings.dueDate?.type, "date");
-  assert.equal("hostSdkVersion" in (inspection?.settings.reminderAt ?? {}), true);
-  assert.equal(
-    "hostSdkVersion" in (inspection?.collections.entries?.fields.recordedAt ?? {}),
-    true,
-  );
+  assert.equal(inspection?.settings.reminderAt?.type, "datetime");
+  assert.equal(inspection?.collections.entries?.fields.recordedAt?.type, "datetime");
 
-  const pageJson = success({
-    page: {
-      type: "page",
-      title: "Date Tool",
-      children: [
-        { type: "date-input", setting: "dueDate" },
-        { type: "datetime-input", setting: "reminderAt" },
-      ],
-    },
-  });
-  assert.throws(
-    () => parseRuntimeResponse(pageJson),
-    (error: unknown) => error instanceof MiniAppRuntimeError && error.code === "INVALID_UI_TREE",
-  );
-  assert.equal(parseDormantSdk12RuntimeResponse(pageJson).value.page?.children.length, 2);
+  const page = parseRuntimeResponse(
+    success({
+      page: {
+        type: "page",
+        title: "Date Tool",
+        children: [
+          { type: "date-input", setting: "dueDate" },
+          { type: "datetime-input", setting: "reminderAt" },
+        ],
+      },
+    }),
+  ).value.page;
+  assert.equal(page?.children.length, 2);
 });
 
-test("rejects malformed dormant temporal definitions", () => {
+test("parses public SDK 1.2 notifications and host effects", () => {
+  const response = parseRuntimeResponse(
+    success({
+      operations: [
+        {
+          type: "notification-schedule",
+          request: {
+            id: "dailyReview",
+            title: "Review entries",
+            body: "Open your saved entries.",
+            trigger: { type: "daily", hour: 9, minute: 15, delivery: "standard" },
+            open: { screen: "home", input: { source: "notification" } },
+          },
+        },
+        { type: "notification-cancel", notificationId: "oldReminder" },
+        { type: "notification-cancel-all" },
+      ],
+      effects: [
+        { type: "feedback", message: "Saved" },
+        { type: "share", title: "Entries", text: "One saved entry" },
+      ],
+    }),
+  );
+
+  assert.equal(response.value.operations.length, 3);
+  assert.deepEqual(response.value.effects, [
+    { type: "feedback", message: "Saved" },
+    { type: "share", title: "Entries", text: "One saved entry" },
+  ]);
+});
+
+test("rejects malformed public temporal definitions", () => {
   const invalid = sdk12DateInspection();
   invalid.settings.dueDate.default = "2026-02-30";
   invalid.settings.reminderAt.default = "2026-08-03T22:30:00.000-05:00";
 
   assert.throws(
-    () => parseDormantSdk12RuntimeResponse(success({ inspection: invalid })),
+    () => parseRuntimeResponse(success({ inspection: invalid })),
     (error: unknown) => {
       if (!(error instanceof MiniAppRuntimeError) || error.code !== "VALIDATION_FAILED")
         return false;
@@ -250,7 +271,7 @@ test("preserves structured sandbox errors and captured logs", () => {
   );
 });
 
-test("rejects malformed envelopes, inspections, and operations", () => {
+test("rejects malformed envelopes, inspections, operations, and effects", () => {
   assert.throws(
     () => parseRuntimeResponse("not-json"),
     (error: unknown) =>
@@ -297,13 +318,8 @@ test("rejects malformed envelopes, inspections, and operations", () => {
   assert.throws(
     () =>
       parseRuntimeResponse(
-        JSON.stringify({
-          ok: true,
-          value: {
-            operations: [{ type: "remove", collection: "entries", id: "id", extra: true }],
-          },
-          logs: [],
-          logsTruncated: false,
+        success({
+          operations: [{ type: "remove", collection: "entries", id: "id", extra: true }],
         }),
       ),
     (error: unknown) =>
@@ -323,6 +339,14 @@ test("rejects malformed envelopes, inspections, and operations", () => {
     () =>
       parseRuntimeResponse(
         success({ operations: [{ type: "setting-set", setting: "draftTitle" }] }),
+      ),
+    (error: unknown) =>
+      error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
+  );
+  assert.throws(
+    () =>
+      parseRuntimeResponse(
+        success({ effects: [{ type: "feedback", message: "Saved", extra: true }] }),
       ),
     (error: unknown) =>
       error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
