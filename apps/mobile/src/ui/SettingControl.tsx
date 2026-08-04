@@ -2,13 +2,21 @@ import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
-import type { SerializableValue, SettingDefinition } from "../model";
+import type {
+  MultiSelectSetting as MultiSelectSettingDefinition,
+  SerializableValue,
+  SettingDefinition,
+} from "../model";
 import {
   dateStringToLocalDate,
   dateTimeStringToDate,
   localDateToDateString,
 } from "../runtime/date-values.ts";
 import type { NumberInputDecimalPlaces } from "../runtime/sdk12-number-input-model.ts";
+import {
+  normalizeMultiSelectValue,
+  selectValueKey,
+} from "../runtime/sdk12-multiselect.ts";
 import {
   DEFAULT_MULTILINE_LINES,
   multilineInputHeight,
@@ -94,6 +102,18 @@ export function SettingControl({
     );
   }
 
+  if (definition.type === "multi-select") {
+    return (
+      <MultiSelectSetting
+        name={name}
+        definition={definition}
+        value={value}
+        label={label}
+        onChange={onChange}
+      />
+    );
+  }
+
   if (definition.type === "date" || definition.type === "datetime") {
     return (
       <TemporalSetting
@@ -131,6 +151,118 @@ export function SettingControl({
       {...(decimalPlaces === undefined ? {} : { decimalPlaces })}
       onChange={onChange}
     />
+  );
+}
+
+interface MultiSelectSettingProps {
+  readonly name: string;
+  readonly definition: MultiSelectSettingDefinition;
+  readonly value: SerializableValue;
+  readonly label: string;
+  readonly onChange: (name: string, value: SerializableValue) => Promise<void>;
+}
+
+function MultiSelectSetting({
+  name,
+  definition,
+  value,
+  label,
+  onChange,
+}: MultiSelectSettingProps) {
+  let persistedValues = definition.default;
+  try {
+    persistedValues = normalizeMultiSelectValue(definition, value, `settings.${name}`);
+  } catch {
+    persistedValues = definition.default;
+  }
+
+  const persistedSignature = JSON.stringify(persistedValues.map(selectValueKey));
+  const [draftSignature, setDraftSignature] = useState(persistedSignature);
+  useEffect(() => setDraftSignature(persistedSignature), [persistedSignature]);
+
+  const draftKeys = new Set<string>(JSON.parse(draftSignature) as string[]);
+  const draftValues = definition.options
+    .filter((option) => draftKeys.has(selectValueKey(option.value)))
+    .map((option) => option.value);
+  const minimum = definition.minSelections ?? 0;
+  const maximum = definition.maxSelections ?? definition.options.length;
+  const valid = draftValues.length >= minimum && draftValues.length <= maximum;
+  const changed = draftSignature !== persistedSignature;
+  const selectionHint =
+    minimum === maximum
+      ? `Select exactly ${minimum} option${minimum === 1 ? "" : "s"}`
+      : `Select between ${minimum} and ${maximum} options`;
+
+  const toggle = (key: string, selected: boolean) => {
+    const nextKeys = new Set(draftKeys);
+    if (selected) nextKeys.delete(key);
+    else nextKeys.add(key);
+    setDraftSignature(JSON.stringify([...nextKeys]));
+  };
+
+  const commit = () => {
+    if (!changed || !valid) return;
+    void onChange(name, draftValues);
+  };
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      {definition.description === undefined ? null : (
+        <Text style={styles.description}>{definition.description}</Text>
+      )}
+      <Text accessibilityLiveRegion="polite" style={styles.selectionSummary}>
+        {draftValues.length} selected. {selectionHint}.
+      </Text>
+      <View style={styles.optionRow}>
+        {definition.options.map((option) => {
+          const key = selectValueKey(option.value);
+          const selected = draftKeys.has(key);
+          const disabled = !selected && draftValues.length >= maximum;
+          return (
+            <Pressable
+              key={key}
+              accessibilityHint={selectionHint}
+              accessibilityLabel={`${label}: ${option.label}`}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: selected, disabled }}
+              disabled={disabled}
+              onPress={() => toggle(key, selected)}
+              style={[
+                styles.option,
+                selected && styles.optionSelected,
+                disabled && styles.optionDisabled,
+              ]}
+            >
+              <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <View style={styles.multiSelectActions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !changed }}
+          disabled={!changed}
+          onPress={() => setDraftSignature(persistedSignature)}
+          style={[styles.secondaryAction, !changed && styles.optionDisabled]}
+        >
+          <Text style={styles.secondaryActionText}>Discard</Text>
+        </Pressable>
+        <Pressable
+          accessibilityHint={valid ? "Save selected options" : selectionHint}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !changed || !valid }}
+          disabled={!changed || !valid}
+          onPress={commit}
+          style={[styles.applyAction, (!changed || !valid) && styles.optionDisabled]}
+        >
+          <Text style={styles.applyActionText}>Apply</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -402,6 +534,10 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
   },
+  selectionSummary: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
   input: {
     backgroundColor: colors.surfaceMuted,
     borderColor: colors.border,
@@ -469,6 +605,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
     borderColor: colors.brand,
   },
+  optionDisabled: {
+    opacity: 0.55,
+  },
   optionText: {
     color: colors.text,
     fontSize: 15,
@@ -477,5 +616,35 @@ const styles = StyleSheet.create({
   },
   optionTextSelected: {
     color: colors.surface,
+  },
+  multiSelectActions: {
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "flex-end",
+  },
+  secondaryAction: {
+    alignItems: "center",
+    borderColor: colors.border,
+    borderRadius: radii.button,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  secondaryActionText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  applyAction: {
+    alignItems: "center",
+    backgroundColor: colors.brand,
+    borderRadius: radii.button,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  applyActionText: {
+    color: colors.surface,
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

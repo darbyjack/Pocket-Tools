@@ -9,6 +9,9 @@ import type {
   FieldDefinition,
   MiniAppInspection,
   MiniAppManifest,
+  MultiSelectSetting,
+  SelectOption,
+  SelectValue,
   SettingDefinition,
 } from "../model.ts";
 import {
@@ -34,10 +37,41 @@ export function validateDormantSdk12Definition(input: DormantDefinitionInput): {
   const issues: ValidationIssue[] = [];
   const normalizedSettings: Record<string, SettingDefinition> = {};
   const transformedSettings: Record<string, unknown> = {};
+  const multiSelectNames = new Set(
+    Object.entries(input.settings)
+      .filter(([, rawValue]) => asObject(rawValue)?.type === "multi-select")
+      .map(([name]) => name),
+  );
 
   for (const [name, rawValue] of Object.entries(input.settings)) {
     const path = `settings.${name}`;
     const value = asObject(rawValue);
+    if (value?.type === "multi-select") {
+      exactKeys(
+        value,
+        [
+          "type",
+          "label",
+          "description",
+          "default",
+          "visibleWhen",
+          "options",
+          "minSelections",
+          "maxSelections",
+        ],
+        path,
+        issues,
+      );
+      const normalizedDefault = validateMultiSelectDefinition(value, path, issues);
+      normalizedSettings[name] = {
+        ...value,
+        default: normalizedDefault,
+        hostSdkVersion: "1.2",
+      } as unknown as MultiSelectSetting;
+      transformedSettings[name] = transformMultiSelectSetting(value);
+      continue;
+    }
+
     if (value === null || (value.type !== "date" && value.type !== "datetime")) {
       normalizedSettings[name] = rawValue as SettingDefinition;
       transformedSettings[name] = rawValue;
@@ -56,6 +90,17 @@ export function validateDormantSdk12Definition(input: DormantDefinitionInput): {
       hostSdkVersion: "1.2",
     } as unknown as SettingDefinition;
     transformedSettings[name] = transformTemporalSetting(value);
+  }
+
+  for (const [name, rawValue] of Object.entries(input.settings)) {
+    const visibleWhen = asObject(asObject(rawValue)?.visibleWhen);
+    if (typeof visibleWhen?.setting === "string" && multiSelectNames.has(visibleWhen.setting)) {
+      addIssue(
+        issues,
+        `settings.${name}.visibleWhen.setting`,
+        "Multi-select settings cannot be used for visibility comparisons.",
+      );
+    }
   }
 
   const normalizedCollections: Record<string, CollectionDefinition> = {};
@@ -129,6 +174,109 @@ export function validateDormantSdk12Definition(input: DormantDefinitionInput): {
   };
 }
 
+function validateMultiSelectDefinition(
+  value: PlainObject,
+  path: string,
+  issues: ValidationIssue[],
+): readonly SelectValue[] {
+  const rawOptions = Array.isArray(value.options) ? value.options : [];
+  const validOptions: SelectOption[] = [];
+  const declared = new Set<string>();
+  for (const rawOption of rawOptions) {
+    const option = asObject(rawOption);
+    if (option === null || !isSelectValue(option.value)) continue;
+    const key = selectValueKey(option.value);
+    if (declared.has(key)) continue;
+    declared.add(key);
+    validOptions.push(option as unknown as SelectOption);
+  }
+
+  validateSelectionBound(
+    value.minSelections,
+    `${path}.minSelections`,
+    rawOptions.length,
+    issues,
+  );
+  validateSelectionBound(
+    value.maxSelections,
+    `${path}.maxSelections`,
+    rawOptions.length,
+    issues,
+  );
+  if (
+    typeof value.minSelections === "number" &&
+    Number.isInteger(value.minSelections) &&
+    typeof value.maxSelections === "number" &&
+    Number.isInteger(value.maxSelections) &&
+    value.minSelections > value.maxSelections
+  ) {
+    addIssue(issues, path, "Minimum selections cannot exceed maximum selections.");
+  }
+
+  if (!Array.isArray(value.default)) {
+    addIssue(issues, `${path}.default`, "Must be an array of declared option values.");
+    return [];
+  }
+
+  const selected = new Set<string>();
+  for (const [index, entry] of value.default.entries()) {
+    if (!isSelectValue(entry)) {
+      addIssue(
+        issues,
+        `${path}.default[${index}]`,
+        "Must be a finite string, number, or boolean option value.",
+      );
+      continue;
+    }
+    const key = selectValueKey(entry);
+    if (!declared.has(key)) {
+      addIssue(issues, `${path}.default[${index}]`, "Must match a declared option value.");
+      continue;
+    }
+    if (selected.has(key)) {
+      addIssue(issues, `${path}.default[${index}]`, "Default selections must be unique.");
+      continue;
+    }
+    selected.add(key);
+  }
+
+  const minimum =
+    typeof value.minSelections === "number" && Number.isInteger(value.minSelections)
+      ? value.minSelections
+      : 0;
+  const maximum =
+    typeof value.maxSelections === "number" && Number.isInteger(value.maxSelections)
+      ? value.maxSelections
+      : rawOptions.length;
+  if (selected.size < minimum) {
+    addIssue(issues, `${path}.default`, "Must satisfy the minimum selection count.");
+  }
+  if (selected.size > maximum) {
+    addIssue(issues, `${path}.default`, "Must satisfy the maximum selection count.");
+  }
+
+  return validOptions
+    .filter((option) => selected.has(selectValueKey(option.value)))
+    .map((option) => option.value);
+}
+
+function validateSelectionBound(
+  value: unknown,
+  path: string,
+  optionCount: number,
+  issues: ValidationIssue[],
+): void {
+  if (
+    value !== undefined &&
+    (typeof value !== "number" ||
+      !Number.isInteger(value) ||
+      value < 0 ||
+      value > optionCount)
+  ) {
+    addIssue(issues, path, `Must be an integer from 0 to ${optionCount}.`);
+  }
+}
+
 function validateTemporalDefinition(
   value: PlainObject,
   path: string,
@@ -177,6 +325,18 @@ function validateTemporalDefinition(
   }
 }
 
+function transformMultiSelectSetting(value: PlainObject): PlainObject {
+  const firstOption = Array.isArray(value.options) ? asObject(value.options[0]) : null;
+  const transformed: PlainObject = {
+    ...value,
+    type: "select",
+    default: isSelectValue(firstOption?.value) ? firstOption.value : "",
+  };
+  delete transformed.minSelections;
+  delete transformed.maxSelections;
+  return transformed;
+}
+
 function transformTemporalSetting(value: PlainObject): PlainObject {
   const transformed: PlainObject = { ...value, type: "text" };
   delete transformed.min;
@@ -192,6 +352,18 @@ function transformTemporalField(value: PlainObject): PlainObject {
   delete transformed.min;
   delete transformed.max;
   return transformed;
+}
+
+function isSelectValue(value: unknown): value is SelectValue {
+  return (
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    (typeof value === "number" && Number.isFinite(value))
+  );
+}
+
+function selectValueKey(value: SelectValue): string {
+  return `${typeof value}:${String(value)}`;
 }
 
 function exactKeys(
