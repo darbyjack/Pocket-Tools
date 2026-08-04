@@ -291,9 +291,15 @@ inline const char* everydayQueryRunner() {
     average(fieldName, query) {
       const values = numericValues(baseCollection, definition, collectionName, fieldName, query);
       if (values.length === 0) return null;
-      let total = 0;
-      for (const value of values) total = finiteResult(total + value, "average");
-      return finiteResult(total / values.length, "average");
+      let result = 0;
+      for (let index = 0; index < values.length; index += 1) {
+        const count = index + 1;
+        result = finiteResult(
+          result * ((count - 1) / count) + values[index] / count,
+          "average",
+        );
+      }
+      return result;
     },
   });
 
