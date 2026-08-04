@@ -1,7 +1,7 @@
-#include "PocketQuickJsMultiSelect.h"
+#include "PocketQuickJsBadge.h"
 
-#define kSdk multiSelectSdk()
-#define kRunner multiSelectRunner()
+#define kSdk badgeSdk()
+#define kRunner badgeRunner()
 #include "PocketQuickJsRuntime.cpp"
 #undef kRunner
 #undef kSdk

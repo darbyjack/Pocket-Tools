@@ -64,9 +64,7 @@ export function stepNumberInputValue(
   const normalizedDecimalPlaces = options.decimalPlaces ?? precisionAsHint(precision);
   return normalizeNumberInputValue(next, {
     ...options,
-    ...(normalizedDecimalPlaces === undefined
-      ? {}
-      : { decimalPlaces: normalizedDecimalPlaces }),
+    ...(normalizedDecimalPlaces === undefined ? {} : { decimalPlaces: normalizedDecimalPlaces }),
   });
 }
 

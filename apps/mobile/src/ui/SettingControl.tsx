@@ -13,10 +13,7 @@ import {
   localDateToDateString,
 } from "../runtime/date-values.ts";
 import type { NumberInputDecimalPlaces } from "../runtime/sdk12-number-input-model.ts";
-import {
-  normalizeMultiSelectValue,
-  selectValueKey,
-} from "../runtime/sdk12-multiselect.ts";
+import { normalizeMultiSelectValue, selectValueKey } from "../runtime/sdk12-multiselect.ts";
 import {
   DEFAULT_MULTILINE_LINES,
   multilineInputHeight,
@@ -162,13 +159,7 @@ interface MultiSelectSettingProps {
   readonly onChange: (name: string, value: SerializableValue) => Promise<void>;
 }
 
-function MultiSelectSetting({
-  name,
-  definition,
-  value,
-  label,
-  onChange,
-}: MultiSelectSettingProps) {
+function MultiSelectSetting({ name, definition, value, label, onChange }: MultiSelectSettingProps) {
   let persistedValues = definition.default;
   try {
     persistedValues = normalizeMultiSelectValue(definition, value, `settings.${name}`);

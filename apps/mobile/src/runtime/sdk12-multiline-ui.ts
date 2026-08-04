@@ -1,11 +1,10 @@
-import type {
-  MiniAppInspection,
-  PageNode,
-  SettingDefinition,
-} from "../model.ts";
+import type { MiniAppInspection, PageNode, SettingDefinition } from "../model.ts";
+import { BADGE_TONES } from "./sdk12-badge.ts";
 import { validatePageNode, type UiValidationOptions } from "./ui-validation.ts";
 
 type PlainObject = Record<string, unknown>;
+
+const BADGE_TONE_SET = new Set<string>(BADGE_TONES);
 
 export function validatePageNodeWithDormantFormHints(
   value: unknown,
@@ -89,17 +88,40 @@ function visit(value: unknown, path: string, supportsSdk12: boolean): unknown {
     exactKeys(value, ["type", "setting", "label"], path);
   }
 
+  const isBadge = value.type === "badge";
+  if (isBadge) {
+    if (!supportsSdk12) fail(path, "Badge nodes require SDK 1.2.");
+    exactKeys(value, ["type", "text", "tone"], path);
+    if (typeof value.text !== "string") {
+      fail(`${path}.text`, "Expected text.");
+    }
+    const textLength = Array.from(value.text).length;
+    if (textLength < 1 || textLength > 80) {
+      fail(`${path}.text`, "Expected 1 to 80 characters.");
+    }
+    if (
+      value.tone !== undefined &&
+      (typeof value.tone !== "string" || !BADGE_TONE_SET.has(value.tone))
+    ) {
+      fail(`${path}.tone`, "Expected neutral, info, success, warning, or danger.");
+    }
+  }
+
   const copy: PlainObject = {};
   for (const [key, entry] of Object.entries(value)) {
     if (isTextInput && (key === "multiline" || key === "minLines")) continue;
     if (isNumberInput && (key === "step" || key === "decimalPlaces")) continue;
+    if (isBadge && key === "tone") continue;
     copy[key] = visit(entry, `${path}.${key}`, supportsSdk12);
   }
   if (isMultiSelect) copy.type = "select";
+  if (isBadge) copy.type = "text";
   return copy;
 }
 
-function legacyInspection(inspection: MiniAppInspection | undefined): MiniAppInspection | undefined {
+function legacyInspection(
+  inspection: MiniAppInspection | undefined,
+): MiniAppInspection | undefined {
   if (inspection === undefined) return undefined;
   return {
     ...inspection,

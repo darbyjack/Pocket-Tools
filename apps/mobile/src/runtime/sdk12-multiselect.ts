@@ -1,8 +1,4 @@
-import type {
-  MultiSelectSetting,
-  SelectValue,
-  SerializableValue,
-} from "../model.ts";
+import type { MultiSelectSetting, SelectValue, SerializableValue } from "../model.ts";
 
 export function selectValueKey(value: SelectValue): string {
   return `${typeof value}:${String(value)}`;

@@ -27,10 +27,11 @@ test("accepts canonical declared multi-select values", () => {
 });
 
 test("normalizes selections into option declaration order", () => {
-  assert.deepEqual(
-    normalizeMultiSelectValue(definition, [2, "work", true], "settings.tags"),
-    ["work", true, 2],
-  );
+  assert.deepEqual(normalizeMultiSelectValue(definition, [2, "work", true], "settings.tags"), [
+    "work",
+    true,
+    2,
+  ]);
 });
 
 test("rejects non-canonical, duplicate, and unknown selections", () => {

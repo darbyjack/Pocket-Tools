@@ -191,18 +191,8 @@ function validateMultiSelectDefinition(
     validOptions.push(option as unknown as SelectOption);
   }
 
-  validateSelectionBound(
-    value.minSelections,
-    `${path}.minSelections`,
-    rawOptions.length,
-    issues,
-  );
-  validateSelectionBound(
-    value.maxSelections,
-    `${path}.maxSelections`,
-    rawOptions.length,
-    issues,
-  );
+  validateSelectionBound(value.minSelections, `${path}.minSelections`, rawOptions.length, issues);
+  validateSelectionBound(value.maxSelections, `${path}.maxSelections`, rawOptions.length, issues);
   if (
     typeof value.minSelections === "number" &&
     Number.isInteger(value.minSelections) &&
@@ -268,10 +258,7 @@ function validateSelectionBound(
 ): void {
   if (
     value !== undefined &&
-    (typeof value !== "number" ||
-      !Number.isInteger(value) ||
-      value < 0 ||
-      value > optionCount)
+    (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > optionCount)
   ) {
     addIssue(issues, path, `Must be an integer from 0 to ${optionCount}.`);
   }
