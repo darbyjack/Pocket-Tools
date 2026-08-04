@@ -1,10 +1,11 @@
 import type { CollectionDefinition, DataClient } from "./data.js";
+import type { FeedbackClient, NotificationClient, OutputClient } from "./runtime.js";
 import type { SettingDefinition, SettingsClient } from "./settings.js";
 import type { TimerClient } from "./timers.js";
 import type { PageNode } from "./ui.js";
 import type { SerializableValue } from "./values.js";
-export declare const SDK_VERSION: "1.1";
-export declare const SUPPORTED_SDK_VERSIONS: readonly ["1.0", "1.1"];
+export declare const SDK_VERSION: "1.2";
+export declare const SUPPORTED_SDK_VERSIONS: readonly ["1.0", "1.1", "1.2"];
 export type SdkVersion = (typeof SUPPORTED_SDK_VERSIONS)[number];
 export declare function normalizeSdkVersion(value: unknown): SdkVersion | null;
 export interface MiniAppManifest {
@@ -18,6 +19,9 @@ export interface MiniAppContext {
     readonly settings: SettingsClient;
     readonly data: DataClient;
     readonly timers: TimerClient;
+    readonly notifications: NotificationClient;
+    readonly output: OutputClient;
+    readonly feedback: FeedbackClient;
     readonly now: () => string;
 }
 export type ScreenRenderer = (context: MiniAppContext, input: SerializableValue | undefined) => PageNode;
