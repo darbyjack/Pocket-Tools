@@ -22,7 +22,12 @@ export function InstalledMiniAppRunner({
   onManage,
 }: InstalledMiniAppRunnerProps) {
   return (
-    <ScreenScrollView contentContainerStyle={styles.content}>
+    <ScreenScrollView
+      contentContainerStyle={styles.content}
+      keyboardAware
+      keyboardShouldPersistTaps="handled"
+      nestedScrollEnabled
+    >
       <View style={styles.toolbar}>
         <Pressable accessibilityRole="button" onPress={onBack} style={styles.toolbarButton}>
           <Text style={styles.toolbarButtonText}>Back</Text>

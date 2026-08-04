@@ -196,6 +196,12 @@ function NodeView(props: NodeViewProps) {
           {...(node.type !== "text-input" || node.placeholder === undefined
             ? {}
             : { placeholder: node.placeholder })}
+          {...(node.type !== "text-input" || node.multiline === undefined
+            ? {}
+            : { multiline: node.multiline })}
+          {...(node.type !== "text-input" || node.minLines === undefined
+            ? {}
+            : { minLines: node.minLines })}
           onChange={onSettingChange}
         />
       );

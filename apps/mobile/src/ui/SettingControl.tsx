@@ -8,6 +8,12 @@ import {
   dateTimeStringToDate,
   localDateToDateString,
 } from "../runtime/date-values.ts";
+import {
+  DEFAULT_MULTILINE_LINES,
+  multilineInputHeight,
+  type MultilineLineCount,
+} from "./multiline-input-layout.ts";
+import { colors, radii } from "./theme.ts";
 
 interface SettingControlProps {
   readonly name: string;
@@ -15,6 +21,8 @@ interface SettingControlProps {
   readonly value: SerializableValue;
   readonly label?: string;
   readonly placeholder?: string;
+  readonly multiline?: boolean;
+  readonly minLines?: MultilineLineCount;
   readonly onChange: (name: string, value: SerializableValue) => Promise<void>;
 }
 
@@ -24,6 +32,8 @@ export function SettingControl({
   value,
   label = definition.label,
   placeholder,
+  multiline = false,
+  minLines,
   onChange,
 }: SettingControlProps) {
   if (definition.type === "boolean") {
@@ -93,6 +103,8 @@ export function SettingControl({
         definition={definition}
         value={typeof value === "string" ? value : definition.default}
         label={label}
+        multiline={multiline}
+        {...(minLines === undefined ? {} : { minLines })}
         {...(placeholder === undefined ? {} : { placeholder })}
         onChange={onChange}
       />
@@ -191,10 +203,21 @@ interface TextSettingProps {
   readonly value: string;
   readonly label: string;
   readonly placeholder?: string;
+  readonly multiline: boolean;
+  readonly minLines?: MultilineLineCount;
   readonly onChange: (name: string, value: SerializableValue) => Promise<void>;
 }
 
-function TextSetting({ name, definition, value, label, placeholder, onChange }: TextSettingProps) {
+function TextSetting({
+  name,
+  definition,
+  value,
+  label,
+  placeholder,
+  multiline,
+  minLines,
+  onChange,
+}: TextSettingProps) {
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
 
@@ -209,6 +232,8 @@ function TextSetting({ name, definition, value, label, placeholder, onChange }: 
     void onChange(name, constrained);
   };
 
+  const visibleLines = minLines ?? DEFAULT_MULTILINE_LINES;
+
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -216,13 +241,21 @@ function TextSetting({ name, definition, value, label, placeholder, onChange }: 
         <Text style={styles.description}>{definition.description}</Text>
       )}
       <TextInput
+        {...(multiline ? { accessibilityHint: "Enter multiple lines of text" } : {})}
         accessibilityLabel={label}
         {...(definition.maxLength === undefined ? {} : { maxLength: definition.maxLength })}
+        multiline={multiline}
+        {...(multiline ? { numberOfLines: visibleLines, scrollEnabled: true } : {})}
         onBlur={commit}
         onChangeText={setDraft}
-        onSubmitEditing={commit}
+        {...(multiline ? {} : { onSubmitEditing: commit })}
         {...(placeholder === undefined ? {} : { placeholder })}
-        style={styles.input}
+        style={[
+          styles.input,
+          multiline ? styles.multilineInput : null,
+          multiline ? { height: multilineInputHeight(visibleLines) } : null,
+        ]}
+        {...(multiline ? { textAlignVertical: "top" as const } : {})}
         value={draft}
       />
     </View>
@@ -290,34 +323,37 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   label: {
-    color: "#344054",
+    color: colors.text,
     fontSize: 14,
     fontWeight: "600",
   },
   description: {
-    color: "#667085",
+    color: colors.textMuted,
     fontSize: 13,
   },
   input: {
-    backgroundColor: "#f3f5f8",
-    borderColor: "#d5dae3",
-    borderRadius: 12,
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
+    borderRadius: radii.button,
     borderWidth: 1,
-    color: "#172033",
+    color: colors.text,
     fontSize: 17,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+  multilineInput: {
+    lineHeight: 24,
+  },
   pickerButton: {
-    backgroundColor: "#f3f5f8",
-    borderColor: "#d5dae3",
-    borderRadius: 12,
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
+    borderRadius: radii.button,
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
   pickerValue: {
-    color: "#172033",
+    color: colors.text,
     fontSize: 17,
     fontWeight: "600",
   },
@@ -327,24 +363,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   option: {
-    backgroundColor: "#f3f5f8",
-    borderColor: "#d5dae3",
-    borderRadius: 12,
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
+    borderRadius: radii.button,
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
   optionSelected: {
-    backgroundColor: "#172033",
-    borderColor: "#172033",
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
   },
   optionText: {
-    color: "#344054",
+    color: colors.text,
     fontSize: 15,
     fontWeight: "600",
     textAlign: "center",
   },
   optionTextSelected: {
-    color: "#ffffff",
+    color: colors.surface,
   },
 });
