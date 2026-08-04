@@ -1,6 +1,6 @@
 # Lifecycle and Namespace Diagnostics
 
-Pocket Tools includes a host-owned diagnostics screen for proving the installed-script persistence boundary on Android. Open **Host diagnostics** from the mini-app library.
+Pocket Tools includes a host-owned diagnostics screen for proving the installed-script persistence boundary on Android. Open **Settings**, then choose **Diagnostics** under **Advanced**.
 
 The diagnostics use temporary SDK v1 scripts and the same QuickJS, operation validation, installed-source, and Expo SQLite paths as ordinary installed mini apps. They do not add a public SDK capability or another reference mini app.
 
@@ -44,7 +44,7 @@ Durable timer recovery is intentionally a two-launch procedure because an in-pro
    The command must print no PID. This is the manual evidence that neither React Native nor QuickJS remained alive while the timer was active.
 
 5. Wait at least one second and reopen Pocket Tools.
-6. Open **Host diagnostics** and press **Resume after relaunch**.
+6. Open **Settings**, choose **Diagnostics**, and press **Resume after relaunch**.
 7. Pocket Tools verifies:
    - The React Native host has a different launch token from the one that prepared the checkpoint.
    - The temporary installation survived.
@@ -54,13 +54,13 @@ Durable timer recovery is intentionally a two-launch procedure because an in-pro
    - The recovered timer can be stopped through the ordinary action path.
 8. The temporary installation, namespace, and checkpoint are removed.
 
-Pressing Resume during the original host launch does not consume the checkpoint. The screen reports that a relaunch is still required; returning to the library and reopening diagnostics reloads the pending checkpoint from SQLite.
+Pressing Resume during the original host launch does not consume the checkpoint. The screen reports that a relaunch is still required; returning to Settings and reopening Diagnostics reloads the pending checkpoint from SQLite.
 
 The timer is never backed by a resident QuickJS context or background JavaScript. Recovery is derived from the UTC start timestamp stored by the host.
 
 ## Crash and abandoned-state cleanup
 
-Temporary diagnostic manifest IDs use the reserved `lifecycle-diagnostic-` prefix and are hidden from the normal library. User-installed scripts cannot use this prefix.
+Temporary diagnostic manifest IDs use the reserved `lifecycle-diagnostic-` prefix and are hidden from the normal tool list. User-installed scripts cannot use this prefix.
 
 At startup, Pocket Tools removes abandoned diagnostic installations and data while preserving the single installation referenced by an active force-stop checkpoint. The Reset action also removes the pending checkpoint and its temporary state.
 
@@ -92,7 +92,7 @@ cd apps/mobile/android
 ./gradlew :app:assembleDebug connectedDebugAndroidTest
 ```
 
-Then open the application and complete both diagnostics from the library.
+Then open the application and complete both diagnostics from **Settings**.
 
 ## Evidence status
 
