@@ -160,6 +160,42 @@ export interface RuntimeSnapshot {
   readonly timers: Readonly<Record<string, TimerSnapshot>>;
 }
 
+export interface NotificationOpenTarget {
+  readonly screen: string;
+  readonly input?: SerializableValue;
+}
+
+export type NotificationDelivery = "standard" | "exact";
+
+export type NotificationTrigger =
+  | { readonly type: "immediate" }
+  | {
+      readonly type: "date";
+      readonly at: string;
+      readonly delivery?: NotificationDelivery;
+    }
+  | {
+      readonly type: "daily";
+      readonly hour: number;
+      readonly minute: number;
+      readonly delivery?: NotificationDelivery;
+    }
+  | {
+      readonly type: "weekly";
+      readonly weekday: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+      readonly hour: number;
+      readonly minute: number;
+      readonly delivery?: NotificationDelivery;
+    };
+
+export interface NotificationRequest {
+  readonly id: string;
+  readonly title: string;
+  readonly body?: string;
+  readonly trigger: NotificationTrigger;
+  readonly open?: NotificationOpenTarget;
+}
+
 export interface InsertOperation {
   readonly type: "insert";
   readonly collection: string;
@@ -201,6 +237,20 @@ export interface TimerStopOperation {
   readonly timerId: string;
 }
 
+export interface NotificationScheduleOperation {
+  readonly type: "notification-schedule";
+  readonly request: NotificationRequest;
+}
+
+export interface NotificationCancelOperation {
+  readonly type: "notification-cancel";
+  readonly notificationId: string;
+}
+
+export interface NotificationCancelAllOperation {
+  readonly type: "notification-cancel-all";
+}
+
 export type RuntimeOperation =
   | InsertOperation
   | UpdateOperation
@@ -208,7 +258,10 @@ export type RuntimeOperation =
   | SettingSetOperation
   | SettingResetOperation
   | TimerStartOperation
-  | TimerStopOperation;
+  | TimerStopOperation
+  | NotificationScheduleOperation
+  | NotificationCancelOperation
+  | NotificationCancelAllOperation;
 
 export interface FeedbackEffect {
   readonly type: "feedback";
