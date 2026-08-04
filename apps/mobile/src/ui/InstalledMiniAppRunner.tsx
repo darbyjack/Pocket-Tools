@@ -8,8 +8,8 @@ import { colors, radii, spacing } from "./theme";
 
 export interface InstalledMiniAppRunnerProps {
   readonly app: InstalledMiniApp;
-  readonly initialScreen?: string;
-  readonly initialScreenInput?: SerializableValue;
+  readonly initialScreen?: string | undefined;
+  readonly initialScreenInput?: SerializableValue | undefined;
   readonly onBack: () => void;
   readonly onManage: () => void;
 }
