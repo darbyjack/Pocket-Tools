@@ -22,12 +22,6 @@ const sdk12DateTimeSetting: SettingDefinition = {
   hostSdkVersion: "1.2",
 };
 
-const legacyDateTimeSetting: SettingDefinition = {
-  type: "datetime",
-  label: "Legacy timestamp",
-  default: "2026-08-03T22:30:00-05:00",
-};
-
 test("validates canonical date setting values and bounds", () => {
   assert.doesNotThrow(() => assertSettingValue(dateSetting, "2026-08-03", "dueDate"));
   assert.throws(
@@ -40,7 +34,7 @@ test("validates canonical date setting values and bounds", () => {
   );
 });
 
-test("enforces canonical UTC date-time values only for SDK 1.2 definitions", () => {
+test("enforces canonical UTC date-time setting values", () => {
   assert.doesNotThrow(() =>
     assertSettingValue(sdk12DateTimeSetting, "2026-08-04T03:30:00.000Z", "reminderAt"),
   );
@@ -53,17 +47,19 @@ test("enforces canonical UTC date-time values only for SDK 1.2 definitions", () 
       ),
     /canonical UTC date-time/,
   );
-
-  assert.doesNotThrow(() =>
-    assertSettingValue(
-      legacyDateTimeSetting,
-      "2026-08-03T22:30:00.000-05:00",
-      "legacyTimestamp",
-    ),
+  assert.throws(
+    () =>
+      assertSettingValue(
+        sdk12DateTimeSetting,
+        "2026-08-04T03:30:00.000Z",
+        "reminderAt",
+        "1.1",
+      ),
+    /Date-time settings require SDK 1\.2/,
   );
 });
 
-test("validates date and date-time collection records", () => {
+test("validates date and SDK 1.2 date-time collection records", () => {
   const collection: CollectionDefinition = {
     fields: {
       dueDate: {
@@ -100,5 +96,34 @@ test("validates date and date-time collection records", () => {
         "record",
       ),
     /canonical YYYY-MM-DD/,
+  );
+});
+
+test("retains parseable date-time field behavior for SDK 1.0 and 1.1", () => {
+  const legacyCollection: CollectionDefinition = {
+    fields: {
+      recordedAt: { type: "datetime" },
+    },
+  };
+
+  assert.doesNotThrow(() =>
+    assertRecordInput(
+      legacyCollection,
+      { recordedAt: "2026-08-03T22:30:00.000-05:00" },
+      "record",
+      false,
+      "1.1",
+    ),
+  );
+  assert.throws(
+    () =>
+      assertRecordInput(
+        legacyCollection,
+        { recordedAt: "not-a-date" },
+        "record",
+        false,
+        "1.1",
+      ),
+    /ISO-compatible date-time/,
   );
 });
