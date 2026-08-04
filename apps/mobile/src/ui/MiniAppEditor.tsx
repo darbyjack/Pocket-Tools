@@ -17,8 +17,10 @@ import {
   updateInstalledMiniApp,
   type InstalledMiniApp,
 } from "../storage/database";
+import { ErrorNotice } from "./ErrorNotice";
 import { MiniAppRuntimePanel } from "./MiniAppRuntimePanel";
 import { ScreenScrollView } from "./ScreenScrollView";
+import { colors, radii, spacing } from "./theme";
 
 export type MiniAppEditorMode = "create" | "duplicate" | "edit";
 
@@ -88,9 +90,7 @@ export function MiniAppEditor({ installed, mode, onCancel, onSaved }: MiniAppEdi
     try {
       const inspection = await validateCandidate(source);
       setCandidate({ inspection, source });
-      setMessage(
-        `Valid SDK v1 definition: ${inspection.manifest.name} (${inspection.manifest.id}).`,
-      );
+      setMessage("Script checked. Preview it before saving.");
     } catch (caught) {
       setCandidate(null);
       setError(formatMiniAppError(caught));
@@ -117,9 +117,7 @@ export function MiniAppEditor({ installed, mode, onCancel, onSaved }: MiniAppEdi
       const nextPreview = { inspection, source, storageId };
       setCandidate({ inspection, source });
       setPreview(nextPreview);
-      setMessage(
-        `Preview is using a disposable copy of retained state for ${inspection.manifest.id}.`,
-      );
+      setMessage("Preview opened below.");
     } catch (caught) {
       setPreview(null);
       setCandidate(null);
@@ -149,9 +147,7 @@ export function MiniAppEditor({ installed, mode, onCancel, onSaved }: MiniAppEdi
       !isCurrentSourceApproved(source, candidate?.source ?? null, previewReadySource) ||
       candidate === null
     ) {
-      setError(
-        "INSTALLATION_FAILED: Preview the current source successfully before installing it.",
-      );
+      setError("INSTALLATION_FAILED: Preview the current script successfully before saving it.");
       return;
     }
 
@@ -172,13 +168,13 @@ export function MiniAppEditor({ installed, mode, onCancel, onSaved }: MiniAppEdi
     }
   }, [candidate, installed, mode, onSaved, preview, previewReadySource, source]);
 
-  const saveLabel = mode === "edit" ? "Update installed app" : "Install app";
+  const saveLabel = mode === "edit" ? "Update tool" : "Install tool";
   const title =
     mode === "edit"
-      ? `Edit ${installed?.name ?? "mini app"}`
+      ? `Edit ${installed?.name ?? "tool"}`
       : mode === "duplicate"
-        ? `Duplicate ${installed?.name ?? "mini app"}`
-        : "Install a mini-app script";
+        ? `Duplicate ${installed?.name ?? "tool"}`
+        : "Add tool";
   const canSave =
     !busy && isCurrentSourceApproved(source, candidate?.source ?? null, previewReadySource);
 
@@ -195,21 +191,9 @@ export function MiniAppEditor({ installed, mode, onCancel, onSaved }: MiniAppEdi
         <Text style={styles.title}>{title}</Text>
       </View>
 
-      <View style={styles.disclosure}>
-        <Text style={styles.disclosureTitle}>Offline SDK authority</Text>
-        <Text style={styles.disclosureText}>
-          This script can use only isolated local settings, records, and durable timers. It cannot
-          access the network, files, location, notifications, secrets, React Native, or Android
-          APIs.
-        </Text>
-      </View>
-
       {mode === "duplicate" ? (
         <View style={styles.notice}>
-          <Text style={styles.noticeText}>
-            Change manifest.id before previewing. A duplicate cannot reuse the original app’s
-            permanent storage identity.
-          </Text>
+          <Text style={styles.noticeText}>Change the tool ID before previewing.</Text>
         </View>
       ) : null}
 
@@ -218,7 +202,8 @@ export function MiniAppEditor({ installed, mode, onCancel, onSaved }: MiniAppEdi
         autoCorrect={false}
         multiline
         onChangeText={invalidateSource}
-        placeholder="Paste one Pocket Tools SDK v1 JavaScript module"
+        placeholder="Paste a Pocket Tools script"
+        placeholderTextColor="#98a2b3"
         style={styles.editor}
         textAlignVertical="top"
         value={source}
@@ -227,7 +212,7 @@ export function MiniAppEditor({ installed, mode, onCancel, onSaved }: MiniAppEdi
       <View style={styles.buttonRow}>
         <EditorButton
           disabled={busy}
-          label={busy ? "Working…" : "Validate"}
+          label={busy ? "Working…" : "Check"}
           onPress={handleValidate}
         />
         <EditorButton disabled={busy} label="Preview" onPress={handlePreview} />
@@ -241,24 +226,23 @@ export function MiniAppEditor({ installed, mode, onCancel, onSaved }: MiniAppEdi
       )}
 
       {error === null ? null : (
-        <View accessibilityRole="alert" style={styles.errorCard}>
-          <Text style={styles.errorTitle}>The script cannot be installed</Text>
-          <Text selectable style={styles.errorText}>
-            {error}
-          </Text>
-        </View>
+        <ErrorNotice
+          detail={error}
+          message="Check the script and try again."
+          title="This script isn’t ready"
+        />
       )}
 
       {preview === null ? null : (
         <View style={styles.previewCard}>
           <View style={styles.previewHeading}>
-            <Text style={styles.previewTitle}>Isolated preview</Text>
+            <Text style={styles.previewTitle}>Preview</Text>
             <Text style={styles.previewStatus}>
               {previewReadySource === preview.source
-                ? "First render passed"
+                ? "Ready"
                 : previewError === null
-                  ? "Rendering…"
-                  : "Preview failed"}
+                  ? "Opening…"
+                  : "Needs attention"}
             </Text>
           </View>
           <MiniAppRuntimePanel
@@ -289,10 +273,11 @@ function EditorButton({
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         styles.editorButton,
         primary ? styles.editorButtonPrimary : null,
         disabled ? styles.editorButtonDisabled : null,
+        pressed && !disabled ? styles.pressed : null,
       ]}
     >
       <Text style={[styles.editorButtonText, primary ? styles.editorButtonPrimaryText : null]}>
@@ -305,7 +290,7 @@ function EditorButton({
 const styles = StyleSheet.create({
   content: {
     gap: 16,
-    padding: 18,
+    padding: spacing.screen,
     paddingBottom: 48,
   },
   toolbar: {
@@ -314,58 +299,39 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   title: {
-    color: "#101828",
+    color: colors.text,
     flex: 1,
     fontSize: 22,
     fontWeight: "800",
   },
   secondaryButton: {
-    backgroundColor: "#ffffff",
-    borderColor: "#d0d5dd",
-    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.button,
     borderWidth: 1,
     paddingHorizontal: 13,
     paddingVertical: 9,
   },
   secondaryButtonText: {
-    color: "#344054",
+    color: colors.brand,
     fontSize: 14,
     fontWeight: "700",
-  },
-  disclosure: {
-    backgroundColor: "#eff8ff",
-    borderColor: "#b2ddff",
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 5,
-    padding: 14,
-  },
-  disclosureTitle: {
-    color: "#175cd3",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  disclosureText: {
-    color: "#1849a9",
-    fontSize: 13,
-    lineHeight: 19,
   },
   notice: {
     backgroundColor: "#fffaeb",
     borderColor: "#fedf89",
-    borderRadius: 12,
+    borderRadius: radii.button,
     borderWidth: 1,
     padding: 13,
   },
   noticeText: {
     color: "#93370d",
     fontSize: 13,
-    lineHeight: 19,
   },
   editor: {
-    backgroundColor: "#101828",
+    backgroundColor: colors.text,
     borderColor: "#344054",
-    borderRadius: 14,
+    borderRadius: radii.card,
     borderWidth: 1,
     color: "#f2f4f7",
     fontFamily: "monospace",
@@ -380,63 +346,46 @@ const styles = StyleSheet.create({
     gap: 9,
   },
   editorButton: {
-    backgroundColor: "#ffffff",
-    borderColor: "#d0d5dd",
-    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.button,
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   editorButtonPrimary: {
-    backgroundColor: "#172033",
-    borderColor: "#172033",
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
   },
   editorButtonDisabled: {
     opacity: 0.45,
   },
   editorButtonText: {
-    color: "#344054",
+    color: colors.brand,
     fontSize: 14,
     fontWeight: "700",
   },
   editorButtonPrimaryText: {
-    color: "#ffffff",
+    color: colors.surface,
+  },
+  pressed: {
+    opacity: 0.72,
   },
   successCard: {
-    backgroundColor: "#ecfdf3",
-    borderColor: "#abefc6",
-    borderRadius: 12,
+    backgroundColor: colors.successBackground,
+    borderColor: colors.successBorder,
+    borderRadius: radii.button,
     borderWidth: 1,
     padding: 13,
   },
   successText: {
-    color: "#067647",
+    color: colors.success,
     fontSize: 13,
-    lineHeight: 19,
-  },
-  errorCard: {
-    backgroundColor: "#fff1f0",
-    borderColor: "#fda29b",
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 5,
-    padding: 14,
-  },
-  errorTitle: {
-    color: "#912018",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  errorText: {
-    color: "#b42318",
-    fontFamily: "monospace",
-    fontSize: 13,
-    lineHeight: 18,
   },
   previewCard: {
-    backgroundColor: "#ffffff",
-    borderColor: "#d0d5dd",
-    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.card,
     borderWidth: 1,
     gap: 14,
     padding: 14,
@@ -448,12 +397,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   previewTitle: {
-    color: "#101828",
+    color: colors.text,
     fontSize: 17,
     fontWeight: "800",
   },
   previewStatus: {
-    color: "#475467",
+    color: colors.textMuted,
     fontSize: 12,
     fontWeight: "700",
   },
