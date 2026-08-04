@@ -37,7 +37,12 @@ function visit(value: unknown, path: string, supportsMultiline: boolean): unknow
       if (value.multiline !== true) {
         fail(`${path}.minLines`, "minLines requires multiline: true.");
       }
-      if (!Number.isInteger(value.minLines) || Number(value.minLines) < 2 || Number(value.minLines) > 8) {
+      if (
+        typeof value.minLines !== "number" ||
+        !Number.isInteger(value.minLines) ||
+        value.minLines < 2 ||
+        value.minLines > 8
+      ) {
         fail(`${path}.minLines`, "Expected an integer from 2 to 8.");
       }
     }
