@@ -9,7 +9,7 @@ FetchContent_Declare(
   GIT_TAG fd0a0210b7be00957751871e7e01b8291268fc29
 )
 FetchContent_GetProperties(quickjs)
-if(NOT quickjs_POPULATED)
+if (NOT quickjs_POPULATED)
   FetchContent_Populate(quickjs)
 endif()
 
@@ -17,7 +17,7 @@ add_library(
   pocketquickjs
   SHARED
   src/main/cpp/PocketQuickJsJni.cpp
-  src/main/cpp/PocketQuickJsRuntimeEverydayQueries.cpp
+  src/main/cpp/PocketQuickJsRuntimeFeedback.cpp
   ${quickjs_SOURCE_DIR}/dtoa.c
   ${quickjs_SOURCE_DIR}/libregexp.c
   ${quickjs_SOURCE_DIR}/libunicode.c
