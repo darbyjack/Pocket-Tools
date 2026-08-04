@@ -27,9 +27,10 @@ interface DormantDefinitionInput {
   readonly actions: readonly string[];
 }
 
-export function validateDormantSdk12Definition(
-  input: DormantDefinitionInput,
-): { readonly inspection?: MiniAppInspection; readonly issues: readonly ValidationIssue[] } {
+export function validateDormantSdk12Definition(input: DormantDefinitionInput): {
+  readonly inspection?: MiniAppInspection;
+  readonly issues: readonly ValidationIssue[];
+} {
   const issues: ValidationIssue[] = [];
   const normalizedSettings: Record<string, SettingDefinition> = {};
   const transformedSettings: Record<string, unknown> = {};

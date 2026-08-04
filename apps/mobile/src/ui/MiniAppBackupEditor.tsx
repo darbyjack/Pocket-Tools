@@ -96,7 +96,8 @@ export function MiniAppBackupEditor({ onCancel, onRestored }: MiniAppBackupEdito
         return;
       }
 
-      const title = conflict.kind === "installed" ? `Replace ${conflict.app.name}?` : "Replace saved data?";
+      const title =
+        conflict.kind === "installed" ? `Replace ${conflict.app.name}?` : "Replace saved data?";
 
       Alert.alert(title, "This replaces the current tool and its saved data with the backup.", [
         { text: "Cancel", style: "cancel" },

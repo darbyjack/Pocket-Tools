@@ -36,9 +36,7 @@ test("accepts date and date-time inputs only through the dormant SDK 1.2 path", 
   ]);
 
   assert.throws(() => validatePageNode(value, inspection), /require SDK 1\.2/);
-  assert.doesNotThrow(() =>
-    validatePageNode(value, inspection, { allowDormantSdk12: true }),
-  );
+  assert.doesNotThrow(() => validatePageNode(value, inspection, { allowDormantSdk12: true }));
 });
 
 test("rejects missing and incompatible temporal setting bindings", () => {

@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  parseNativeNotificationOpenTarget,
-  parseNativeNotificationResults,
-} from "./validation.ts";
+import { parseNativeNotificationOpenTarget, parseNativeNotificationResults } from "./validation.ts";
 
 test("parses exact native reconciliation results", () => {
   assert.deepEqual(

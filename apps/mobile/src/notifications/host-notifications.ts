@@ -121,14 +121,14 @@ export function resolveNotificationUrl(url: string): NotificationRouteTarget | n
 
 async function getAndroidNotificationPermission(): Promise<HostNotificationPermission> {
   if (!requiresRuntimeNotificationPermission()) return "granted";
-  const granted = await PermissionsAndroid.check(
-    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-  );
+  const granted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
   return granted ? "granted" : "denied";
 }
 
 function requiresRuntimeNotificationPermission(): boolean {
-  return Platform.OS === "android" && typeof Platform.Version === "number" && Platform.Version >= 33;
+  return (
+    Platform.OS === "android" && typeof Platform.Version === "number" && Platform.Version >= 33
+  );
 }
 
 async function listRegistryEntries(): Promise<readonly NotificationRegistryEntry[]> {

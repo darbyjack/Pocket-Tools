@@ -39,23 +39,27 @@ export function ToolNotificationSettings({ app, onBack }: ToolNotificationSettin
   }, [refresh]);
 
   const cancelAll = useCallback(() => {
-    Alert.alert(`Cancel reminders for ${app.name}?`, "This removes every desired reminder for this tool.", [
-      { text: "Keep reminders", style: "cancel" },
-      {
-        text: "Cancel all",
-        style: "destructive",
-        onPress: () => {
-          void (async () => {
-            try {
-              await cancelAllToolNotifications(app.id);
-              await refresh();
-            } catch (caught) {
-              setError(errorMessage(caught));
-            }
-          })();
+    Alert.alert(
+      `Cancel reminders for ${app.name}?`,
+      "This removes every desired reminder for this tool.",
+      [
+        { text: "Keep reminders", style: "cancel" },
+        {
+          text: "Cancel all",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              try {
+                await cancelAllToolNotifications(app.id);
+                await refresh();
+              } catch (caught) {
+                setError(errorMessage(caught));
+              }
+            })();
+          },
         },
-      },
-    ]);
+      ],
+    );
   }, [app.id, app.name, refresh]);
 
   const desired = entries.filter((entry) => entry.desired);

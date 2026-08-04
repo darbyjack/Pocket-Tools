@@ -30,11 +30,11 @@ This design preserves all existing storage, mutation, operation, timer, setting,
 
 Dormant SDK 1.2 collection queries support:
 
-| Field type | Operators |
-| --- | --- |
-| Text | `eq`, `neq`, `contains`, `startsWith` |
-| Boolean | `eq`, `neq` |
-| Number and money | `eq`, `neq`, `gt`, `gte`, `lt`, `lte` |
+| Field type         | Operators                             |
+| ------------------ | ------------------------------------- |
+| Text               | `eq`, `neq`, `contains`, `startsWith` |
+| Boolean            | `eq`, `neq`                           |
+| Number and money   | `eq`, `neq`, `gt`, `gte`, `lt`, `lte` |
 | Date and date-time | `eq`, `neq`, `gt`, `gte`, `lt`, `lte` |
 
 Text `contains` and `startsWith`:
@@ -59,9 +59,9 @@ All filters remain AND-combined. Ordering, offset, and limit behavior remains un
 Dormant SDK 1.2 collection clients add:
 
 ```js
-collection.min(fieldName, query)
-collection.max(fieldName, query)
-collection.average(fieldName, query)
+collection.min(fieldName, query);
+collection.max(fieldName, query);
+collection.average(fieldName, query);
 ```
 
 Existing `sum(...)` is routed through the same numeric-value path.

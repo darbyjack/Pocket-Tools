@@ -286,7 +286,8 @@ export default function App() {
     route.name === "editor"
       ? route.appId
       : null;
-  const selectedApp = routeAppId === null ? null : (apps.find((app) => app.id === routeAppId) ?? null);
+  const selectedApp =
+    routeAppId === null ? null : (apps.find((app) => app.id === routeAppId) ?? null);
   const routeRequiresMissingApp =
     route.name === "run" ||
     route.name === "manage" ||
@@ -393,9 +394,7 @@ export default function App() {
         onBack={() => setRoute({ name: "run", appId: selectedApp.id })}
         onBackup={() => void exportBackup(selectedApp)}
         onDelete={() => removeApp(selectedApp)}
-        onDuplicate={() =>
-          setRoute({ name: "editor", mode: "duplicate", appId: selectedApp.id })
-        }
+        onDuplicate={() => setRoute({ name: "editor", mode: "duplicate", appId: selectedApp.id })}
         onEdit={() => setRoute({ name: "editor", mode: "edit", appId: selectedApp.id })}
         onExport={() => void exportSource(selectedApp)}
         onNotifications={() => setRoute({ name: "toolNotifications", appId: selectedApp.id })}

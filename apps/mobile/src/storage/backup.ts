@@ -1,9 +1,8 @@
-import type {
-  MiniAppInspection,
-  NotificationRequest,
-  SerializableValue,
-} from "../model.ts";
-import { normalizeNotificationRequest, parseNotificationRequestShape } from "../runtime/notification-validation.ts";
+import type { MiniAppInspection, NotificationRequest, SerializableValue } from "../model.ts";
+import {
+  normalizeNotificationRequest,
+  parseNotificationRequestShape,
+} from "../runtime/notification-validation.ts";
 import { assertRecordInput, assertSettingValue } from "../runtime/sdk-validation.ts";
 import { isDiagnosticAppId, isPreviewStorageId } from "./namespaces.ts";
 import { MAX_DESIRED_NOTIFICATIONS } from "./notification-registry.ts";
@@ -64,16 +63,7 @@ export function parseMiniAppBackup(input: unknown): MiniAppBackupV2 {
   const root = requireObject(value, "backup");
   assertExactKeys(
     root,
-    [
-      "format",
-      "version",
-      "exportedAt",
-      "app",
-      "settings",
-      "records",
-      "timers",
-      "notifications",
-    ],
+    ["format", "version", "exportedAt", "app", "settings", "records", "timers", "notifications"],
     [],
     "backup",
   );

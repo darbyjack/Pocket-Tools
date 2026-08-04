@@ -25,10 +25,7 @@ export function assertNotificationId(value: unknown, path: string): string {
   return value;
 }
 
-export function parseNotificationRequestShape(
-  value: unknown,
-  path: string,
-): NotificationRequest {
+export function parseNotificationRequestShape(value: unknown, path: string): NotificationRequest {
   return normalizeRequest(value, undefined, path, {});
 }
 
@@ -169,12 +166,7 @@ function requireObject(value: unknown, path: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function requireText(
-  value: unknown,
-  path: string,
-  minimum: number,
-  maximum: number,
-): string {
+function requireText(value: unknown, path: string, minimum: number, maximum: number): string {
   if (typeof value !== "string") throw validationError(`${path} must be text.`);
   const length = Array.from(value).length;
   if (length < minimum || length > maximum) {

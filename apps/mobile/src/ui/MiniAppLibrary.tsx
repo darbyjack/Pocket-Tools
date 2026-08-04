@@ -59,7 +59,11 @@ export function MiniAppLibrary({ apps, onCreate, onOpen, onSettings }: MiniAppLi
                   </Text>
                 )}
               </View>
-              <Text accessibilityElementsHidden importantForAccessibility="no" style={styles.chevron}>
+              <Text
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                style={styles.chevron}
+              >
                 ›
               </Text>
             </Pressable>

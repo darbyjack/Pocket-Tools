@@ -58,9 +58,7 @@ export function ListItemControl({ node, onInvokeAction }: ListItemControlProps) 
               accessibilityState={{ disabled: action.disabled === true }}
               disabled={action.disabled === true}
               key={`${action.action}-${index}`}
-              onPress={(event) =>
-                invokeIsolatedListAction(event, () => onInvokeAction(action))
-              }
+              onPress={(event) => invokeIsolatedListAction(event, () => onInvokeAction(action))}
               style={[
                 styles.listAction,
                 action.intent === "destructive" ? styles.destructiveListAction : null,

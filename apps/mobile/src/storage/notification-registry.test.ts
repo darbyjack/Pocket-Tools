@@ -120,10 +120,7 @@ test("enforces the 64 desired schedule limit against current and in-action state
     databaseWithDesired(existing),
     inspection,
     "reminder-test",
-    [
-      { type: "notification-cancel", notificationId: "reminder0" },
-      schedule("newReminder"),
-    ],
+    [{ type: "notification-cancel", notificationId: "reminder0" }, schedule("newReminder")],
     { now, exactAlarmAccess: false },
   );
   assert.equal(cancelThenAdd.size, 2);
@@ -145,12 +142,7 @@ test("rechecks capacity inside the transaction to close concurrent preflight rac
   if (operation.type !== "notification-schedule") return;
 
   await assert.rejects(
-    applyPreparedNotificationOperation(
-      fullDatabase,
-      "reminder-test",
-      { index: 0, operation },
-      now,
-    ),
+    applyPreparedNotificationOperation(fullDatabase, "reminder-test", { index: 0, operation }, now),
     /NOTIFICATION_LIMIT_EXCEEDED/,
   );
   assert.equal(writes, 0);

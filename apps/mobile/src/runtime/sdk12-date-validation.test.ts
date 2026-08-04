@@ -39,22 +39,11 @@ test("enforces canonical UTC date-time setting values", () => {
     assertSettingValue(sdk12DateTimeSetting, "2026-08-04T03:30:00.000Z", "reminderAt"),
   );
   assert.throws(
-    () =>
-      assertSettingValue(
-        sdk12DateTimeSetting,
-        "2026-08-03T22:30:00.000-05:00",
-        "reminderAt",
-      ),
+    () => assertSettingValue(sdk12DateTimeSetting, "2026-08-03T22:30:00.000-05:00", "reminderAt"),
     /canonical UTC date-time/,
   );
   assert.throws(
-    () =>
-      assertSettingValue(
-        sdk12DateTimeSetting,
-        "2026-08-04T03:30:00.000Z",
-        "reminderAt",
-        "1.1",
-      ),
+    () => assertSettingValue(sdk12DateTimeSetting, "2026-08-04T03:30:00.000Z", "reminderAt", "1.1"),
     /Date-time settings require SDK 1\.2/,
   );
 });
@@ -116,14 +105,7 @@ test("retains parseable date-time field behavior for SDK 1.0 and 1.1", () => {
     ),
   );
   assert.throws(
-    () =>
-      assertRecordInput(
-        legacyCollection,
-        { recordedAt: "not-a-date" },
-        "record",
-        false,
-        "1.1",
-      ),
+    () => assertRecordInput(legacyCollection, { recordedAt: "not-a-date" }, "record", false, "1.1"),
     /ISO-compatible date-time/,
   );
 });

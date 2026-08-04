@@ -170,10 +170,7 @@ test("parses dormant SDK 1.2 date definitions and nodes only through the guarded
   const inspection = parseDormantSdk12RuntimeResponse(inspectionJson).value.inspection;
   assert.equal(inspection?.manifest.sdkVersion, "1.2");
   assert.equal(inspection?.settings.dueDate?.type, "date");
-  assert.equal(
-    "hostSdkVersion" in (inspection?.settings.reminderAt ?? {}),
-    true,
-  );
+  assert.equal("hostSdkVersion" in (inspection?.settings.reminderAt ?? {}), true);
   assert.equal(
     "hostSdkVersion" in (inspection?.collections.entries?.fields.recordedAt ?? {}),
     true,
@@ -204,7 +201,8 @@ test("rejects malformed dormant temporal definitions", () => {
   assert.throws(
     () => parseDormantSdk12RuntimeResponse(success({ inspection: invalid })),
     (error: unknown) => {
-      if (!(error instanceof MiniAppRuntimeError) || error.code !== "VALIDATION_FAILED") return false;
+      if (!(error instanceof MiniAppRuntimeError) || error.code !== "VALIDATION_FAILED")
+        return false;
       assert.match(error.message, /settings\.dueDate\.default/);
       assert.match(error.message, /settings\.reminderAt\.default/);
       return true;
@@ -315,9 +313,7 @@ test("rejects malformed envelopes, inspections, and operations", () => {
     () =>
       parseRuntimeResponse(
         success({
-          operations: [
-            { type: "setting-set", setting: "draftTitle", value: "Saved", extra: true },
-          ],
+          operations: [{ type: "setting-set", setting: "draftTitle", value: "Saved", extra: true }],
         }),
       ),
     (error: unknown) =>

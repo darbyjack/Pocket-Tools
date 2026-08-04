@@ -47,7 +47,13 @@ export function HostSettings({
   );
 }
 
-function SettingsSection({ children, title }: { readonly children: ReactNode; readonly title: string }) {
+function SettingsSection({
+  children,
+  title,
+}: {
+  readonly children: ReactNode;
+  readonly title: string;
+}) {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>

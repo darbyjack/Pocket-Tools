@@ -150,11 +150,7 @@ function visitNode(
       optionalString(node.description, `${path}.description`, 0, 500);
       return node;
     case "list-item": {
-      exactKeys(
-        node,
-        ["type", "title", "subtitle", "trailing", "primaryAction", "actions"],
-        path,
-      );
+      exactKeys(node, ["type", "title", "subtitle", "trailing", "primaryAction", "actions"], path);
       requireString(node.title, `${path}.title`, 1, 500);
       optionalString(node.subtitle, `${path}.subtitle`, 0, 500);
       optionalString(node.trailing, `${path}.trailing`, 0, 120);

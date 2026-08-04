@@ -71,8 +71,7 @@ export type FieldDefinition =
   | DateField
   | DateTimeField;
 
-export interface CollectionDefinition
-  extends Omit<PublicCollectionDefinition, "fields"> {
+export interface CollectionDefinition extends Omit<PublicCollectionDefinition, "fields"> {
   readonly fields: Readonly<Record<string, FieldDefinition>>;
 }
 

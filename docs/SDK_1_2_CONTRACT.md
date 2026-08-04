@@ -164,8 +164,8 @@ interface DateTimeSetting extends SettingBase<"datetime", string> {
 Builders:
 
 ```ts
-setting.date(definition)
-setting.datetime(definition)
+setting.date(definition);
+setting.datetime(definition);
 ```
 
 The default, minimum, and maximum use the canonical representation for their type. Ordered bounds are required.
@@ -199,8 +199,8 @@ The existing datetime field remains source-compatible while gaining optional val
 interface DateInputNode extends SettingInputNode<"date-input"> {}
 interface DateTimeInputNode extends SettingInputNode<"datetime-input"> {}
 
-ui.dateInput(definition)
-ui.datetimeInput(definition)
+ui.dateInput(definition);
+ui.datetimeInput(definition);
 ```
 
 - A date input binds only to a declared date setting.
@@ -246,15 +246,7 @@ interface ListItemNode extends UiNodeBase<"list-item"> {
 ## Query operators
 
 ```ts
-type QueryOperator =
-  | "eq"
-  | "neq"
-  | "gt"
-  | "gte"
-  | "lt"
-  | "lte"
-  | "contains"
-  | "startsWith";
+type QueryOperator = "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "contains" | "startsWith";
 ```
 
 ## Type matrix
@@ -329,10 +321,7 @@ interface FeedbackEffect {
 ```ts
 interface OutputClient {
   copy(text: string): void;
-  share(request: {
-    readonly title?: string;
-    readonly text: string;
-  }): void;
+  share(request: { readonly title?: string; readonly text: string }): void;
 }
 ```
 
@@ -585,8 +574,8 @@ interface MultiSelectSetting extends SettingBase<"multi-select", readonly Select
 
 interface MultiSelectInputNode extends SettingInputNode<"multi-select"> {}
 
-setting.multiSelect(definition)
-ui.multiSelect(definition)
+setting.multiSelect(definition);
+ui.multiSelect(definition);
 ```
 
 - Defaults contain unique option values only.
@@ -605,7 +594,7 @@ interface BadgeNode extends UiNodeBase<"badge"> {
   readonly tone?: BadgeTone;
 }
 
-ui.badge(definition)
+ui.badge(definition);
 ```
 
 Text length is 1 to 80 characters. Tone is semantic and host-owned; scripts cannot provide colors.
@@ -621,7 +610,7 @@ interface ProgressNode extends UiNodeBase<"progress"> {
   readonly format?: "number" | "percent";
 }
 
-ui.progress(definition)
+ui.progress(definition);
 ```
 
 - Values and bounds must be finite.

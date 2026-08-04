@@ -5,10 +5,7 @@ import type {
   NativeNotificationReconciliationResult,
   NativeNotificationRegistryEntry,
 } from "./types.ts";
-import {
-  parseNativeNotificationOpenTarget,
-  parseNativeNotificationResults,
-} from "./validation.ts";
+import { parseNativeNotificationOpenTarget, parseNativeNotificationResults } from "./validation.ts";
 
 export type {
   NativeNotificationOpenTarget,

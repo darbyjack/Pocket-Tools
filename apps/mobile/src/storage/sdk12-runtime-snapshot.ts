@@ -1,10 +1,6 @@
 import * as SQLite from "expo-sqlite";
 
-import type {
-  MiniAppInspection,
-  NotificationRequest,
-  RuntimeSnapshot,
-} from "../model.ts";
+import type { MiniAppInspection, NotificationRequest, RuntimeSnapshot } from "../model.ts";
 import { loadRuntimeSnapshot } from "./database.ts";
 import {
   ensureNotificationRegistrySchema,

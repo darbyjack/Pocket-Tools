@@ -140,7 +140,9 @@ export function useMiniApp(
           throw new Error("INVALID_SCRIPT: A home screen is required.");
         }
         await ensureSettingDefaults(nextInspection, storageIdFor(nextInspection));
-        const targetScreen = nextInspection.screens.includes(initialScreen) ? initialScreen : "home";
+        const targetScreen = nextInspection.screens.includes(initialScreen)
+          ? initialScreen
+          : "home";
         const targetInput = targetScreen === initialScreen ? initialScreenInput : undefined;
         const rendered = await render(nextInspection, targetScreen, targetInput);
 

@@ -152,16 +152,10 @@ function assertTemporalValue(
   }
 
   const text = value as string;
-  if (
-    definition.min !== undefined &&
-    compareCanonicalTemporalValues(text, definition.min) < 0
-  ) {
+  if (definition.min !== undefined && compareCanonicalTemporalValues(text, definition.min) < 0) {
     fail(path, "Value is below the minimum.");
   }
-  if (
-    definition.max !== undefined &&
-    compareCanonicalTemporalValues(text, definition.max) > 0
-  ) {
+  if (definition.max !== undefined && compareCanonicalTemporalValues(text, definition.max) > 0) {
     fail(path, "Value exceeds the maximum.");
   }
 }

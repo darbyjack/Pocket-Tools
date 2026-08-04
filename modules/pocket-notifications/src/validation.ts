@@ -20,12 +20,17 @@ export function parseNativeNotificationResults(
   try {
     value = JSON.parse(json) as unknown;
   } catch (cause) {
-    throw new Error("NOTIFICATION_RECONCILIATION_FAILED: Native reconciliation returned invalid JSON.", {
-      cause,
-    });
+    throw new Error(
+      "NOTIFICATION_RECONCILIATION_FAILED: Native reconciliation returned invalid JSON.",
+      {
+        cause,
+      },
+    );
   }
   if (!Array.isArray(value)) {
-    throw new Error("NOTIFICATION_RECONCILIATION_FAILED: Native reconciliation returned invalid data.");
+    throw new Error(
+      "NOTIFICATION_RECONCILIATION_FAILED: Native reconciliation returned invalid data.",
+    );
   }
   return value.map((entry, index) => parseResult(entry, index));
 }

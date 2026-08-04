@@ -1,11 +1,11 @@
 import * as SQLite from "expo-sqlite";
 
-import type {
-  MiniAppInspection,
-  RuntimeOperation,
-  SerializableValue,
-} from "../model.ts";
-import { assertRecordId, assertRecordInput, assertSettingValue } from "../runtime/sdk-validation.ts";
+import type { MiniAppInspection, RuntimeOperation, SerializableValue } from "../model.ts";
+import {
+  assertRecordId,
+  assertRecordInput,
+  assertSettingValue,
+} from "../runtime/sdk-validation.ts";
 import {
   applyPreparedNotificationOperation,
   ensureNotificationRegistrySchema,

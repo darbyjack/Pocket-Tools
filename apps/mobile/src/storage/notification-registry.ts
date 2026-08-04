@@ -1,10 +1,6 @@
 import type * as SQLite from "expo-sqlite";
 
-import type {
-  MiniAppInspection,
-  NotificationRequest,
-  RuntimeOperation,
-} from "../model.ts";
+import type { MiniAppInspection, NotificationRequest, RuntimeOperation } from "../model.ts";
 import {
   assertNotificationId,
   normalizeNotificationRequest,
@@ -14,11 +10,7 @@ import {
 
 export const MAX_DESIRED_NOTIFICATIONS = 64;
 
-export type NotificationReconciliationStatus =
-  | "pending"
-  | "scheduled"
-  | "blocked"
-  | "failed";
+export type NotificationReconciliationStatus = "pending" | "scheduled" | "blocked" | "failed";
 
 interface NotificationRegistryRow {
   readonly storage_id: string;
@@ -481,11 +473,7 @@ function notificationLimitError(): Error {
   );
 }
 
-function missingRegistryRow(
-  storageId: string,
-  notificationId: string,
-  kind: string,
-): Error {
+function missingRegistryRow(storageId: string, notificationId: string, kind: string): Error {
   return new Error(
     `NOTIFICATION_RECONCILIATION_FAILED: Missing ${kind} ${storageId}.${notificationId}.`,
   );

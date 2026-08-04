@@ -81,9 +81,7 @@ export function MiniAppRuntimePanel({
 
   return (
     <View style={styles.runtime}>
-      {feedback === null ? null : (
-        <FeedbackNotice message={feedback} onDismiss={dismissFeedback} />
-      )}
+      {feedback === null ? null : <FeedbackNotice message={feedback} onDismiss={dismissFeedback} />}
       <MiniAppRenderer
         page={page}
         settings={inspection.settings}

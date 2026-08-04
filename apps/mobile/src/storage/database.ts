@@ -543,12 +543,7 @@ export async function applyRuntimeOperations(
         case "setting-set": {
           const definition = requireSdk12Setting(inspection, operation.setting, index);
           assertSettingValue(definition, operation.value, `operations[${index}].value`);
-          await writeSettingInTransaction(
-            database,
-            storageId,
-            operation.setting,
-            operation.value,
-          );
+          await writeSettingInTransaction(database, storageId, operation.setting, operation.value);
           break;
         }
         case "setting-reset": {
@@ -635,11 +630,7 @@ function requireCollection(inspection: MiniAppInspection, name: string, operatio
   return definition;
 }
 
-function requireSdk12Setting(
-  inspection: MiniAppInspection,
-  name: string,
-  operationIndex: number,
-) {
+function requireSdk12Setting(inspection: MiniAppInspection, name: string, operationIndex: number) {
   if ((inspection.manifest.sdkVersion as string) !== "1.2") {
     throw new Error(
       `UNSUPPORTED_SDK_VERSION: operations[${operationIndex}] setting writes require SDK 1.2.`,
@@ -647,7 +638,9 @@ function requireSdk12Setting(
   }
   const definition = inspection.settings[name];
   if (definition === undefined) {
-    throw new Error(`VALIDATION_FAILED: operations[${operationIndex}].setting: Unknown setting ${name}.`);
+    throw new Error(
+      `VALIDATION_FAILED: operations[${operationIndex}].setting: Unknown setting ${name}.`,
+    );
   }
   return definition;
 }
