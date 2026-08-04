@@ -16,6 +16,7 @@ import {
   type BadgeTone,
   type DormantRenderableNode,
 } from "../runtime/sdk12-badge.ts";
+import type { DormantIconActionControl } from "../runtime/sdk12-icons.ts";
 import type { DormantNumberInputNode } from "../runtime/sdk12-number-input-model.ts";
 import {
   progressAccessibilityText,
@@ -25,6 +26,7 @@ import {
   progressMinimum,
   progressVisualText,
 } from "../runtime/sdk12-progress.ts";
+import { HostIcon } from "./HostIcon.tsx";
 import { ListItemControl } from "./ListItemControl.tsx";
 import { SettingControl } from "./SettingControl.tsx";
 
@@ -270,22 +272,30 @@ function NodeView(props: NodeViewProps) {
         />
       );
     }
-    case "button":
+    case "button": {
+      const iconButton = node as DormantIconActionControl;
+      const destructive = iconButton.intent === "destructive";
       return (
         <Pressable
           accessibilityRole="button"
-          accessibilityState={{ disabled: node.disabled === true }}
-          disabled={node.disabled === true}
-          onPress={() => invokeAction(node)}
+          accessibilityState={{ disabled: iconButton.disabled === true }}
+          disabled={iconButton.disabled === true}
+          onPress={() => invokeAction(iconButton)}
           style={[
             styles.primaryButton,
-            node.intent === "destructive" ? styles.destructiveButton : null,
-            node.disabled === true ? styles.disabledAction : null,
+            destructive ? styles.destructiveButton : null,
+            iconButton.disabled === true ? styles.disabledAction : null,
           ]}
         >
-          <Text style={styles.primaryButtonText}>{node.label}</Text>
+          <View style={styles.primaryButtonContent}>
+            {iconButton.icon === undefined ? null : (
+              <HostIcon name={iconButton.icon} tone="inverse" />
+            )}
+            <Text style={styles.primaryButtonText}>{iconButton.label}</Text>
+          </View>
         </Pressable>
       );
+    }
     case "navigation":
       return (
         <Pressable
@@ -529,6 +539,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 14,
   },
+  primaryButtonContent: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 7,
+    justifyContent: "center",
+    width: "100%",
+  },
   destructiveButton: {
     backgroundColor: "#b42318",
   },
@@ -537,8 +554,11 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: "#ffffff",
+    flex: 1,
     fontSize: 17,
     fontWeight: "700",
+    minWidth: 0,
+    textAlign: "center",
   },
   secondaryButton: {
     alignItems: "center",

@@ -1,5 +1,6 @@
 import type { MiniAppInspection, PageNode, SettingDefinition } from "../model.ts";
 import { BADGE_TONES } from "./sdk12-badge.ts";
+import { UI_ICON_NAMES } from "./sdk12-icons.ts";
 import { PROGRESS_FORMATS } from "./sdk12-progress.ts";
 import { validatePageNode, type UiValidationOptions } from "./ui-validation.ts";
 
@@ -7,6 +8,7 @@ type PlainObject = Record<string, unknown>;
 
 const BADGE_TONE_SET = new Set<string>(BADGE_TONES);
 const PROGRESS_FORMAT_SET = new Set<string>(PROGRESS_FORMATS);
+const UI_ICON_NAME_SET = new Set<string>(UI_ICON_NAMES);
 
 export function validatePageNodeWithDormantFormHints(
   value: unknown,
@@ -138,12 +140,31 @@ function visit(value: unknown, path: string, supportsSdk12: boolean): unknown {
     }
   }
 
+  const isListItem = value.type === "list-item";
+  const isActionControl =
+    value.type === "button" ||
+    (value.type === undefined &&
+      typeof value.label === "string" &&
+      typeof value.action === "string");
+  const iconPresent = Object.prototype.hasOwnProperty.call(value, "icon");
+  const leadingIconPresent =
+    isListItem && Object.prototype.hasOwnProperty.call(value, "leadingIcon");
+
+  if (isActionControl && iconPresent) {
+    validateIcon(value.icon, `${path}.icon`, supportsSdk12);
+  }
+  if (leadingIconPresent) {
+    validateIcon(value.leadingIcon, `${path}.leadingIcon`, supportsSdk12);
+  }
+
   const copy: PlainObject = {};
   for (const [key, entry] of Object.entries(value)) {
     if (isTextInput && (key === "multiline" || key === "minLines")) continue;
     if (isNumberInput && (key === "step" || key === "decimalPlaces")) continue;
     if (isBadge && key === "tone") continue;
     if (isProgress && ["label", "value", "min", "max", "format"].includes(key)) continue;
+    if (isActionControl && key === "icon") continue;
+    if (isListItem && key === "leadingIcon") continue;
     copy[key] = visit(entry, `${path}.${key}`, supportsSdk12);
   }
   if (isMultiSelect) copy.type = "select";
@@ -153,6 +174,16 @@ function visit(value: unknown, path: string, supportsSdk12: boolean): unknown {
     copy.text = String(value.value);
   }
   return copy;
+}
+
+function validateIcon(value: unknown, path: string, supportsSdk12: boolean): void {
+  if (!supportsSdk12) fail(path, "Fixed host icons require SDK 1.2.");
+  if (typeof value !== "string" || !UI_ICON_NAME_SET.has(value)) {
+    fail(
+      path,
+      "Expected add, edit, delete, check, calendar, clock, copy, share, search, settings, warning, info, money, list, or refresh.",
+    );
+  }
 }
 
 function legacyInspection(
