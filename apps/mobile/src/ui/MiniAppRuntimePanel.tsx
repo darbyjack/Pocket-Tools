@@ -3,7 +3,9 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import type { MiniAppInspection } from "../model";
 import { useMiniApp } from "../useMiniApp";
+import { ErrorNotice } from "./ErrorNotice";
 import { MiniAppRenderer } from "./MiniAppRenderer";
+import { colors } from "./theme";
 
 export interface MiniAppRuntimePanelProps {
   readonly source: string | null;
@@ -37,27 +39,28 @@ export function MiniAppRuntimePanel({
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Starting the mini-app runtime…</Text>
+        <Text style={styles.loadingText}>Opening…</Text>
       </View>
     );
   }
 
   if (error !== null) {
     return (
-      <View accessibilityRole="alert" style={styles.errorCard}>
-        <Text style={styles.errorTitle}>Pocket Tools could not run this script</Text>
-        <Text selectable style={styles.errorText}>
-          {error}
-        </Text>
-      </View>
+      <ErrorNotice
+        detail={error}
+        message="Check the tool script in Manage, then try again."
+        title="This tool couldn’t open"
+      />
     );
   }
 
   if (page === null || snapshot === null || inspection === null) {
     return (
-      <View style={styles.errorCard}>
-        <Text style={styles.errorTitle}>The script returned no screen</Text>
-      </View>
+      <ErrorNotice
+        detail="The tool completed without returning a screen."
+        message="Check the tool script in Manage, then try again."
+        title="This tool couldn’t open"
+      />
     );
   }
 
@@ -82,25 +85,7 @@ const styles = StyleSheet.create({
     minHeight: 240,
   },
   loadingText: {
-    color: "#475467",
+    color: colors.textMuted,
     fontSize: 15,
-  },
-  errorCard: {
-    backgroundColor: "#fff1f0",
-    borderColor: "#fda29b",
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 6,
-    padding: 16,
-  },
-  errorTitle: {
-    color: "#912018",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  errorText: {
-    color: "#b42318",
-    fontFamily: "monospace",
-    fontSize: 13,
   },
 });
