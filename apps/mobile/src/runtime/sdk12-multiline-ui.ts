@@ -2,7 +2,7 @@ import type { MiniAppInspection, PageNode, SettingDefinition } from "../model.ts
 import { BADGE_TONES } from "./sdk12-badge.ts";
 import { UI_ICON_NAMES } from "./sdk12-icons.ts";
 import { PROGRESS_FORMATS } from "./sdk12-progress.ts";
-import { validatePageNode } from "./ui-validation.ts";
+import { validatePageNode, type UiValidationOptions } from "./ui-validation.ts";
 
 type PlainObject = Record<string, unknown>;
 
@@ -22,18 +22,22 @@ export function validateSdkPageNode(
 export function validatePageNodeWithDormantFormHints(
   value: unknown,
   inspection?: MiniAppInspection,
-  _options?: unknown,
+  options: UiValidationOptions = {},
 ): asserts value is PageNode {
-  validateSdkPageNode(value, inspection);
+  if (options.allowDormantSdk12 === true) {
+    validateSdkPageNode(value, inspection);
+    return;
+  }
+  validatePageNode(value, inspection);
 }
 
 /** @deprecated SDK 1.2 is public; use validateSdkPageNode. */
 export function validatePageNodeWithDormantMultiline(
   value: unknown,
   inspection?: MiniAppInspection,
-  _options?: unknown,
+  options: UiValidationOptions = {},
 ): asserts value is PageNode {
-  validateSdkPageNode(value, inspection);
+  validatePageNodeWithDormantFormHints(value, inspection, options);
 }
 
 function stripAndValidateSdk12Extensions(
