@@ -61,9 +61,12 @@ export function stepNumberInputValue(
       : Number((value + direction * options.step).toPrecision(15));
 
   if (!Number.isFinite(next)) return undefined;
+  const normalizedDecimalPlaces = options.decimalPlaces ?? precisionAsHint(precision);
   return normalizeNumberInputValue(next, {
     ...options,
-    decimalPlaces: options.decimalPlaces ?? precisionAsHint(precision),
+    ...(normalizedDecimalPlaces === undefined
+      ? {}
+      : { decimalPlaces: normalizedDecimalPlaces }),
   });
 }
 
@@ -92,6 +95,7 @@ function roundToDecimalPlaces(value: number, decimalPlaces: number): number {
   const [coefficientText, exponentText = "0"] = value.toString().split("e");
   const coefficient = coefficientText ?? "0";
   const shiftedValue = Number(`${coefficient}e${Number(exponentText) + decimalPlaces}`);
+  if (!Number.isFinite(shiftedValue)) return value;
   const shifted = Math.sign(shiftedValue) * Math.round(Math.abs(shiftedValue));
   const [roundedCoefficientText, roundedExponentText = "0"] = shifted.toString().split("e");
   const roundedCoefficient = roundedCoefficientText ?? "0";
