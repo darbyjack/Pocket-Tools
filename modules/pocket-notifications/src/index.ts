@@ -1,5 +1,10 @@
 import { requireNativeModule } from "expo-modules-core";
 
+import {
+  parseNativeNotificationOpenTarget,
+  parseNativeNotificationResults,
+} from "./validation.ts";
+
 export type NativeNotificationResultStatus =
   | "scheduled"
   | "blocked"
@@ -68,22 +73,11 @@ export function openExactAlarmSettings(): Promise<boolean> {
 export async function reconcileNativeNotifications(
   entries: readonly NativeNotificationRegistryEntry[],
 ): Promise<readonly NativeNotificationReconciliationResult[]> {
-  const result = await nativeModule.reconcile(JSON.stringify(entries));
-  const parsed = JSON.parse(result) as unknown;
-  if (!Array.isArray(parsed)) {
-    throw new Error("NOTIFICATION_RECONCILIATION_FAILED: Native reconciliation returned invalid data.");
-  }
-  return parsed as readonly NativeNotificationReconciliationResult[];
+  return parseNativeNotificationResults(await nativeModule.reconcile(JSON.stringify(entries)));
 }
 
 export function getNativeNotificationOpenTarget(
   hostId: string,
 ): NativeNotificationOpenTarget | null {
-  const json = nativeModule.getOpenTarget(hostId);
-  if (json === null) return null;
-  const parsed = JSON.parse(json) as unknown;
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("NOTIFICATION_ROUTE_INVALID: Native notification routing data is invalid.");
-  }
-  return parsed as NativeNotificationOpenTarget;
+  return parseNativeNotificationOpenTarget(nativeModule.getOpenTarget(hostId));
 }
