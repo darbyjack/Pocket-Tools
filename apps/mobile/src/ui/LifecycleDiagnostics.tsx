@@ -10,6 +10,7 @@ import {
 } from "../diagnostics/lifecycle";
 import type { DiagnosticCheck, TimerRecoveryCheckpoint } from "../diagnostics/types";
 import { ScreenScrollView } from "./ScreenScrollView";
+import { Sdk12IconsAcceptance } from "./Sdk12IconsAcceptance.tsx";
 
 export interface LifecycleDiagnosticsProps {
   readonly onBack: () => void;
@@ -123,6 +124,8 @@ export function LifecycleDiagnostics({ onBack }: LifecycleDiagnosticsProps) {
           choices, and durable timer reconstruction after a real process stop.
         </Text>
       </View>
+
+      <Sdk12IconsAcceptance />
 
       {loading ? (
         <View style={styles.loadingRow}>
