@@ -110,6 +110,22 @@ test("parses an SDK 1.1 inspection and CRUD operations", () => {
   assert.equal(response.value.operations.length, 2);
 });
 
+test("parses dormant SDK 1.2 setting operations structurally", () => {
+  const response = parseRuntimeResponse(
+    success({
+      operations: [
+        { type: "setting-set", setting: "draftTitle", value: "Saved" },
+        { type: "setting-reset", setting: "draftTitle" },
+      ],
+    }),
+  );
+
+  assert.deepEqual(response.value.operations, [
+    { type: "setting-set", setting: "draftTitle", value: "Saved" },
+    { type: "setting-reset", setting: "draftTitle" },
+  ]);
+});
+
 test("accepts a normalized SDK 1.0 inspection", () => {
   const response = parseRuntimeResponse(
     success({
@@ -205,6 +221,26 @@ test("rejects malformed envelopes, inspections, and operations", () => {
           logs: [],
           logsTruncated: false,
         }),
+      ),
+    (error: unknown) =>
+      error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
+  );
+  assert.throws(
+    () =>
+      parseRuntimeResponse(
+        success({
+          operations: [
+            { type: "setting-set", setting: "draftTitle", value: "Saved", extra: true },
+          ],
+        }),
+      ),
+    (error: unknown) =>
+      error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
+  );
+  assert.throws(
+    () =>
+      parseRuntimeResponse(
+        success({ operations: [{ type: "setting-set", setting: "draftTitle" }] }),
       ),
     (error: unknown) =>
       error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
