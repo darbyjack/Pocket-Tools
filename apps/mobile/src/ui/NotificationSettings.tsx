@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     borderWidth: 1,
     gap: spacing.item,
-    padding: spacing.card,
+    padding: spacing.item,
   },
   acceptanceTitle: {
     color: colors.text,
