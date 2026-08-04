@@ -21,6 +21,9 @@ import {
   seedBundledMiniAppsOnce,
   type InstalledMiniApp,
 } from "./src/storage/database";
+import { stringifyHostBackup } from "./src/storage/host-backup";
+import { createHostBackup } from "./src/storage/host-backup-storage";
+import { HostBackupEditor } from "./src/ui/HostBackupEditor";
 import { InstalledMiniAppRunner } from "./src/ui/InstalledMiniAppRunner";
 import { LifecycleDiagnostics } from "./src/ui/LifecycleDiagnostics";
 import { MiniAppBackupEditor } from "./src/ui/MiniAppBackupEditor";
@@ -30,6 +33,7 @@ import { MiniAppLibrary } from "./src/ui/MiniAppLibrary";
 type Route =
   | { readonly name: "library" }
   | { readonly name: "backup" }
+  | { readonly name: "hostBackup" }
   | { readonly name: "diagnostics" }
   | { readonly name: "run"; readonly appId: string }
   | {
@@ -98,6 +102,21 @@ export default function App() {
       });
     } catch (caught) {
       Alert.alert("Backup failed", caught instanceof Error ? caught.message : String(caught));
+    }
+  }, []);
+
+  const exportAllBackup = useCallback(async () => {
+    try {
+      const backup = await createHostBackup();
+      await Share.share({
+        title: "Pocket Tools.pocket-tools-host-backup.json",
+        message: stringifyHostBackup(backup),
+      });
+    } catch (caught) {
+      Alert.alert(
+        "Complete backup failed",
+        caught instanceof Error ? caught.message : String(caught),
+      );
     }
   }, []);
 
@@ -173,6 +192,11 @@ export default function App() {
     [refreshApps],
   );
 
+  const handleHostRestored = useCallback(async () => {
+    await refreshApps();
+    setRoute({ name: "library" });
+  }, [refreshApps]);
+
   const selectedApp =
     route.name === "run" || route.name === "editor"
       ? (apps.find((app) => app.id === route.appId) ?? null)
@@ -201,6 +225,7 @@ export default function App() {
     content = (
       <MiniAppLibrary
         apps={apps}
+        onBackupAll={() => void exportAllBackup()}
         onCreate={() => setRoute({ name: "editor", mode: "create", appId: null })}
         onDelete={removeApp}
         onDiagnostics={() => setRoute({ name: "diagnostics" })}
@@ -209,6 +234,7 @@ export default function App() {
         onExport={(app) => void exportSource(app)}
         onOpen={(app) => setRoute({ name: "run", appId: app.id })}
         onRestore={() => setRoute({ name: "backup" })}
+        onRestoreAll={() => setRoute({ name: "hostBackup" })}
       />
     );
   } else if (route.name === "backup") {
@@ -216,6 +242,13 @@ export default function App() {
       <MiniAppBackupEditor
         onCancel={() => setRoute({ name: "library" })}
         onRestored={(restored) => void handleSaved(restored)}
+      />
+    );
+  } else if (route.name === "hostBackup") {
+    content = (
+      <HostBackupEditor
+        onCancel={() => setRoute({ name: "library" })}
+        onRestored={() => void handleHostRestored()}
       />
     );
   } else if (route.name === "diagnostics") {

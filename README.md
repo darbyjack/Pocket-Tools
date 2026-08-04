@@ -11,7 +11,7 @@ Their business logic lives only under `examples/*.miniapp.js`; the host contains
 
 ## Development rules
 
-Read [AGENTS.md](AGENTS.md) before changing the project. SDK v1 is frozen for the MVP. New public SDK surface requires an explicit post-MVP version decision rather than an incidental v1 addition.
+Read [AGENTS.md](AGENTS.md) before changing the project. SDK 1.0 is the original frozen MVP contract, and SDK 1.1 is the first explicit additive release. New public SDK surface requires another deliberate version decision.
 
 No GitHub Actions workflow is enabled. Repository checks and Android builds are run manually until CI is deliberately introduced later.
 
@@ -22,7 +22,7 @@ single-file mini-app source
   → on-device validation and isolated preview
   → installed active source in SQLite
   → fresh bounded QuickJS-NG runtime
-  → frozen virtual @pocket-tools/sdk module
+  → virtual @pocket-tools/sdk module
   → serialized UI, interaction input, and explicit operation results
   → React Native response and target validation
   → host-owned native renderer and active-screen state
@@ -33,9 +33,11 @@ Bundled reference scripts are imported into the installed mini-app library only 
 
 The canonical delivery map is [Wayfinder: Deliver the Pocket Tools Android MVP](https://github.com/darbyjack/Pocket-Tools/issues/1).
 
-## Frozen offline SDK v1
+## Offline SDK
 
-SDK v1 supports:
+Pocket Tools supports SDK 1.0 and SDK 1.1.
+
+SDK 1.0 provides:
 
 - Text, boolean, number, money, and select settings
 - Text, boolean, number, money, and datetime collection fields
@@ -48,13 +50,15 @@ SDK v1 supports:
 - Durable start/get/stop timers
 - Host-owned plain, number, USD money, and duration formatting with ISO datetime storage
 
-SDK v1 intentionally excludes network, files, location, notifications, secrets, custom native modules, arbitrary background JavaScript, migrations, and compatibility shims.
+SDK 1.1 adds reusable action descriptors, actionable list items, destructive intent, disabled actions, and host-owned confirmation while retaining SDK 1.0 compatibility.
 
-See [Frozen Offline Mini App SDK v1](docs/SDK_OVERVIEW.md) for the complete contract.
+Both versions intentionally exclude network, files, location, notifications, secrets, custom native modules, arbitrary background JavaScript, and permission manifests.
+
+See [Pocket Tools Offline Mini-App SDK](docs/SDK_OVERVIEW.md) for the complete contract.
 
 ## Author a mini-app
 
-Start with the [SDK v1 Agent Authoring Guide](docs/AGENT_AUTHORING.md). It contains the executable template, full authoring rules, unsupported API list, local commands, and final delivery checklist.
+Start with the [SDK 1.1 Agent Authoring Guide](docs/AGENT_AUTHORING.md). It contains the executable template, full authoring rules, unsupported API list, local commands, and final delivery checklist.
 
 For delegation, use the [canonical copy-and-paste agent prompt](docs/AGENT_PROMPT.md). The committed [SDK declarations](packages/sdk-contract/dist/index.d.ts) provide editor and agent type context.
 
@@ -68,12 +72,12 @@ pnpm mini-app validate ./path/to/tool.miniapp.js --json
 pnpm mini-app inspect ./path/to/tool.miniapp.js --json
 ```
 
-These commands execute the exact SDK and runner source embedded in the Android native module under QuickJS-NG WASM, then apply the canonical SDK definition validator.
+These commands execute the same SDK and runner source embedded in the Android native module, then apply the canonical SDK definition validator.
 
 ## Install a mini-app on Android
 
 1. Open the mini-app library and choose **Add script**.
-2. Paste one SDK v1 JavaScript module.
+2. Paste one SDK 1.0 or SDK 1.1 JavaScript module.
 3. Validate it.
 4. Preview it in a disposable storage namespace.
 5. Install it after the current exact source completes its first render.
@@ -82,13 +86,23 @@ Updates render against a cloned copy of current installed state before the activ
 
 See [Installed Mini-App Lifecycle](docs/INSTALLED_MINI_APPS.md) for storage, preview, update, rollback, export, duplication, and removal behavior.
 
-## Back up one installed mini app
+## Back up and restore
 
-Open an installed app and choose **Backup** to share a versioned JSON document containing both saved sources, manifest metadata, settings, records, and active durable timer timestamps. Choose **Restore backup** from the library to paste, validate, and restore that document transactionally.
+### One installed mini app
+
+Open an installed app and choose **Backup** to share a versioned JSON document containing both saved sources, manifest metadata, settings, records, and active durable timer timestamps. Choose **Restore one app** from the library to paste, validate, and restore that document transactionally.
 
 Restoring over an existing manifest ID requires explicit confirmation. Invalid backups and failed SQLite writes leave the existing installation unchanged.
 
-See [Portable Mini-App Backups](docs/PORTABLE_BACKUPS.md) for the format, validation boundary, replacement behavior, and Android acceptance procedure.
+See [Portable Mini-App Backups](docs/PORTABLE_BACKUPS.md).
+
+### Complete Pocket Tools state
+
+Choose **Back up all** from the library to share one versioned host backup containing every installed mini app plus retained settings, records, and timers for removed apps. Choose **Restore all** to validate every installed source and replace all user-owned state in one transaction after explicit confirmation.
+
+Preview and lifecycle-diagnostic namespaces are excluded. Internal host metadata is preserved.
+
+See [Complete Host Backups](docs/HOST_BACKUPS.md).
 
 ## Validate lifecycle and isolation
 
@@ -98,11 +112,17 @@ The immediate suite creates two temporary installed scripts with colliding setti
 
 See [Lifecycle and Namespace Diagnostics](docs/LIFECYCLE_DIAGNOSTICS.md) for the complete evidence procedure and current verification boundary.
 
-## Prove the ordinary script workflow
+## Ordinary script acceptance
 
-Use [Ordinary Agent-Script Acceptance](docs/ORDINARY_SCRIPT_ACCEPTANCE.md) to take the existing Bathroom Pay source through local SDK validation, on-device paste and preview, install, settings, timer recovery, records, summaries, valid and failed updates, rollback, export, and removal without rebuilding the host.
+The ordinary authoring path has been physically proven: an agent given the published SDK material produced a script that installed and ran through the normal Android workflow without host-specific code.
 
-The acceptance remains incomplete until actual repository command output and physical Android observations are recorded.
+The repeatable procedure remains documented in [Ordinary Agent-Script Acceptance](docs/ORDINARY_SCRIPT_ACCEPTANCE.md).
+
+## Android build target
+
+The project is configured for the Samsung Galaxy S24 Ultra's `arm64-v8a` runtime. Clean prebuilds produce ARM64-only native builds, and release builds enable R8 minification plus unused-resource shrinking. This reduces native build work and APK size, but generated APKs will not install on x86 emulators or 32-bit ARM devices.
+
+See [Pocket Tools Mobile](apps/mobile/README.md#galaxy-s24-ultra-build-target) for regeneration, build, ABI verification, and APK output commands.
 
 ## Requirements
 
@@ -140,7 +160,7 @@ export default defineMiniApp({
   manifest: {
     id: "example-tool",
     name: "Example Tool",
-    sdkVersion: 1,
+    sdkVersion: "1.1",
   },
   screens: {
     home() {
@@ -161,10 +181,11 @@ The host rejects unsupported imports, ambient native access, unknown SDK propert
 - [Canonical agent prompt](docs/AGENT_PROMPT.md)
 - [Authoring error codes](docs/AUTHORING_ERRORS.md)
 - [Installed mini-app lifecycle](docs/INSTALLED_MINI_APPS.md)
-- [Portable mini-app backups](docs/PORTABLE_BACKUPS.md)
+- [Portable single-app backups](docs/PORTABLE_BACKUPS.md)
+- [Complete host backups](docs/HOST_BACKUPS.md)
 - [Lifecycle and namespace diagnostics](docs/LIFECYCLE_DIAGNOSTICS.md)
 - [Ordinary agent-script acceptance](docs/ORDINARY_SCRIPT_ACCEPTANCE.md)
-- [Frozen SDK v1](docs/SDK_OVERVIEW.md)
+- [SDK overview](docs/SDK_OVERVIEW.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security model](docs/SECURITY_MODEL.md)
 - [Android slice](docs/ANDROID_SLICE.md)
