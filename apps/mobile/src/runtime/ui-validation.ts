@@ -13,16 +13,22 @@ const ACTION_KEYS = ["label", "action", "input", "intent", "disabled", "confirma
 type PlainObject = Record<string, unknown>;
 type DisplayFormat = "plain" | "money" | "duration" | "number";
 
+export interface UiValidationOptions {
+  readonly allowDormantSdk12?: boolean;
+}
+
 interface ValidationState {
   count: number;
   inspection: MiniAppInspection | undefined;
+  options: UiValidationOptions;
 }
 
 export function validatePageNode(
   value: unknown,
   inspection?: MiniAppInspection,
+  options: UiValidationOptions = {},
 ): asserts value is PageNode {
-  const state: ValidationState = { count: 0, inspection };
+  const state: ValidationState = { count: 0, inspection, options };
   const page = visitNode(value, "page", 0, state, true);
   if (page.type !== "page") fail("page", "A screen must return one page node.");
 }
@@ -105,6 +111,16 @@ function visitNode(
     case "select":
       exactKeys(node, ["type", "setting", "label"], path);
       validateSettingBinding(node, path, state, ["select"]);
+      return node;
+    case "date-input":
+      if (!supportsSdk12(state)) fail(path, "Date inputs require SDK 1.2.");
+      exactKeys(node, ["type", "setting", "label"], path);
+      validateSettingBinding(node, path, state, ["date"]);
+      return node;
+    case "datetime-input":
+      if (!supportsSdk12(state)) fail(path, "Date-time inputs require SDK 1.2.");
+      exactKeys(node, ["type", "setting", "label"], path);
+      validateSettingBinding(node, path, state, ["datetime"]);
       return node;
     case "button":
       exactKeys(node, ["type", ...ACTION_KEYS], path);
@@ -230,7 +246,16 @@ function validateActionControl(action: PlainObject, path: string, state: Validat
 }
 
 function supportsSdk11(state: ValidationState): boolean {
-  return state.inspection === undefined || state.inspection.manifest.sdkVersion === "1.1";
+  return (
+    state.inspection === undefined ||
+    state.inspection.manifest.sdkVersion === "1.1" ||
+    state.inspection.manifest.sdkVersion === "1.2"
+  );
+}
+
+function supportsSdk12(state: ValidationState): boolean {
+  if (state.options.allowDormantSdk12 !== true) return false;
+  return state.inspection === undefined || state.inspection.manifest.sdkVersion === "1.2";
 }
 
 function validateSettingBinding(
