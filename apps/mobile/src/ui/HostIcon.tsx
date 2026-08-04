@@ -1,7 +1,7 @@
 import {
-  CalendarDays,
+  Calendar,
   Check,
-  Clock3,
+  Clock,
   Copy,
   DollarSign,
   Info,
@@ -16,7 +16,7 @@ import {
   TriangleAlert,
   type LucideIcon,
 } from "lucide-react-native";
-import { StyleSheet, View, type ColorValue } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import type { UiIconName } from "../runtime/sdk12-icons.ts";
 
@@ -25,8 +25,8 @@ const ICONS: Readonly<Record<UiIconName, LucideIcon>> = {
   edit: Pencil,
   delete: Trash2,
   check: Check,
-  calendar: CalendarDays,
-  clock: Clock3,
+  calendar: Calendar,
+  clock: Clock,
   copy: Copy,
   share: Share2,
   search: Search,
@@ -63,7 +63,7 @@ export function HostIcon({ name, size = "medium", tone = "default" }: HostIconPr
   );
 }
 
-function iconColor(tone: HostIconTone): ColorValue {
+function iconColor(tone: HostIconTone): string {
   switch (tone) {
     case "inverse":
       return "#ffffff";
