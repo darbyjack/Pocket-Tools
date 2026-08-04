@@ -34,8 +34,19 @@ class PocketQuickJsSdk12EverydayQueryTest {
   }
 
   @Test
-  fun rejectsUnsupportedOperatorsAndAggregateFields() {
-    for (action in listOf("invalidTextGt", "invalidBooleanContains", "invalidNumberContains", "invalidAggregate")) {
+  fun rejectsInvalidQueriesAndAggregateFields() {
+    val actions = listOf(
+      "invalidTextGt",
+      "invalidBooleanContains",
+      "invalidNumberContains",
+      "invalidMalformedQuery",
+      "invalidDateValue",
+      "invalidUnknownField",
+      "invalidNonFiniteFilter",
+      "invalidAggregate",
+      "invalidAggregateName",
+    )
+    for (action in actions) {
       assertEquals("VALIDATION_FAILED", errorCode(run(definition(), actionRequest(action))))
     }
   }
@@ -54,6 +65,14 @@ class PocketQuickJsSdk12EverydayQueryTest {
     assertEquals(
       "VALIDATION_FAILED",
       errorCode(run(legacyDefinition(), legacyActionRequest("usesNeq"))),
+    )
+  }
+
+  @Test
+  fun preservesBaseDefinitionValidation() {
+    assertEquals(
+      "INVALID_SCRIPT",
+      errorCode(run(malformedDefinition(), minimalActionRequest("broken"))),
     )
   }
 
@@ -82,7 +101,9 @@ class PocketQuickJsSdk12EverydayQueryTest {
             const entries = context.data.collection('entries');
             const requireCount = (query, expected, label) => {
               const actual = entries.count(query);
-              if (actual !== expected) throw new Error(`${label}: expected ${expected}, received ${actual}`);
+              if (actual !== expected) {
+                throw new Error(label + ': expected ' + expected + ', received ' + actual);
+              }
             };
 
             requireCount({ where: [{ field: 'name', operator: 'eq', value: 'Alpha' }] }, 1, 'text eq');
@@ -178,8 +199,29 @@ class PocketQuickJsSdk12EverydayQueryTest {
               where: [{ field: 'amount', operator: 'contains', value: 1 }],
             });
           },
+          invalidMalformedQuery(context) {
+            context.data.collection('entries').query({ where: 'not-an-array' });
+          },
+          invalidDateValue(context) {
+            context.data.collection('entries').query({
+              where: [{ field: 'dueDate', operator: 'eq', value: '2026-02-30' }],
+            });
+          },
+          invalidUnknownField(context) {
+            context.data.collection('entries').query({
+              where: [{ field: 'missing', operator: 'eq', value: 'x' }],
+            });
+          },
+          invalidNonFiniteFilter(context) {
+            context.data.collection('entries').query({
+              where: [{ field: 'amount', operator: 'eq', value: Infinity }],
+            });
+          },
           invalidAggregate(context) {
             context.data.collection('entries').average('name');
+          },
+          invalidAggregateName(context) {
+            context.data.collection('entries').average(42);
           },
           verifyOverflow(context) {
             context.data.collection('entries').sum('amount');
@@ -210,6 +252,16 @@ class PocketQuickJsSdk12EverydayQueryTest {
       });
     """.trimIndent()
 
+  private fun malformedDefinition(): String =
+    """
+      import { defineMiniApp } from '@pocket-tools/sdk';
+      export default defineMiniApp({
+        manifest: { id: 'malformed-query-test', name: 'Malformed Query Test', sdkVersion: '1.2' },
+        screens: { home() { return { type: 'page', title: 'Malformed', children: [] }; } },
+        actions: { broken: 42 },
+      });
+    """.trimIndent()
+
   private fun actionRequest(action: String): String =
     baseRequest(action, records()).toString()
 
@@ -217,8 +269,28 @@ class PocketQuickJsSdk12EverydayQueryTest {
     baseRequest(
       "verifyOverflow",
       JSONArray()
-        .put(record("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "Huge A", true, Double.MAX_VALUE, 1.0, "2026-08-01", "2026-08-01T10:00:00.000Z"))
-        .put(record("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "Huge B", true, Double.MAX_VALUE, 1.0, "2026-08-02", "2026-08-02T10:00:00.000Z")),
+        .put(
+          record(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "Huge A",
+            true,
+            Double.MAX_VALUE,
+            1.0,
+            "2026-08-01",
+            "2026-08-01T10:00:00.000Z",
+          ),
+        )
+        .put(
+          record(
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "Huge B",
+            true,
+            Double.MAX_VALUE,
+            1.0,
+            "2026-08-02",
+            "2026-08-02T10:00:00.000Z",
+          ),
+        ),
     ).toString()
 
   private fun legacyActionRequest(action: String): String =
@@ -243,6 +315,16 @@ class PocketQuickJsSdk12EverydayQueryTest {
       .put("timers", JSONObject())
       .toString()
 
+  private fun minimalActionRequest(action: String): String =
+    JSONObject()
+      .put("mode", "action")
+      .put("action", action)
+      .put("now", "2026-08-04T04:30:00.000Z")
+      .put("settings", JSONObject())
+      .put("records", JSONObject())
+      .put("timers", JSONObject())
+      .toString()
+
   private fun baseRequest(action: String, entries: JSONArray): JSONObject =
     JSONObject()
       .put("mode", "action")
@@ -254,13 +336,61 @@ class PocketQuickJsSdk12EverydayQueryTest {
 
   private fun records(): JSONArray =
     JSONArray()
-      .put(record("11111111111111111111111111111111", "Alpha", true, 10.0, 2.0, "2026-08-01", "2026-08-01T10:00:00.000Z"))
-      .put(record("22222222222222222222222222222222", "CAFÉ Budget", false, 20.0, 4.0, "2026-08-10", "2026-08-10T10:00:00.000Z"))
-      .put(record("33333333333333333333333333333333", "Ångström Notes", true, JSONObject.NULL, JSONObject.NULL, "2026-08-12", "2026-08-12T10:00:00.000Z"))
       .put(
-        record("44444444444444444444444444444444", "Gamma", false, null, 8.0, "2026-08-20", "2026-08-20T10:00:00.000Z"),
+        record(
+          "11111111111111111111111111111111",
+          "Alpha",
+          true,
+          10.0,
+          2.0,
+          "2026-08-01",
+          "2026-08-01T10:00:00.000Z",
+        ),
       )
-      .put(record("55555555555555555555555555555555", "Omega", true, 30.0, 6.0, "2026-08-30", "2026-08-30T10:00:00.000Z"))
+      .put(
+        record(
+          "22222222222222222222222222222222",
+          "CAFÉ Budget",
+          false,
+          20.0,
+          4.0,
+          "2026-08-10",
+          "2026-08-10T10:00:00.000Z",
+        ),
+      )
+      .put(
+        record(
+          "33333333333333333333333333333333",
+          "Ångström Notes",
+          true,
+          JSONObject.NULL,
+          JSONObject.NULL,
+          "2026-08-12",
+          "2026-08-12T10:00:00.000Z",
+        ),
+      )
+      .put(
+        record(
+          "44444444444444444444444444444444",
+          "Gamma",
+          false,
+          null,
+          8.0,
+          "2026-08-20",
+          "2026-08-20T10:00:00.000Z",
+        ),
+      )
+      .put(
+        record(
+          "55555555555555555555555555555555",
+          "Omega",
+          true,
+          30.0,
+          6.0,
+          "2026-08-30",
+          "2026-08-30T10:00:00.000Z",
+        ),
+      )
 
   private fun record(
     id: String,
