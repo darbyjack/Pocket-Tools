@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseDormantSdk12RuntimeResponse, parseRuntimeResponse } from "./protocol.ts";
+import { parseRuntimeResponse } from "./protocol.ts";
 
 function response(): string {
   return JSON.stringify({
@@ -29,12 +29,8 @@ function response(): string {
   });
 }
 
-test("keeps normal response parsing closed to SDK 1.2 progress output", () => {
-  assert.throws(() => parseRuntimeResponse(response()), /Progress nodes require SDK 1\.2/);
-});
-
-test("preserves progress values, bounds, labels, and formats in dormant parsing", () => {
-  const parsed = parseDormantSdk12RuntimeResponse(response());
+test("preserves public progress values, bounds, labels, and formats", () => {
+  const parsed = parseRuntimeResponse(response());
   assert.deepEqual(parsed.value.page?.children, [
     { type: "progress", value: 25 },
     {
@@ -54,7 +50,7 @@ test("rejects malformed progress output from the native boundary", () => {
   };
   malformed.value.page.children[0].value = null;
   assert.throws(
-    () => parseDormantSdk12RuntimeResponse(JSON.stringify(malformed)),
+    () => parseRuntimeResponse(JSON.stringify(malformed)),
     /value: Expected a finite number/,
   );
 
@@ -63,7 +59,7 @@ test("rejects malformed progress output from the native boundary", () => {
   };
   invalidFormat.value.page.children[1].format = "ratio";
   assert.throws(
-    () => parseDormantSdk12RuntimeResponse(JSON.stringify(invalidFormat)),
+    () => parseRuntimeResponse(JSON.stringify(invalidFormat)),
     /format: Expected number or percent/,
   );
 });
