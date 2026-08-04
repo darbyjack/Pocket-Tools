@@ -150,10 +150,26 @@ function visitNode(
       optionalString(node.description, `${path}.description`, 0, 500);
       return node;
     case "list-item": {
-      exactKeys(node, ["type", "title", "subtitle", "trailing", "actions"], path);
+      exactKeys(
+        node,
+        ["type", "title", "subtitle", "trailing", "primaryAction", "actions"],
+        path,
+      );
       requireString(node.title, `${path}.title`, 1, 500);
       optionalString(node.subtitle, `${path}.subtitle`, 0, 500);
       optionalString(node.trailing, `${path}.trailing`, 0, 120);
+      if (node.primaryAction !== undefined) {
+        if (!supportsSdk12(state)) {
+          fail(`${path}.primaryAction`, "List-item primary actions require SDK 1.2.");
+        }
+        const primaryPath = `${path}.primaryAction`;
+        const primaryAction = requireObject(node.primaryAction, primaryPath);
+        exactKeys(primaryAction, ACTION_KEYS, primaryPath);
+        validateActionControl(primaryAction, primaryPath, state);
+        if (primaryAction.intent === "destructive" && primaryAction.confirmation === undefined) {
+          fail(primaryPath, "Destructive list-item primary actions require confirmation.");
+        }
+      }
       if (node.actions !== undefined) {
         if (!supportsSdk11(state)) fail(`${path}.actions`, "List-item actions require SDK 1.1.");
         const actions = requireArray(node.actions, `${path}.actions`);
