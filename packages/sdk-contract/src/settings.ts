@@ -7,7 +7,7 @@ export interface VisibilityRule {
   readonly equals: SelectValue;
 }
 
-interface SettingBase<TType extends string, TValue extends SerializableValue> {
+export interface SettingBase<TType extends string, TValue extends SerializableValue> {
   readonly type: TType;
   readonly label: string;
   readonly description?: string;
@@ -32,6 +32,16 @@ export interface MoneySetting extends SettingBase<"money", number> {
   readonly max?: number;
 }
 
+export interface DateSetting extends SettingBase<"date", string> {
+  readonly min?: string;
+  readonly max?: string;
+}
+
+export interface DateTimeSetting extends SettingBase<"datetime", string> {
+  readonly min?: string;
+  readonly max?: string;
+}
+
 export interface SelectOption {
   readonly label: string;
   readonly value: SelectValue;
@@ -41,12 +51,22 @@ export interface SelectSetting extends SettingBase<"select", SelectValue> {
   readonly options: readonly SelectOption[];
 }
 
+export interface MultiSelectSetting
+  extends SettingBase<"multi-select", readonly SelectValue[]> {
+  readonly options: readonly SelectOption[];
+  readonly minSelections?: number;
+  readonly maxSelections?: number;
+}
+
 export type SettingDefinition =
   | TextSetting
   | BooleanSetting
   | NumberSetting
   | MoneySetting
-  | SelectSetting;
+  | DateSetting
+  | DateTimeSetting
+  | SelectSetting
+  | MultiSelectSetting;
 
 export const setting = {
   text(definition: Omit<TextSetting, "type">): TextSetting {
@@ -61,11 +81,22 @@ export const setting = {
   money(definition: Omit<MoneySetting, "type">): MoneySetting {
     return { type: "money", ...definition };
   },
+  date(definition: Omit<DateSetting, "type">): DateSetting {
+    return { type: "date", ...definition };
+  },
+  datetime(definition: Omit<DateTimeSetting, "type">): DateTimeSetting {
+    return { type: "datetime", ...definition };
+  },
   select(definition: Omit<SelectSetting, "type">): SelectSetting {
     return { type: "select", ...definition };
+  },
+  multiSelect(definition: Omit<MultiSelectSetting, "type">): MultiSelectSetting {
+    return { type: "multi-select", ...definition };
   },
 } as const;
 
 export interface SettingsClient {
   get<TValue extends SerializableValue = SerializableValue>(name: string): TValue;
+  set(name: string, value: SerializableValue): void;
+  reset(name: string): void;
 }

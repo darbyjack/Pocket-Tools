@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseDormantSdk12RuntimeResponse, parseRuntimeResponse } from "./protocol.ts";
+import { parseRuntimeResponse } from "./protocol.ts";
 
 function response(): string {
   return JSON.stringify({
@@ -33,12 +33,8 @@ function response(): string {
   });
 }
 
-test("keeps normal response parsing closed to SDK 1.2 icon output", () => {
-  assert.throws(() => parseRuntimeResponse(response()), /Fixed host icons require SDK 1\.2/);
-});
-
-test("preserves fixed action and list-item icons in dormant parsing", () => {
-  const parsed = parseDormantSdk12RuntimeResponse(response());
+test("preserves public fixed action and list-item icons", () => {
+  const parsed = parseRuntimeResponse(response());
   const children = parsed.value.page?.children as readonly Record<string, unknown>[] | undefined;
   assert.equal(children?.[0]?.icon, "add");
   const list = children?.[1] as { items?: readonly Record<string, unknown>[] } | undefined;
@@ -60,7 +56,7 @@ test("rejects malformed icon output from the native boundary", () => {
   };
   malformed.value.page.children[0].icon = "download";
   assert.throws(
-    () => parseDormantSdk12RuntimeResponse(JSON.stringify(malformed)),
+    () => parseRuntimeResponse(JSON.stringify(malformed)),
     /Expected add, edit, delete/,
   );
 
@@ -69,7 +65,7 @@ test("rejects malformed icon output from the native boundary", () => {
   };
   invalidLeading.value.page.children[1].items[0].leadingIcon = { custom: true };
   assert.throws(
-    () => parseDormantSdk12RuntimeResponse(JSON.stringify(invalidLeading)),
+    () => parseRuntimeResponse(JSON.stringify(invalidLeading)),
     /Expected add, edit, delete/,
   );
 });

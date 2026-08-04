@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  MiniAppRuntimeError,
-  parseDormantSdk12RuntimeResponse,
-  parseRuntimeResponse,
-} from "./protocol.ts";
+import { MiniAppRuntimeError, parseRuntimeResponse } from "./protocol.ts";
 
 function response(page: unknown): string {
   return JSON.stringify({
@@ -24,7 +20,7 @@ function invalidUiTree(error: unknown): boolean {
   return error instanceof MiniAppRuntimeError && error.code === "INVALID_UI_TREE";
 }
 
-test("parses dormant SDK 1.2 multiline text input without changing its shape", () => {
+test("parses public SDK 1.2 multiline text input without changing its shape", () => {
   const value = page({
     type: "text-input",
     setting: "notes",
@@ -34,11 +30,10 @@ test("parses dormant SDK 1.2 multiline text input without changing its shape", (
     minLines: 5,
   });
 
-  assert.throws(() => parseRuntimeResponse(response(value)), invalidUiTree);
-  assert.deepEqual(parseDormantSdk12RuntimeResponse(response(value)).value.page, value);
+  assert.deepEqual(parseRuntimeResponse(response(value)).value.page, value);
 });
 
-test("rejects malformed dormant multiline response properties", () => {
+test("rejects malformed public multiline response properties", () => {
   for (const input of [
     { type: "text-input", setting: "notes", multiline: "true" },
     { type: "text-input", setting: "notes", minLines: 4 },
@@ -47,11 +42,11 @@ test("rejects malformed dormant multiline response properties", () => {
     { type: "text-input", setting: "notes", multiline: true, minLines: 9 },
     { type: "text-input", setting: "notes", multiline: true, minLines: 3.5 },
   ]) {
-    assert.throws(() => parseDormantSdk12RuntimeResponse(response(page(input))), invalidUiTree);
+    assert.throws(() => parseRuntimeResponse(response(page(input))), invalidUiTree);
   }
 });
 
-test("keeps ordinary text input responses compatible with the normal parser", () => {
+test("keeps ordinary text input responses compatible", () => {
   const value = page({ type: "text-input", setting: "notes", placeholder: "Notes" });
   assert.deepEqual(parseRuntimeResponse(response(value)).value.page, value);
 });

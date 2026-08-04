@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { MiniAppRuntimeError, parseRuntimeResponse } from "./protocol.ts";
-import { parseDormantSdk12NotificationRuntimeResponse } from "./sdk12-notification-protocol.ts";
 
 function response(operations: unknown): string {
   return JSON.stringify({
@@ -13,8 +12,8 @@ function response(operations: unknown): string {
   });
 }
 
-test("parses dormant notification operations in their original order", () => {
-  const parsed = parseDormantSdk12NotificationRuntimeResponse(
+test("parses public notification operations in their original order", () => {
+  const parsed = parseRuntimeResponse(
     response([
       { type: "timer-start", timerId: "work", startedAt: "2026-08-04T05:30:00.000Z" },
       {
@@ -53,22 +52,6 @@ test("parses dormant notification operations in their original order", () => {
   }
 });
 
-test("normal response parsing rejects dormant notification operations", () => {
-  assert.throws(
-    () =>
-      parseRuntimeResponse(
-        response([
-          {
-            type: "notification-schedule",
-            request: { id: "test", title: "Test", trigger: { type: "immediate" } },
-          },
-        ]),
-      ),
-    (error: unknown) =>
-      error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
-  );
-});
-
 const invalidOperations: readonly [string, unknown][] = [
   ["missing request", [{ type: "notification-schedule" }]],
   [
@@ -97,7 +80,7 @@ const invalidOperations: readonly [string, unknown][] = [
 for (const [name, operations] of invalidOperations) {
   test(`rejects ${name}`, () => {
     assert.throws(
-      () => parseDormantSdk12NotificationRuntimeResponse(response(operations)),
+      () => parseRuntimeResponse(response(operations)),
       (error: unknown) =>
         error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
     );

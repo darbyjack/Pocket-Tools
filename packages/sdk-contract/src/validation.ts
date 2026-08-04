@@ -1,5 +1,5 @@
 import type { FieldDefinition } from "./data.ts";
-import type { MiniAppDefinition } from "./core.ts";
+import type { MiniAppDefinition, SdkVersion } from "./core.ts";
 import { normalizeSdkVersion, SDK_VERSION, SUPPORTED_SDK_VERSIONS } from "./core.ts";
 import type { SelectValue } from "./settings.ts";
 
@@ -27,7 +27,7 @@ export function validateMiniAppDefinition(
     "definition",
     issues,
   );
-  validateManifest(root.manifest, issues);
+  const sdkVersion = validateManifest(root.manifest, issues);
 
   const settings = validateNamedObject(root.settings, "settings", issues);
   const collections = validateNamedObject(root.collections, "collections", issues);
@@ -52,18 +52,18 @@ export function validateMiniAppDefinition(
   }
 
   for (const [name, value] of Object.entries(settings)) {
-    validateSetting(name, value, settings, issues);
+    validateSetting(name, value, settings, sdkVersion, issues);
   }
   for (const [name, value] of Object.entries(collections)) {
-    validateCollection(name, value, issues);
+    validateCollection(name, value, sdkVersion, issues);
   }
 
   return issues;
 }
 
-function validateManifest(value: unknown, issues: ValidationIssue[]): void {
+function validateManifest(value: unknown, issues: ValidationIssue[]): SdkVersion | null {
   const manifest = asObject(value, "manifest", issues);
-  if (manifest === null) return;
+  if (manifest === null) return null;
   exactKeys(manifest, ["id", "name", "description", "icon", "sdkVersion"], "manifest", issues);
 
   if (typeof manifest.id !== "string" || !appIdPattern.test(manifest.id)) {
@@ -72,7 +72,9 @@ function validateManifest(value: unknown, issues: ValidationIssue[]): void {
   validateString(manifest.name, "manifest.name", 1, 80, issues);
   validateOptionalString(manifest.description, "manifest.description", 0, 500, issues);
   validateOptionalString(manifest.icon, "manifest.icon", 1, 80, issues);
-  if (normalizeSdkVersion(manifest.sdkVersion) === null) {
+
+  const sdkVersion = normalizeSdkVersion(manifest.sdkVersion);
+  if (sdkVersion === null) {
     addIssue(
       issues,
       "manifest.sdkVersion",
@@ -81,6 +83,7 @@ function validateManifest(value: unknown, issues: ValidationIssue[]): void {
       )}. The latest version is ${SDK_VERSION}.`,
     );
   }
+  return sdkVersion;
 }
 
 function validateNamedObject(
@@ -108,14 +111,15 @@ function validateSetting(
   name: string,
   value: unknown,
   allSettings: PlainObject,
+  sdkVersion: SdkVersion | null,
   issues: ValidationIssue[],
 ): void {
   const path = `settings.${name}`;
   const setting = asObject(value, path, issues);
   if (setting === null) return;
   const type = setting.type;
-
   const common = ["type", "label", "description", "default", "visibleWhen"];
+
   if (type === "text") {
     exactKeys(setting, [...common, "minLength", "maxLength"], path, issues);
   } else if (type === "boolean") {
@@ -124,6 +128,17 @@ function validateSetting(
     exactKeys(setting, [...common, "min", "max"], path, issues);
   } else if (type === "select") {
     exactKeys(setting, [...common, "options"], path, issues);
+  } else if (type === "date" || type === "datetime") {
+    exactKeys(setting, [...common, "min", "max"], path, issues);
+    requireSdk12(sdkVersion, `${path}.type`, issues);
+  } else if (type === "multi-select") {
+    exactKeys(
+      setting,
+      [...common, "options", "minSelections", "maxSelections"],
+      path,
+      issues,
+    );
+    requireSdk12(sdkVersion, `${path}.type`, issues);
   } else {
     addIssue(issues, `${path}.type`, "Unsupported setting type.");
     return;
@@ -145,7 +160,7 @@ function validateSetting(
         addIssue(issues, `${path}.default`, "Must satisfy the declared text length bounds.");
       }
     }
-    validateOrderedBounds(setting.minLength, setting.maxLength, path, issues);
+    validateOrderedNumericBounds(setting.minLength, setting.maxLength, path, issues);
     return;
   }
 
@@ -160,7 +175,7 @@ function validateSetting(
     validateFinite(setting.default, `${path}.default`, issues);
     validateOptionalFinite(setting.min, `${path}.min`, issues);
     validateOptionalFinite(setting.max, `${path}.max`, issues);
-    validateOrderedBounds(setting.min, setting.max, path, issues);
+    validateOrderedNumericBounds(setting.min, setting.max, path, issues);
     if (
       typeof setting.default === "number" &&
       Number.isFinite(setting.default) &&
@@ -172,16 +187,96 @@ function validateSetting(
     return;
   }
 
-  const options = Array.isArray(setting.options) ? setting.options : null;
-  if (options === null || options.length === 0 || options.length > 100) {
-    addIssue(issues, `${path}.options`, "Must contain between 1 and 100 options.");
+  if (type === "date" || type === "datetime") {
+    const isValid = type === "date" ? isCanonicalDate : isCanonicalDateTime;
+    validateCanonicalTemporal(setting.default, `${path}.default`, type, isValid, issues);
+    validateOptionalCanonicalTemporal(setting.min, `${path}.min`, type, isValid, issues);
+    validateOptionalCanonicalTemporal(setting.max, `${path}.max`, type, isValid, issues);
+    validateOrderedStringBounds(setting.min, setting.max, path, issues);
+    if (
+      typeof setting.default === "string" &&
+      isValid(setting.default) &&
+      ((typeof setting.min === "string" && setting.default < setting.min) ||
+        (typeof setting.max === "string" && setting.default > setting.max))
+    ) {
+      addIssue(issues, `${path}.default`, "Must satisfy the declared temporal bounds.");
+    }
     return;
   }
 
-  const optionValues: SelectValue[] = [];
+  const optionValues = validateOptions(setting.options, `${path}.options`, issues);
+  if (type === "select") {
+    if (!isSelectValue(setting.default) || !optionValues.some((entry) => entry === setting.default)) {
+      addIssue(issues, `${path}.default`, "Must exactly match one declared option value.");
+    }
+    return;
+  }
+
+  validateIntegerBound(
+    setting.minSelections,
+    `${path}.minSelections`,
+    0,
+    optionValues.length,
+    issues,
+  );
+  validateIntegerBound(
+    setting.maxSelections,
+    `${path}.maxSelections`,
+    0,
+    optionValues.length,
+    issues,
+  );
+  validateOrderedNumericBounds(setting.minSelections, setting.maxSelections, path, issues);
+
+  if (!Array.isArray(setting.default)) {
+    addIssue(issues, `${path}.default`, "Must be an array of declared option values.");
+    return;
+  }
+  const seen = new Set<string>();
+  const defaultValues: SelectValue[] = [];
+  for (const [index, entry] of setting.default.entries()) {
+    if (!isSelectValue(entry) || (typeof entry === "number" && !Number.isFinite(entry))) {
+      addIssue(issues, `${path}.default[${index}]`, "Must be a finite declared option value.");
+      continue;
+    }
+    const key = selectValueKey(entry);
+    if (seen.has(key)) {
+      addIssue(issues, `${path}.default[${index}]`, "Selections must be unique.");
+    }
+    seen.add(key);
+    if (!optionValues.some((option) => option === entry)) {
+      addIssue(issues, `${path}.default[${index}]`, "Must match a declared option value.");
+    }
+    defaultValues.push(entry);
+  }
+  const expectedOrder = optionValues.filter((option) =>
+    defaultValues.some((selected) => selected === option),
+  );
+  if (!expectedOrder.every((entry, index) => entry === defaultValues[index])) {
+    addIssue(issues, `${path}.default`, "Must preserve option declaration order.");
+  }
+  const minimum = numberOr(setting.minSelections, 0);
+  const maximum = numberOr(setting.maxSelections, optionValues.length);
+  if (defaultValues.length < minimum || defaultValues.length > maximum) {
+    addIssue(issues, `${path}.default`, "Must satisfy the declared selection bounds.");
+  }
+}
+
+function validateOptions(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+): SelectValue[] {
+  const options = Array.isArray(value) ? value : null;
+  if (options === null || options.length === 0 || options.length > 100) {
+    addIssue(issues, path, "Must contain between 1 and 100 options.");
+    return [];
+  }
+
+  const values: SelectValue[] = [];
   const seen = new Set<string>();
   for (const [index, optionValue] of options.entries()) {
-    const optionPath = `${path}.options[${index}]`;
+    const optionPath = `${path}[${index}]`;
     const option = asObject(optionValue, optionPath, issues);
     if (option === null) continue;
     exactKeys(option, ["label", "value"], optionPath, issues);
@@ -194,16 +289,14 @@ function validateSetting(
       addIssue(issues, `${optionPath}.value`, "Must be finite.");
       continue;
     }
-    const key = `${typeof option.value}:${String(option.value)}`;
+    const key = selectValueKey(option.value);
     if (seen.has(key)) {
       addIssue(issues, `${optionPath}.value`, "Option values must be unique.");
     }
     seen.add(key);
-    optionValues.push(option.value);
+    values.push(option.value);
   }
-  if (!isSelectValue(setting.default) || !optionValues.some((value) => value === setting.default)) {
-    addIssue(issues, `${path}.default`, "Must exactly match one declared option value.");
-  }
+  return values;
 }
 
 function validateVisibility(
@@ -220,6 +313,11 @@ function validateVisibility(
     addIssue(issues, `${path}.setting`, "Must name a lower camelCase setting.");
   } else if (!(rule.setting in settings)) {
     addIssue(issues, `${path}.setting`, "Must reference a declared setting.");
+  } else {
+    const target = settings[rule.setting];
+    if (isPlainObject(target) && target.type === "multi-select") {
+      addIssue(issues, `${path}.setting`, "Cannot reference a multi-select setting.");
+    }
   }
   if (
     !isSelectValue(rule.equals) ||
@@ -229,7 +327,12 @@ function validateVisibility(
   }
 }
 
-function validateCollection(name: string, value: unknown, issues: ValidationIssue[]): void {
+function validateCollection(
+  name: string,
+  value: unknown,
+  sdkVersion: SdkVersion | null,
+  issues: ValidationIssue[],
+): void {
   const path = `collections.${name}`;
   const collection = asObject(value, path, issues);
   if (collection === null) return;
@@ -247,46 +350,73 @@ function validateCollection(name: string, value: unknown, issues: ValidationIssu
     if (reservedRecordFields.has(fieldName)) {
       addIssue(issues, fieldPath, "This record metadata name is reserved for the host.");
     }
-    validateField(fieldValue, fieldPath, issues);
+    validateField(fieldValue, fieldPath, sdkVersion, issues);
   }
 }
 
-function validateField(value: unknown, path: string, issues: ValidationIssue[]): void {
+function validateField(
+  value: unknown,
+  path: string,
+  sdkVersion: SdkVersion | null,
+  issues: ValidationIssue[],
+): void {
   const field = asObject(value, path, issues) as (PlainObject & Partial<FieldDefinition>) | null;
   if (field === null) return;
   const type = field.type;
+
   if (type === "text") {
     exactKeys(field, ["type", "optional", "minLength", "maxLength"], path, issues);
     validateIntegerBound(field.minLength, `${path}.minLength`, 0, 100_000, issues);
     validateIntegerBound(field.maxLength, `${path}.maxLength`, 1, 100_000, issues);
-    validateOrderedBounds(field.minLength, field.maxLength, path, issues);
-  } else if (type === "boolean" || type === "datetime") {
+    validateOrderedNumericBounds(field.minLength, field.maxLength, path, issues);
+  } else if (type === "boolean") {
     exactKeys(field, ["type", "optional"], path, issues);
   } else if (type === "number" || type === "money") {
     exactKeys(field, ["type", "optional", "min", "max"], path, issues);
     validateOptionalFinite(field.min, `${path}.min`, issues);
     validateOptionalFinite(field.max, `${path}.max`, issues);
-    validateOrderedBounds(field.min, field.max, path, issues);
+    validateOrderedNumericBounds(field.min, field.max, path, issues);
+  } else if (type === "date" || type === "datetime") {
+    exactKeys(field, ["type", "optional", "min", "max"], path, issues);
+    if (type === "date" || field.min !== undefined || field.max !== undefined) {
+      requireSdk12(sdkVersion, `${path}.type`, issues);
+    }
+    const isValid = type === "date" ? isCanonicalDate : isCanonicalDateTime;
+    validateOptionalCanonicalTemporal(field.min, `${path}.min`, type, isValid, issues);
+    validateOptionalCanonicalTemporal(field.max, `${path}.max`, type, isValid, issues);
+    validateOrderedStringBounds(field.min, field.max, path, issues);
   } else {
     addIssue(issues, `${path}.type`, "Unsupported collection field type.");
     return;
   }
+
   if (field.optional !== undefined && typeof field.optional !== "boolean") {
     addIssue(issues, `${path}.optional`, "Must be a boolean.");
   }
 }
 
+function requireSdk12(
+  sdkVersion: SdkVersion | null,
+  path: string,
+  issues: ValidationIssue[],
+): void {
+  if (sdkVersion !== "1.2") {
+    addIssue(issues, path, "Requires SDK 1.2.");
+  }
+}
+
 function asObject(value: unknown, path: string, issues: ValidationIssue[]): PlainObject | null {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+  if (!isPlainObject(value)) {
     addIssue(issues, path, "Must be a plain object.");
     return null;
   }
+  return value;
+}
+
+function isPlainObject(value: unknown): value is PlainObject {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
   const prototype = Object.getPrototypeOf(value);
-  if (prototype !== Object.prototype && prototype !== null) {
-    addIssue(issues, path, "Must be a plain object.");
-    return null;
-  }
-  return value as PlainObject;
+  return prototype === Object.prototype || prototype === null;
 }
 
 function exactKeys(
@@ -322,9 +452,7 @@ function validateOptionalString(
   maximum: number,
   issues: ValidationIssue[],
 ): void {
-  if (value !== undefined) {
-    validateString(value, path, minimum, maximum, issues);
-  }
+  if (value !== undefined) validateString(value, path, minimum, maximum, issues);
 }
 
 function validateFinite(value: unknown, path: string, issues: ValidationIssue[]): void {
@@ -352,7 +480,7 @@ function validateIntegerBound(
   }
 }
 
-function validateOrderedBounds(
+function validateOrderedNumericBounds(
   minimum: unknown,
   maximum: unknown,
   path: string,
@@ -363,12 +491,67 @@ function validateOrderedBounds(
   }
 }
 
+function validateOrderedStringBounds(
+  minimum: unknown,
+  maximum: unknown,
+  path: string,
+  issues: ValidationIssue[],
+): void {
+  if (typeof minimum === "string" && typeof maximum === "string" && minimum > maximum) {
+    addIssue(issues, path, "Minimum cannot exceed maximum.");
+  }
+}
+
+function validateCanonicalTemporal(
+  value: unknown,
+  path: string,
+  type: "date" | "datetime",
+  validator: (value: string) => boolean,
+  issues: ValidationIssue[],
+): void {
+  if (typeof value !== "string" || !validator(value)) {
+    addIssue(
+      issues,
+      path,
+      type === "date"
+        ? "Must be a valid date in YYYY-MM-DD form."
+        : "Must be a canonical UTC date-time in YYYY-MM-DDTHH:mm:ss.sssZ form.",
+    );
+  }
+}
+
+function validateOptionalCanonicalTemporal(
+  value: unknown,
+  path: string,
+  type: "date" | "datetime",
+  validator: (value: string) => boolean,
+  issues: ValidationIssue[],
+): void {
+  if (value !== undefined) validateCanonicalTemporal(value, path, type, validator, issues);
+}
+
+function isCanonicalDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const timestamp = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === value;
+}
+
+function isCanonicalDateTime(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) return false;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString() === value;
+}
+
 function numberOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function isSelectValue(value: unknown): value is SelectValue {
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+}
+
+function selectValueKey(value: SelectValue): string {
+  return `${typeof value}:${String(value)}`;
 }
 
 function addIssue(issues: ValidationIssue[], path: string, message: string): void {

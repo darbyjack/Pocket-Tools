@@ -10,15 +10,11 @@ import type {
   SettingDefinition,
   TimerSnapshot,
 } from "../model.ts";
-import { validateDormantSdk12Definition } from "./sdk12-date-definition.ts";
-import { validatePageNodeWithDormantMultiline } from "./sdk12-multiline-ui.ts";
+import { assertNotificationId, parseNotificationRequestShape } from "./notification-validation.ts";
+import { validateSdkPageNode } from "./sdk12-multiline-ui.ts";
 
 const LOG_LEVELS = new Set(["log", "info", "warn", "error"]);
 const IDENTIFIER_PATTERN = /^[a-z][A-Za-z0-9]*$/;
-
-interface RuntimeParseOptions {
-  readonly allowDormantSdk12?: boolean;
-}
 
 export class MiniAppRuntimeError extends Error {
   readonly code: string;
@@ -45,10 +41,7 @@ export class MiniAppRuntimeError extends Error {
   }
 }
 
-export function parseRuntimeResponse(
-  json: string,
-  options: RuntimeParseOptions = {},
-): RuntimeSuccess {
+export function parseRuntimeResponse(json: string): RuntimeSuccess {
   let parsed: unknown;
   try {
     parsed = JSON.parse(json);
@@ -91,16 +84,13 @@ export function parseRuntimeResponse(
     });
   }
 
-  const allowDormantSdk12 = options.allowDormantSdk12 === true;
   const operations = parseOperations(parsed.value.operations);
-  const effects = parseEffects(parsed.value.effects, allowDormantSdk12);
+  const effects = parseEffects(parsed.value.effects);
   const inspection =
-    parsed.value.inspection === undefined
-      ? undefined
-      : parseInspection(parsed.value.inspection, allowDormantSdk12);
+    parsed.value.inspection === undefined ? undefined : parseInspection(parsed.value.inspection);
   if (parsed.value.page !== undefined) {
     try {
-      validatePageNodeWithDormantMultiline(parsed.value.page, undefined, { allowDormantSdk12 });
+      validateSdkPageNode(parsed.value.page);
     } catch (cause) {
       throw new MiniAppRuntimeError(
         "INVALID_UI_TREE",
@@ -123,11 +113,10 @@ export function parseRuntimeResponse(
   } as RuntimeSuccess;
 }
 
-export function parseDormantSdk12RuntimeResponse(json: string): RuntimeSuccess {
-  return parseRuntimeResponse(json, { allowDormantSdk12: true });
-}
+/** @deprecated SDK 1.2 is public; use parseRuntimeResponse. */
+export const parseDormantSdk12RuntimeResponse = parseRuntimeResponse;
 
-function parseInspection(value: unknown, allowDormantSdk12: boolean): MiniAppInspection {
+function parseInspection(value: unknown): MiniAppInspection {
   if (!isRecord(value)) throw invalidNative("The runtime inspection must be a plain object.");
   exactKeys(value, ["manifest", "settings", "collections", "screens", "actions"], "inspection");
   if (!isRecord(value.manifest) || !isRecord(value.settings) || !isRecord(value.collections)) {
@@ -135,21 +124,6 @@ function parseInspection(value: unknown, allowDormantSdk12: boolean): MiniAppIns
   }
   const screens = parseIdentifierList(value.screens, "inspection.screens");
   const actions = parseIdentifierList(value.actions, "inspection.actions");
-
-  if (allowDormantSdk12 && value.manifest.sdkVersion === "1.2") {
-    const result = validateDormantSdk12Definition({
-      manifest: value.manifest,
-      settings: value.settings,
-      collections: value.collections,
-      screens,
-      actions,
-    });
-    if (result.inspection !== undefined) return result.inspection;
-    throw new MiniAppRuntimeError(
-      "VALIDATION_FAILED",
-      result.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n"),
-    );
-  }
 
   const dummyPage = { type: "page" as const, title: "Validation", children: [] };
   const definition = {
@@ -244,16 +218,38 @@ function parseOperations(value: unknown): readonly RuntimeOperation[] {
       requireIdentifier(entry.timerId, `${path}.timerId`);
       return entry as unknown as RuntimeOperation;
     }
+    if (entry.type === "notification-schedule") {
+      exactRequiredKeys(entry, ["type", "request"], path);
+      try {
+        return {
+          type: "notification-schedule",
+          request: parseNotificationRequestShape(entry.request, `${path}.request`),
+        };
+      } catch (cause) {
+        throw invalidNative(errorMessage(cause));
+      }
+    }
+    if (entry.type === "notification-cancel") {
+      exactRequiredKeys(entry, ["type", "notificationId"], path);
+      try {
+        return {
+          type: "notification-cancel",
+          notificationId: assertNotificationId(entry.notificationId, `${path}.notificationId`),
+        };
+      } catch (cause) {
+        throw invalidNative(errorMessage(cause));
+      }
+    }
+    if (entry.type === "notification-cancel-all") {
+      exactRequiredKeys(entry, ["type"], path);
+      return { type: "notification-cancel-all" };
+    }
     throw invalidNative(`${path}.type is unsupported.`);
   });
 }
 
-function parseEffects(
-  value: unknown,
-  allowDormantSdk12: boolean,
-): readonly RuntimeEffect[] | undefined {
+function parseEffects(value: unknown): readonly RuntimeEffect[] | undefined {
   if (value === undefined) return undefined;
-  if (!allowDormantSdk12) throw invalidNative("Runtime effects require SDK 1.2.");
   if (!Array.isArray(value)) throw invalidNative("The runtime effect list is invalid.");
   if (value.length > 2) {
     throw invalidNative("An action may return at most one output effect and one feedback effect.");
@@ -297,8 +293,9 @@ function parseEffects(
 }
 
 function parseLogs(value: unknown): readonly RuntimeLogEntry[] {
-  if (!Array.isArray(value))
+  if (!Array.isArray(value)) {
     throw invalidNative("The native sandbox returned an invalid log payload.");
+  }
   return value.map((entry) => {
     if (
       !isRecord(entry) ||
@@ -320,6 +317,19 @@ function exactKeys(
   const allowedKeys = new Set(allowed);
   for (const key of Object.keys(object)) {
     if (!allowedKeys.has(key)) throw invalidNative(`${path}.${key} is not supported.`);
+  }
+}
+
+function exactRequiredKeys(
+  object: Record<string, unknown>,
+  allowed: readonly string[],
+  path: string,
+): void {
+  exactKeys(object, allowed, path);
+  for (const key of allowed) {
+    if (!Object.prototype.hasOwnProperty.call(object, key)) {
+      throw invalidNative(`${path}.${key} is required.`);
+    }
   }
 }
 
@@ -345,6 +355,10 @@ function boundedText(value: unknown, path: string, minimum: number, maximum: num
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function errorMessage(caught: unknown): string {
+  return caught instanceof Error ? caught.message : String(caught);
 }
 
 function invalidNative(

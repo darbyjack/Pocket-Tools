@@ -1,12 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  MiniAppRuntimeError,
-  parseDormantSdk12RuntimeResponse,
-  parseRuntimeResponse,
-} from "./protocol.ts";
-import { parseDormantSdk12NotificationRuntimeResponse } from "./sdk12-notification-protocol.ts";
+import { MiniAppRuntimeError, parseRuntimeResponse } from "./protocol.ts";
 
 function response(effects: unknown, operations: unknown = []): string {
   return JSON.stringify({
@@ -20,11 +15,11 @@ function response(effects: unknown, operations: unknown = []): string {
   });
 }
 
-test("parses dormant copy and share effects", () => {
-  const copy = parseDormantSdk12RuntimeResponse(response([{ type: "copy", text: "Copied value" }]));
+test("parses public copy and share effects", () => {
+  const copy = parseRuntimeResponse(response([{ type: "copy", text: "Copied value" }]));
   assert.deepEqual(copy.value.effects, [{ type: "copy", text: "Copied value" }]);
 
-  const share = parseDormantSdk12RuntimeResponse(
+  const share = parseRuntimeResponse(
     response([
       { type: "feedback", message: "Ready" },
       { type: "share", title: "Pocket Tools", text: "Shared value" },
@@ -36,8 +31,8 @@ test("parses dormant copy and share effects", () => {
   ]);
 });
 
-test("preserves output while parsing dormant notification operations", () => {
-  const parsed = parseDormantSdk12NotificationRuntimeResponse(
+test("preserves output while parsing public notification operations", () => {
+  const parsed = parseRuntimeResponse(
     response(
       [{ type: "copy", text: "Reminder created" }],
       [
@@ -60,18 +55,8 @@ test("preserves output while parsing dormant notification operations", () => {
 test("counts output limits by Unicode code point", () => {
   const text = "😀".repeat(10_000);
   const title = "😀".repeat(120);
-  const parsed = parseDormantSdk12RuntimeResponse(response([{ type: "share", title, text }]));
+  const parsed = parseRuntimeResponse(response([{ type: "share", title, text }]));
   assert.deepEqual(parsed.value.effects, [{ type: "share", title, text }]);
-});
-
-test("normal response parsing rejects dormant output effects", () => {
-  assert.throws(
-    () => parseRuntimeResponse(response([{ type: "copy", text: "Copied" }])),
-    (error: unknown) =>
-      error instanceof MiniAppRuntimeError &&
-      error.code === "INVALID_NATIVE_RESPONSE" &&
-      error.message.includes("require SDK 1.2"),
-  );
 });
 
 const invalidEffects: readonly [string, unknown][] = [
@@ -110,7 +95,7 @@ const invalidEffects: readonly [string, unknown][] = [
 for (const [name, effects] of invalidEffects) {
   test(`rejects ${name}`, () => {
     assert.throws(
-      () => parseDormantSdk12RuntimeResponse(response(effects)),
+      () => parseRuntimeResponse(response(effects)),
       (error: unknown) =>
         error instanceof MiniAppRuntimeError && error.code === "INVALID_NATIVE_RESPONSE",
     );

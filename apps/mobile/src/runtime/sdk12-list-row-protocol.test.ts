@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  MiniAppRuntimeError,
-  parseDormantSdk12RuntimeResponse,
-  parseRuntimeResponse,
-} from "./protocol.ts";
+import { MiniAppRuntimeError, parseRuntimeResponse } from "./protocol.ts";
 
 function response(primaryAction: Record<string, unknown>): string {
   return JSON.stringify({
@@ -34,8 +30,8 @@ function response(primaryAction: Record<string, unknown>): string {
   });
 }
 
-test("parses a valid dormant SDK 1.2 list-row action", () => {
-  const parsed = parseDormantSdk12RuntimeResponse(
+test("parses a valid public SDK 1.2 list-row action", () => {
+  const parsed = parseRuntimeResponse(
     response({
       label: "Open Entry",
       action: "openEntry",
@@ -52,20 +48,10 @@ test("parses a valid dormant SDK 1.2 list-row action", () => {
   assert.equal(list.items[0]?.primaryAction?.label, "Open Entry");
 });
 
-test("normal response parsing rejects dormant list-row actions", () => {
-  assert.throws(
-    () => parseRuntimeResponse(response({ label: "Open Entry", action: "openEntry" })),
-    (error: unknown) =>
-      error instanceof MiniAppRuntimeError &&
-      error.code === "INVALID_UI_TREE" &&
-      error.message.includes("require SDK 1.2"),
-  );
-});
-
-test("dormant parsing rejects destructive rows without confirmation", () => {
+test("rejects destructive rows without confirmation", () => {
   assert.throws(
     () =>
-      parseDormantSdk12RuntimeResponse(
+      parseRuntimeResponse(
         response({
           label: "Remove Entry",
           action: "removeEntry",
