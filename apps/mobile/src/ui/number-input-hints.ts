@@ -87,12 +87,12 @@ export function normalizeNumberInputValue(
 
 function roundToDecimalPlaces(value: number, decimalPlaces: number): number {
   if (decimalPlaces === 0) return Math.round(value);
-  const [coefficient, exponentText = "0"] = value.toString().split("e");
+  const [coefficientText, exponentText = "0"] = value.toString().split("e");
+  const coefficient = coefficientText ?? "0";
   const shifted = Math.round(Number(`${coefficient}e${Number(exponentText) + decimalPlaces}`));
-  const [roundedCoefficient, roundedExponentText = "0"] = shifted.toString().split("e");
-  return Number(
-    `${roundedCoefficient}e${Number(roundedExponentText) - decimalPlaces}`,
-  );
+  const [roundedCoefficientText, roundedExponentText = "0"] = shifted.toString().split("e");
+  const roundedCoefficient = roundedCoefficientText ?? "0";
+  return Number(`${roundedCoefficient}e${Number(roundedExponentText) - decimalPlaces}`);
 }
 
 function decimalPlacesForNumber(value: number): number {
