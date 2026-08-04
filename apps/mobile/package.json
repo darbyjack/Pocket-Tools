@@ -14,17 +14,17 @@
     "@pocket-tools/notifications-runtime": "workspace:*",
     "@pocket-tools/quickjs-runtime": "workspace:*",
     "@pocket-tools/sdk-contract": "workspace:*",
+    "@react-native-vector-icons/lucide": "13.1.2",
     "expo": "~57.0.9",
     "expo-clipboard": "~57.0.1",
     "expo-dev-client": "~57.0.10",
+    "expo-font": "~57.0.1",
     "expo-modules-core": "~57.0.8",
     "expo-sqlite": "~57.0.1",
     "expo-status-bar": "~57.0.1",
-    "lucide-react-native": "1.18.0",
     "react": "19.2.3",
     "react-native": "0.86.2",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-svg": "15.15.4"
+    "react-native-safe-area-context": "~5.7.0"
   },
   "devDependencies": {
     "@types/node": "26.1.2",
