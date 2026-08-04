@@ -1,7 +1,6 @@
 package com.darbyjack.pockettools.quickjs
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
