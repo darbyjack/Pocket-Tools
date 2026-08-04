@@ -2,7 +2,7 @@ import * as SQLite from "expo-sqlite";
 
 import type { MiniAppInspection, SerializableValue } from "../model.ts";
 import { inspectMiniApp } from "../runtime/quickjs.ts";
-import { validateMiniAppBackupForRestore, type MiniAppBackupV1 } from "./backup.ts";
+import { validateMiniAppBackupForRestore, type MiniAppBackupV2 } from "./backup.ts";
 import { createMiniAppBackup } from "./backup-storage.ts";
 import { listInstalledMiniApps, type InstalledMiniApp } from "./database.ts";
 import {
@@ -10,9 +10,14 @@ import {
   HOST_BACKUP_VERSION,
   parseHostBackup,
   type HostBackupRetainedState,
-  type HostBackupV1,
+  type HostBackupV2,
 } from "./host-backup.ts";
 import { isDiagnosticAppId, isPreviewStorageId } from "./namespaces.ts";
+import {
+  ensureNotificationRegistrySchema,
+  prepareNotificationRegistryForHostRestoreInTransaction,
+  replaceDesiredNotificationsInTransaction,
+} from "./notification-registry.ts";
 
 const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 
@@ -39,17 +44,17 @@ interface TimerRow {
 }
 
 export interface PreparedHostBackupApp {
-  readonly backup: MiniAppBackupV1;
+  readonly backup: MiniAppBackupV2;
   readonly activeInspection: MiniAppInspection;
   readonly lastKnownGoodInspection: MiniAppInspection;
 }
 
 export interface PreparedHostBackup {
-  readonly backup: HostBackupV1;
+  readonly backup: HostBackupV2;
   readonly apps: readonly PreparedHostBackupApp[];
 }
 
-export async function createHostBackup(): Promise<HostBackupV1> {
+export async function createHostBackup(): Promise<HostBackupV2> {
   const installed = (await listInstalledMiniApps()).filter(
     (app) => !isPreviewStorageId(app.id) && !isDiagnosticAppId(app.id),
   );
@@ -126,8 +131,11 @@ export async function restoreHostBackup(
   }
 
   const database = await databasePromise;
+  await ensureNotificationRegistrySchema(database);
   try {
     await database.withTransactionAsync(async () => {
+      const restoredAt = new Date().toISOString();
+      await prepareNotificationRegistryForHostRestoreInTransaction(database, restoredAt);
       await database.runAsync("DELETE FROM installed_mini_apps");
       await database.runAsync("DELETE FROM settings");
       await database.runAsync("DELETE FROM records");
@@ -136,6 +144,12 @@ export async function restoreHostBackup(
       for (const appBackup of backup.apps) {
         await insertInstalledApp(database, appBackup);
         await insertState(database, appBackup.app.id, appBackup);
+        await replaceDesiredNotificationsInTransaction(
+          database,
+          appBackup.app.id,
+          appBackup.notifications,
+          restoredAt,
+        );
       }
       for (const retained of backup.retained) {
         await insertState(database, retained.appId, retained);
@@ -202,7 +216,7 @@ async function readRetainedState(
 
 async function insertInstalledApp(
   database: SQLite.SQLiteDatabase,
-  backup: MiniAppBackupV1,
+  backup: MiniAppBackupV2,
 ): Promise<void> {
   await database.runAsync(
     `INSERT INTO installed_mini_apps (
@@ -223,7 +237,7 @@ async function insertInstalledApp(
 async function insertState(
   database: SQLite.SQLiteDatabase,
   appId: string,
-  state: Pick<MiniAppBackupV1, "settings" | "records" | "timers">,
+  state: Pick<MiniAppBackupV2, "settings" | "records" | "timers">,
 ): Promise<void> {
   for (const setting of state.settings) {
     await database.runAsync(

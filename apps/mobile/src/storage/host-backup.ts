@@ -4,12 +4,12 @@ import {
   type MiniAppBackupRecord,
   type MiniAppBackupSetting,
   type MiniAppBackupTimer,
-  type MiniAppBackupV1,
+  type MiniAppBackupV2,
 } from "./backup.ts";
 import { isDiagnosticAppId, isPreviewStorageId } from "./namespaces.ts";
 
 export const HOST_BACKUP_FORMAT = "pocket-tools-host";
-export const HOST_BACKUP_VERSION = 1;
+export const HOST_BACKUP_VERSION = 2;
 
 export interface HostBackupRetainedState {
   readonly appId: string;
@@ -18,15 +18,15 @@ export interface HostBackupRetainedState {
   readonly timers: readonly MiniAppBackupTimer[];
 }
 
-export interface HostBackupV1 {
+export interface HostBackupV2 {
   readonly format: typeof HOST_BACKUP_FORMAT;
   readonly version: typeof HOST_BACKUP_VERSION;
   readonly exportedAt: string;
-  readonly apps: readonly MiniAppBackupV1[];
+  readonly apps: readonly MiniAppBackupV2[];
   readonly retained: readonly HostBackupRetainedState[];
 }
 
-export function parseHostBackup(input: unknown): HostBackupV1 {
+export function parseHostBackup(input: unknown): HostBackupV2 {
   let value: unknown = input;
   if (typeof input === "string") {
     try {
@@ -88,7 +88,7 @@ export function parseHostBackup(input: unknown): HostBackupV1 {
   };
 }
 
-export function stringifyHostBackup(backup: HostBackupV1): string {
+export function stringifyHostBackup(backup: HostBackupV2): string {
   return `${JSON.stringify(parseHostBackup(backup), null, 2)}\n`;
 }
 

@@ -6,7 +6,7 @@ import { formatMiniAppError, inspectMiniApp } from "../runtime/quickjs";
 import {
   parseMiniAppBackup,
   validateMiniAppBackupForRestore,
-  type MiniAppBackupV1,
+  type MiniAppBackupV2,
 } from "../storage/backup";
 import { getMiniAppRestoreConflict, restoreMiniAppBackup } from "../storage/backup-storage";
 import type { InstalledMiniApp } from "../storage/database";
@@ -20,7 +20,7 @@ export interface MiniAppBackupEditorProps {
 }
 
 interface RestoreCandidate {
-  readonly backup: MiniAppBackupV1;
+  readonly backup: MiniAppBackupV2;
   readonly activeInspection: MiniAppInspection;
   readonly lastKnownGoodInspection: MiniAppInspection;
 }
@@ -53,7 +53,7 @@ export function MiniAppBackupEditor({ onCancel, onRestored }: MiniAppBackupEdito
       validateMiniAppBackupForRestore(backup, activeInspection, lastKnownGoodInspection);
       setCandidate({ backup, activeInspection, lastKnownGoodInspection });
       setMessage(
-        `Backup ready: ${backup.app.name}, ${backup.records.length} records, ${backup.timers.length} active timers.`,
+        `Backup ready: ${backup.app.name}, ${backup.records.length} records, ${backup.timers.length} active timers, ${backup.notifications.length} reminders.`,
       );
     } catch (caught) {
       setError(formatBackupError(caught));

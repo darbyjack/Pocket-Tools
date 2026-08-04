@@ -1,9 +1,15 @@
-import type { MiniAppInspection, SerializableValue } from "../model.ts";
+import type {
+  MiniAppInspection,
+  NotificationRequest,
+  SerializableValue,
+} from "../model.ts";
+import { normalizeNotificationRequest, parseNotificationRequestShape } from "../runtime/notification-validation.ts";
 import { assertRecordInput, assertSettingValue } from "../runtime/sdk-validation.ts";
 import { isDiagnosticAppId, isPreviewStorageId } from "./namespaces.ts";
+import { MAX_DESIRED_NOTIFICATIONS } from "./notification-registry.ts";
 
 export const MINI_APP_BACKUP_FORMAT = "pocket-tools-mini-app";
-export const MINI_APP_BACKUP_VERSION = 1;
+export const MINI_APP_BACKUP_VERSION = 2;
 
 export interface MiniAppBackupApp {
   readonly id: string;
@@ -34,7 +40,7 @@ export interface MiniAppBackupTimer {
   readonly startedAt: string;
 }
 
-export interface MiniAppBackupV1 {
+export interface MiniAppBackupV2 {
   readonly format: typeof MINI_APP_BACKUP_FORMAT;
   readonly version: typeof MINI_APP_BACKUP_VERSION;
   readonly exportedAt: string;
@@ -42,9 +48,10 @@ export interface MiniAppBackupV1 {
   readonly settings: readonly MiniAppBackupSetting[];
   readonly records: readonly MiniAppBackupRecord[];
   readonly timers: readonly MiniAppBackupTimer[];
+  readonly notifications: readonly NotificationRequest[];
 }
 
-export function parseMiniAppBackup(input: unknown): MiniAppBackupV1 {
+export function parseMiniAppBackup(input: unknown): MiniAppBackupV2 {
   let value: unknown = input;
   if (typeof input === "string") {
     try {
@@ -57,7 +64,16 @@ export function parseMiniAppBackup(input: unknown): MiniAppBackupV1 {
   const root = requireObject(value, "backup");
   assertExactKeys(
     root,
-    ["format", "version", "exportedAt", "app", "settings", "records", "timers"],
+    [
+      "format",
+      "version",
+      "exportedAt",
+      "app",
+      "settings",
+      "records",
+      "timers",
+      "notifications",
+    ],
     [],
     "backup",
   );
@@ -79,10 +95,19 @@ export function parseMiniAppBackup(input: unknown): MiniAppBackupV1 {
   const timers = requireArray(root.timers, "backup.timers").map((entry, index) =>
     parseTimer(entry, index),
   );
+  const notifications = requireArray(root.notifications, "backup.notifications").map(
+    (entry, index) => parseNotification(entry, index),
+  );
 
   assertUnique(settings, (entry) => entry.name, "backup.settings", "name");
   assertUnique(records, (entry) => entry.id, "backup.records", "id");
   assertUnique(timers, (entry) => entry.id, "backup.timers", "id");
+  assertUnique(notifications, (entry) => entry.id, "backup.notifications", "ID");
+  if (notifications.length > MAX_DESIRED_NOTIFICATIONS) {
+    throw backupError(
+      `backup.notifications may contain at most ${MAX_DESIRED_NOTIFICATIONS} schedules.`,
+    );
+  }
 
   return {
     format: MINI_APP_BACKUP_FORMAT,
@@ -92,15 +117,16 @@ export function parseMiniAppBackup(input: unknown): MiniAppBackupV1 {
     settings,
     records,
     timers,
+    notifications,
   };
 }
 
-export function stringifyMiniAppBackup(backup: MiniAppBackupV1): string {
+export function stringifyMiniAppBackup(backup: MiniAppBackupV2): string {
   return `${JSON.stringify(parseMiniAppBackup(backup), null, 2)}\n`;
 }
 
 export function validateMiniAppBackupForRestore(
-  backup: MiniAppBackupV1,
+  backup: MiniAppBackupV2,
   activeInspection: MiniAppInspection,
   lastKnownGoodInspection: MiniAppInspection,
 ): void {
@@ -145,6 +171,34 @@ export function validateMiniAppBackupForRestore(
       );
     }
     assertRecordInput(definition, record.data, `backup.records.${record.id}.data`);
+  }
+
+  if (
+    parsed.notifications.length > 0 &&
+    activeInspection.manifest.sdkVersion !== "1.2" &&
+    lastKnownGoodInspection.manifest.sdkVersion !== "1.2"
+  ) {
+    throw backupError("Notification schedules require at least one saved SDK 1.2 source.");
+  }
+
+  const notificationInspection: MiniAppInspection = {
+    ...activeInspection,
+    manifest:
+      activeInspection.manifest.sdkVersion === "1.2"
+        ? activeInspection.manifest
+        : lastKnownGoodInspection.manifest,
+    screens: [...new Set([...activeInspection.screens, ...lastKnownGoodInspection.screens])],
+  };
+  for (const [index, notification] of parsed.notifications.entries()) {
+    try {
+      normalizeNotificationRequest(
+        notification,
+        notificationInspection,
+        `backup.notifications[${index}]`,
+      );
+    } catch (cause) {
+      throw backupError(errorMessage(cause), cause);
+    }
   }
 }
 
@@ -209,6 +263,14 @@ function parseTimer(value: unknown, index: number): MiniAppBackupTimer {
     id: requireMemberName(timer.id, `${path}.id`),
     startedAt: requireIsoTimestamp(timer.startedAt, `${path}.startedAt`),
   };
+}
+
+function parseNotification(value: unknown, index: number): NotificationRequest {
+  try {
+    return parseNotificationRequestShape(value, `backup.notifications[${index}]`);
+  } catch (cause) {
+    throw backupError(errorMessage(cause), cause);
+  }
 }
 
 function requireObject(value: unknown, path: string): Record<string, unknown> {
@@ -327,6 +389,11 @@ function assertUnique<T>(
     if (seen.has(value)) throw backupError(`${path} contains duplicate ${field} ${value}.`);
     seen.add(value);
   }
+}
+
+function errorMessage(caught: unknown): string {
+  const message = caught instanceof Error ? caught.message : String(caught);
+  return message.replace(/^VALIDATION_FAILED:\s*/, "");
 }
 
 function backupError(message: string, cause?: unknown): Error {
