@@ -177,13 +177,17 @@ function validateTemporalDefinition(
 }
 
 function transformTemporalSetting(value: PlainObject): PlainObject {
-  const { min: _minimum, max: _maximum, type: _type, ...common } = value;
-  return { ...common, type: "text" };
+  const transformed = { ...value, type: "text" };
+  delete transformed.min;
+  delete transformed.max;
+  return transformed;
 }
 
 function transformTemporalField(value: PlainObject): PlainObject {
-  const { min: _minimum, max: _maximum, type, ...common } = value;
-  return type === "date" ? { ...common, type: "text" } : { ...common, type: "datetime" };
+  const transformed = { ...value, type: value.type === "date" ? "text" : "datetime" };
+  delete transformed.min;
+  delete transformed.max;
+  return transformed;
 }
 
 function exactKeys(
