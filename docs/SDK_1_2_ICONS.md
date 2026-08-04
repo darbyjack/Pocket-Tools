@@ -111,7 +111,9 @@ Normal runtime parsing remains closed to these fields until public activation. D
 
 ## Host-owned Android presentation
 
-Pocket Tools maps each semantic name to one fixed host glyph. The host owns the glyph, text presentation, dimensions, spacing, weight, and color treatment.
+Pocket Tools maps each semantic name to one fixed Google Material Symbol vector drawable imported from `@expo/material-symbols` and rendered through the platform-native `Icon` component from `@expo/ui`.
+
+Only the 15 imported assets are bundled. The host owns the exact asset mapping, dimensions, spacing, and color treatment; mini-app scripts continue to provide only a semantic `UiIconName`.
 
 - Primary button icons use the button's fixed inverse treatment.
 - Destructive visible-action icons use the host danger treatment.
@@ -119,7 +121,7 @@ Pocket Tools maps each semantic name to one fixed host glyph. The host owns the 
 - Leading list icons occupy a fixed host-controlled alignment area.
 - Primary row-action icons appear at the end of the row without replacing the action label announced by TalkBack.
 
-The glyph view is hidden from accessibility. TalkBack continues to announce the existing action label, row-action label, disabled state, and confirmation flow without duplicate icon-name speech.
+The icon container is hidden from accessibility. TalkBack continues to announce the existing action label, row-action label, disabled state, and confirmation flow without duplicate icon-name speech.
 
 ## Persistence and lifecycle
 
@@ -139,6 +141,7 @@ They are recalculated whenever the owning screen renders from its validated runt
 Run from the repository root:
 
 ```powershell
+pnpm install
 pnpm format
 pnpm check
 ```
@@ -170,14 +173,14 @@ Use a temporary diagnostics-only fixture without enabling public SDK 1.2 authori
 
 Verify:
 
-1. All 15 icon names have distinct, readable host-owned presentations.
+1. All 15 icon names have distinct, readable host-owned Material Symbol presentations.
 2. Icon-bearing primary and destructive buttons retain their labels and established behavior.
 3. Leading list icons align consistently with one-line and multiline list content.
 4. A primary row-action icon does not replace or alter the row's TalkBack action label.
 5. Visible list-action icons do not trigger the row action when pressed.
 6. Disabled and destructive treatments remain visually clear.
 7. Increased Android font size does not clip icons, labels, rows, action wrapping, or touch targets.
-8. TalkBack announces labels and states once and does not announce decorative glyphs separately.
+8. TalkBack announces labels and states once and does not announce decorative icons separately.
 9. Background/foreground, force-stop, relaunch, and navigation preserve rendering and action behavior.
 10. Existing SDK 1.0 and SDK 1.1 tools remain visually and behaviorally unchanged.
 
