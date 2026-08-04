@@ -67,7 +67,8 @@ test("rejects unsupported formats and version-1 documents", () => {
 });
 
 test("rejects missing notification state and unknown fields", () => {
-  const { notifications: _notifications, ...withoutNotifications } = validBackup();
+  const withoutNotifications = { ...validBackup() } as Record<string, unknown>;
+  delete withoutNotifications.notifications;
   assert.throws(
     () => parseMiniAppBackup(withoutNotifications),
     /BACKUP_INVALID: backup\.notifications is required/,
