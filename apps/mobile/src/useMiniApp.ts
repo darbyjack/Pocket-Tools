@@ -49,7 +49,12 @@ export function useMiniApp(
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pendingFeedback, setPendingFeedback] = useState<string | null>(null);
   const activeSource = useRef(source);
-  activeSource.current = source;
+  const interactionRevision = useRef(0);
+
+  if (activeSource.current !== source) {
+    activeSource.current = source;
+    interactionRevision.current += 1;
+  }
 
   const storageIdFor = useCallback(
     (currentInspection: MiniAppInspection) => requestedStorageId ?? currentInspection.manifest.id,
@@ -162,6 +167,11 @@ export function useMiniApp(
     async (action: string, input?: SerializableValue) => {
       if (inspection === null || source === null) return;
       const actionSource = source;
+      const revision = interactionRevision.current + 1;
+      interactionRevision.current = revision;
+      const isCurrent = () =>
+        activeSource.current === actionSource && interactionRevision.current === revision;
+
       setError(null);
       setFeedback(null);
       setPendingFeedback(null);
@@ -180,15 +190,15 @@ export function useMiniApp(
           (operations) => applyRuntimeOperations(inspection, storageId, operations),
           async () => {
             const rendered = await render(inspection, screen, screenInput);
-            if (activeSource.current !== actionSource) return;
+            if (!isCurrent()) return;
             setSnapshot(rendered.snapshot);
             setPage(rendered.page);
           },
         );
-        if (activeSource.current !== actionSource) return;
+        if (!isCurrent()) return;
         if (message !== null) setPendingFeedback(message);
       } catch (caught) {
-        if (activeSource.current !== actionSource) return;
+        if (!isCurrent()) return;
         setPendingFeedback(null);
         setError(formatMiniAppError(caught));
       }
@@ -199,6 +209,7 @@ export function useMiniApp(
   const navigate = useCallback(
     async (targetScreen: string, input?: SerializableValue) => {
       if (inspection === null) return;
+      interactionRevision.current += 1;
       setError(null);
       setFeedback(null);
       setPendingFeedback(null);
@@ -219,6 +230,7 @@ export function useMiniApp(
   const updateSetting = useCallback(
     async (name: string, value: SerializableValue) => {
       if (inspection === null) return;
+      interactionRevision.current += 1;
       setError(null);
       setFeedback(null);
       setPendingFeedback(null);
