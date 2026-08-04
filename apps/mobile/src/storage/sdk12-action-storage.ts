@@ -18,6 +18,7 @@ const SDK_1_2_OPERATION_LIMIT = 256;
 export interface Sdk12ActionStorageOptions {
   readonly actionNow: string;
   readonly exactAlarmAccess?: boolean;
+  readonly reconcileNotifications?: () => Promise<void>;
 }
 
 export async function applySdk12RuntimeOperations(
@@ -167,6 +168,10 @@ export async function applySdk12RuntimeOperations(
       }
     }
   });
+
+  if (notificationOperations.size > 0) {
+    await options.reconcileNotifications?.();
+  }
 }
 
 async function writeSetting(
