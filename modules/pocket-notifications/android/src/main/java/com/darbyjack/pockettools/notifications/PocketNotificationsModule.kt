@@ -24,35 +24,23 @@ class PocketNotificationsModule : Module() {
     }
 
     AsyncFunction("openNotificationSettings") {
-      val context = requireContext()
-      val activity = appContext.currentActivity
-      if (activity == null) {
-        false
-      } else {
-        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-          putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-        }
-        activity.startActivity(intent)
-        true
-      }
+      openSettingsIntent(
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+          putExtra(Settings.EXTRA_APP_PACKAGE, requireContext().packageName)
+        },
+      )
     }
 
     AsyncFunction("openExactAlarmSettings") {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
         true
       } else {
-        val context = requireContext()
-        val activity = appContext.currentActivity
-        if (activity == null) {
-          false
-        } else {
-          val intent = Intent(
+        openSettingsIntent(
+          Intent(
             Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-            Uri.parse("package:${context.packageName}"),
-          )
-          activity.startActivity(intent)
-          true
-        }
+            Uri.parse("package:${requireContext().packageName}"),
+          ),
+        )
       }
     }
 
@@ -62,6 +50,26 @@ class PocketNotificationsModule : Module() {
 
     Function("getOpenTarget") { hostId: String ->
       PocketNotificationScheduler.getOpenTarget(requireContext(), hostId)
+    }
+  }
+
+  private fun openSettingsIntent(preferred: Intent): Boolean {
+    val context = requireContext()
+    val activity = appContext.currentActivity ?: return false
+    return try {
+      activity.startActivity(preferred)
+      true
+    } catch (_: Exception) {
+      val fallback = Intent(
+        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+        Uri.parse("package:${context.packageName}"),
+      )
+      try {
+        activity.startActivity(fallback)
+        true
+      } catch (_: Exception) {
+        false
+      }
     }
   }
 
