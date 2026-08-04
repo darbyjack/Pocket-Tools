@@ -139,10 +139,17 @@ inline constexpr char kRunner[] = R"POCKET_JS(
   const sdkVersion = definition.manifest.sdkVersion === 1
     ? "1.0"
     : definition.manifest.sdkVersion;
-  if (sdkVersion !== "1.0" && sdkVersion !== "1.1") {
-    fail("UNSUPPORTED_SDK_VERSION", "This host supports sdkVersion 1.0 and 1.1.");
+  if (sdkVersion !== "1.0" && sdkVersion !== "1.1" && sdkVersion !== "1.2") {
+    fail("UNSUPPORTED_SDK_VERSION", "This runtime understands sdkVersion 1.0, 1.1, and dormant 1.2 internals.");
   }
-  const supportsSdk11 = sdkVersion === "1.1";
+  const supportsSdk12 = sdkVersion === "1.2";
+  const supportsSdk11 = sdkVersion === "1.1" || supportsSdk12;
+  const pushOperation = (operation) => {
+    if (supportsSdk12 && operations.length >= 256) {
+      fail("ACTION_LIMIT_EXCEEDED", "SDK 1.2 actions may request at most 256 durable operations.");
+    }
+    operations.push(operation);
+  };
 
   for (const groupName of ["settings", "collections", "screens", "actions"]) {
     const group = definition[groupName] ?? {};
@@ -170,7 +177,7 @@ inline constexpr char kRunner[] = R"POCKET_JS(
 
   const recordsByCollection = request.records ?? {};
   const timersById = request.timers ?? {};
-  const settings = request.settings ?? {};
+  const settings = { ...(request.settings ?? {}) };
   for (const [label, value] of [
     ["request.settings", settings],
     ["request.records", recordsByCollection],
@@ -180,6 +187,51 @@ inline constexpr char kRunner[] = R"POCKET_JS(
       fail("INVALID_RUNTIME_REQUEST", `${label} must be a plain object.`);
     }
   }
+
+  const settingDefinition = (name) => {
+    if (!identifierPattern.test(name)) {
+      fail("VALIDATION_FAILED", "Setting names must be lower camelCase identifiers.");
+    }
+    const value = settingDefinitions[name];
+    if (!isPlainObject(value)) fail("VALIDATION_FAILED", `Unknown setting: ${name}`);
+    return value;
+  };
+  const assertSettingValue = (setting, value, path) => {
+    if (setting.type === "text") {
+      if (typeof value !== "string") fail("VALIDATION_FAILED", `${path} must be text.`);
+      if (
+        value.length < (setting.minLength ?? 0) ||
+        value.length > (setting.maxLength ?? 10_000)
+      ) {
+        fail("VALIDATION_FAILED", `${path} violates text length bounds.`);
+      }
+      return;
+    }
+    if (setting.type === "boolean") {
+      if (typeof value !== "boolean") fail("VALIDATION_FAILED", `${path} must be a boolean.`);
+      return;
+    }
+    if (setting.type === "number" || setting.type === "money") {
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        fail("VALIDATION_FAILED", `${path} must be a finite number.`);
+      }
+      if (setting.min !== undefined && value < setting.min) {
+        fail("VALIDATION_FAILED", `${path} is below its minimum.`);
+      }
+      if (setting.max !== undefined && value > setting.max) {
+        fail("VALIDATION_FAILED", `${path} exceeds its maximum.`);
+      }
+      return;
+    }
+    if (setting.type === "select") {
+      const options = Array.isArray(setting.options) ? setting.options : [];
+      if (!options.some((option) => isPlainObject(option) && option.value === value)) {
+        fail("VALIDATION_FAILED", `${path} must match one declared option value.`);
+      }
+      return;
+    }
+    fail("VALIDATION_FAILED", `${path} has an unsupported setting type.`);
+  };
 
   const collectionDefinition = (name) => {
     const value = collectionDefinitions[name];
@@ -381,7 +433,7 @@ inline constexpr char kRunner[] = R"POCKET_JS(
           updatedAt: request.now,
         };
         mutableRecords[name].push(pending);
-        operations.push({ type: "insert", collection: name, record: { ...record } });
+        pushOperation({ type: "insert", collection: name, record: { ...record } });
         return { ...pending };
       },
       get(id) {
@@ -404,7 +456,7 @@ inline constexpr char kRunner[] = R"POCKET_JS(
         );
         assertRecord(name, recordData, `operations.${name}.record`);
         mutableRecords[name][index] = updated;
-        operations.push({ type: "update", collection: name, id, changes: { ...changes } });
+        pushOperation({ type: "update", collection: name, id, changes: { ...changes } });
         return { ...updated };
       },
       remove(id) {
@@ -412,7 +464,7 @@ inline constexpr char kRunner[] = R"POCKET_JS(
         const index = mutableRecords[name].findIndex((entry) => entry.id === id);
         if (index < 0) fail("RECORD_NOT_FOUND", `Record not found: ${name}.${id}`);
         mutableRecords[name].splice(index, 1);
-        operations.push({ type: "remove", collection: name, id });
+        pushOperation({ type: "remove", collection: name, id });
       },
       query(query) {
         return queryRecords(name, query);
@@ -433,15 +485,38 @@ inline constexpr char kRunner[] = R"POCKET_JS(
     });
   };
 
+  const settingsClient = {
+    get(name) {
+      settingDefinition(name);
+      if (!(name in settings)) fail("VALIDATION_FAILED", `Unknown setting value: ${name}`);
+      return settings[name];
+    },
+  };
+  if (supportsSdk12) {
+    settingsClient.set = (name, value) => {
+      if (request.mode !== "action") {
+        fail("INVALID_CONTEXT_OPERATION", "settings.set is available only during actions.");
+      }
+      const setting = settingDefinition(name);
+      assertSettingValue(setting, value, `settings.${name}`);
+      assertSerializable(value, `settings.${name}`);
+      settings[name] = value;
+      pushOperation({ type: "setting-set", setting: name, value });
+    };
+    settingsClient.reset = (name) => {
+      if (request.mode !== "action") {
+        fail("INVALID_CONTEXT_OPERATION", "settings.reset is available only during actions.");
+      }
+      const setting = settingDefinition(name);
+      assertSettingValue(setting, setting.default, `settings.${name}.default`);
+      assertSerializable(setting.default, `settings.${name}.default`);
+      settings[name] = setting.default;
+      pushOperation({ type: "setting-reset", setting: name });
+    };
+  }
+
   const context = Object.freeze({
-    settings: Object.freeze({
-      get(name) {
-        if (!(name in settingDefinitions) || !(name in settings)) {
-          fail("VALIDATION_FAILED", `Unknown setting: ${name}`);
-        }
-        return settings[name];
-      },
-    }),
+    settings: Object.freeze(settingsClient),
     data: Object.freeze({ collection }),
     timers: Object.freeze({
       get(timerId) {
@@ -458,13 +533,13 @@ inline constexpr char kRunner[] = R"POCKET_JS(
           fail("VALIDATION_FAILED", `Timer is already active: ${timerId}`);
         }
         const timer = { id: timerId, startedAt: request.now, elapsedSeconds: 0 };
-        operations.push({ type: "timer-start", timerId, startedAt: request.now });
+        pushOperation({ type: "timer-start", timerId, startedAt: request.now });
         return timer;
       },
       stop(timerId) {
         const timer = timersById[timerId];
         if (timer === undefined) fail("TIMER_NOT_FOUND", `Timer is not active: ${timerId}`);
-        operations.push({ type: "timer-stop", timerId });
+        pushOperation({ type: "timer-stop", timerId });
         return {
           id: timerId,
           startedAt: timer.startedAt,

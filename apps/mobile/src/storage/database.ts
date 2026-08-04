@@ -540,6 +540,28 @@ export async function applyRuntimeOperations(
           }
           break;
         }
+        case "setting-set": {
+          const definition = requireSdk12Setting(inspection, operation.setting, index);
+          assertSettingValue(definition, operation.value, `operations[${index}].value`);
+          await writeSettingInTransaction(
+            database,
+            storageId,
+            operation.setting,
+            operation.value,
+          );
+          break;
+        }
+        case "setting-reset": {
+          const definition = requireSdk12Setting(inspection, operation.setting, index);
+          assertSettingValue(definition, definition.default, `operations[${index}].default`);
+          await writeSettingInTransaction(
+            database,
+            storageId,
+            operation.setting,
+            definition.default,
+          );
+          break;
+        }
         case "timer-start":
           await database.runAsync(
             `INSERT INTO timers (app_id, timer_id, started_at)
@@ -576,6 +598,22 @@ async function clearAppDataInTransaction(
   await database.runAsync("DELETE FROM timers WHERE app_id = ?", storageId);
 }
 
+async function writeSettingInTransaction(
+  database: SQLite.SQLiteDatabase,
+  storageId: string,
+  name: string,
+  value: SerializableValue,
+): Promise<void> {
+  await database.runAsync(
+    `INSERT INTO settings (app_id, name, value_json)
+     VALUES (?, ?, ?)
+     ON CONFLICT(app_id, name) DO UPDATE SET value_json = excluded.value_json`,
+    storageId,
+    name,
+    JSON.stringify(value),
+  );
+}
+
 function mapInstalledMiniApp(row: InstalledMiniAppRow): InstalledMiniApp {
   return {
     id: row.app_id,
@@ -593,6 +631,23 @@ function requireCollection(inspection: MiniAppInspection, name: string, operatio
   const definition = inspection.collections[name];
   if (definition === undefined) {
     throw new Error(`UNKNOWN_COLLECTION: operations[${operationIndex}].collection: ${name}`);
+  }
+  return definition;
+}
+
+function requireSdk12Setting(
+  inspection: MiniAppInspection,
+  name: string,
+  operationIndex: number,
+) {
+  if ((inspection.manifest.sdkVersion as string) !== "1.2") {
+    throw new Error(
+      `UNSUPPORTED_SDK_VERSION: operations[${operationIndex}] setting writes require SDK 1.2.`,
+    );
+  }
+  const definition = inspection.settings[name];
+  if (definition === undefined) {
+    throw new Error(`VALIDATION_FAILED: operations[${operationIndex}].setting: Unknown setting ${name}.`);
   }
   return definition;
 }

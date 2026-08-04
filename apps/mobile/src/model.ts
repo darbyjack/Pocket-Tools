@@ -61,6 +61,17 @@ export interface RemoveOperation {
   readonly id: string;
 }
 
+export interface SettingSetOperation {
+  readonly type: "setting-set";
+  readonly setting: string;
+  readonly value: SerializableValue;
+}
+
+export interface SettingResetOperation {
+  readonly type: "setting-reset";
+  readonly setting: string;
+}
+
 export interface TimerStartOperation {
   readonly type: "timer-start";
   readonly timerId: string;
@@ -76,6 +87,8 @@ export type RuntimeOperation =
   | InsertOperation
   | UpdateOperation
   | RemoveOperation
+  | SettingSetOperation
+  | SettingResetOperation
   | TimerStartOperation
   | TimerStopOperation;
 
