@@ -15,15 +15,27 @@ export interface MiniAppLibraryProps {
 export function MiniAppLibrary({ apps, onCreate, onOpen, onSettings }: MiniAppLibraryProps) {
   return (
     <ScreenScrollView contentContainerStyle={styles.content}>
-      <ProductHeader onSettings={onSettings} />
+      <ProductHeader />
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={onCreate}
-        style={({ pressed }) => [styles.addButton, pressed ? styles.pressed : null]}
-      >
-        <Text style={styles.addButtonText}>Add tool</Text>
-      </Pressable>
+      <View style={styles.actions}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onCreate}
+          style={({ pressed }) => [styles.addButton, pressed ? styles.addButtonPressed : null]}
+        >
+          <Text style={styles.addButtonText}>Add tool</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onSettings}
+          style={({ pressed }) => [
+            styles.settingsButton,
+            pressed ? styles.settingsButtonPressed : null,
+          ]}
+        >
+          <Text style={styles.settingsButtonText}>Settings</Text>
+        </Pressable>
+      </View>
 
       {apps.length === 0 ? (
         <View style={styles.emptyCard}>
@@ -64,18 +76,44 @@ const styles = StyleSheet.create({
     padding: spacing.screen,
     paddingBottom: 48,
   },
+  actions: {
+    flexDirection: "row",
+    gap: 10,
+  },
   addButton: {
     alignItems: "center",
     backgroundColor: colors.brand,
     borderRadius: radii.button,
+    flex: 1,
     justifyContent: "center",
     minHeight: 48,
     paddingHorizontal: 18,
+  },
+  addButtonPressed: {
+    backgroundColor: colors.brandPressed,
   },
   addButtonText: {
     color: colors.surface,
     fontSize: 16,
     fontWeight: "800",
+  },
+  settingsButton: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.button,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 48,
+    paddingHorizontal: 16,
+  },
+  settingsButtonPressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  settingsButtonText: {
+    color: colors.brand,
+    fontSize: 15,
+    fontWeight: "700",
   },
   emptyCard: {
     alignItems: "center",
@@ -130,8 +168,5 @@ const styles = StyleSheet.create({
   chevron: {
     color: colors.textMuted,
     fontSize: 28,
-  },
-  pressed: {
-    backgroundColor: colors.brandPressed,
   },
 });
