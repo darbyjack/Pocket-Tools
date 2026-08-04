@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  DEFAULT_MULTILINE_LINES,
-  multilineInputHeight,
-} from "../ui/multiline-input-layout.ts";
+import { DEFAULT_MULTILINE_LINES, multilineInputHeight } from "../ui/multiline-input-layout.ts";
 
 test("uses four visible lines by default", () => {
   assert.equal(DEFAULT_MULTILINE_LINES, 4);
