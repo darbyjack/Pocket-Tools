@@ -17,6 +17,14 @@ import {
   type DormantRenderableNode,
 } from "../runtime/sdk12-badge.ts";
 import type { DormantNumberInputNode } from "../runtime/sdk12-number-input-model.ts";
+import {
+  progressAccessibilityText,
+  progressClampedValue,
+  progressFraction,
+  progressMaximum,
+  progressMinimum,
+  progressVisualText,
+} from "../runtime/sdk12-progress.ts";
 import { ListItemControl } from "./ListItemControl.tsx";
 import { SettingControl } from "./SettingControl.tsx";
 
@@ -175,6 +183,36 @@ function NodeView(props: NodeViewProps) {
           style={[styles.badge, badgeContainerStyle(tone)]}
         >
           <Text style={[styles.badgeText, badgeTextStyle(tone)]}>{node.text}</Text>
+        </View>
+      );
+    }
+    case "progress": {
+      const minimum = progressMinimum(node);
+      const maximum = progressMaximum(node);
+      const current = progressClampedValue(node);
+      const width = `${progressFraction(node) * 100}%` as `${number}%`;
+      return (
+        <View
+          accessible
+          accessibilityLabel={node.label ?? "Progress"}
+          accessibilityRole="progressbar"
+          accessibilityValue={{
+            min: minimum,
+            max: maximum,
+            now: current,
+            text: progressAccessibilityText(node),
+          }}
+          style={styles.progress}
+        >
+          <View style={styles.progressHeader}>
+            {node.label === undefined ? null : (
+              <Text style={styles.progressLabel}>{node.label}</Text>
+            )}
+            <Text style={styles.progressValue}>{progressVisualText(node)}</Text>
+          </View>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width }]} />
+          </View>
         </View>
       );
     }
@@ -426,6 +464,40 @@ const styles = StyleSheet.create({
   },
   badgeTextDanger: {
     color: "#b42318",
+  },
+  progress: {
+    gap: 7,
+    minWidth: 160,
+  },
+  progressHeader: {
+    alignItems: "baseline",
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "space-between",
+  },
+  progressLabel: {
+    color: "#344054",
+    flexShrink: 1,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  progressValue: {
+    color: "#475467",
+    fontSize: 13,
+    fontVariant: ["tabular-nums"],
+    fontWeight: "700",
+    marginLeft: "auto",
+  },
+  progressTrack: {
+    backgroundColor: "#e4e7ec",
+    borderRadius: 999,
+    height: 10,
+    overflow: "hidden",
+  },
+  progressFill: {
+    backgroundColor: "#175cd3",
+    borderRadius: 999,
+    height: "100%",
   },
   timer: {
     color: "#101828",

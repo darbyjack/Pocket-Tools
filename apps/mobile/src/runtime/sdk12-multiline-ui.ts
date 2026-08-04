@@ -1,10 +1,12 @@
 import type { MiniAppInspection, PageNode, SettingDefinition } from "../model.ts";
 import { BADGE_TONES } from "./sdk12-badge.ts";
+import { PROGRESS_FORMATS } from "./sdk12-progress.ts";
 import { validatePageNode, type UiValidationOptions } from "./ui-validation.ts";
 
 type PlainObject = Record<string, unknown>;
 
 const BADGE_TONE_SET = new Set<string>(BADGE_TONES);
+const PROGRESS_FORMAT_SET = new Set<string>(PROGRESS_FORMATS);
 
 export function validatePageNodeWithDormantFormHints(
   value: unknown,
@@ -107,15 +109,49 @@ function visit(value: unknown, path: string, supportsSdk12: boolean): unknown {
     }
   }
 
+  const isProgress = value.type === "progress";
+  if (isProgress) {
+    if (!supportsSdk12) fail(path, "Progress nodes require SDK 1.2.");
+    exactKeys(value, ["type", "label", "value", "min", "max", "format"], path);
+    if (value.label !== undefined && typeof value.label !== "string") {
+      fail(`${path}.label`, "Expected text.");
+    }
+    if (typeof value.value !== "number" || !Number.isFinite(value.value)) {
+      fail(`${path}.value`, "Expected a finite number.");
+    }
+    if (value.min !== undefined && (typeof value.min !== "number" || !Number.isFinite(value.min))) {
+      fail(`${path}.min`, "Expected a finite number.");
+    }
+    if (value.max !== undefined && (typeof value.max !== "number" || !Number.isFinite(value.max))) {
+      fail(`${path}.max`, "Expected a finite number.");
+    }
+    const minimum = value.min ?? 0;
+    const maximum = value.max ?? 100;
+    if (typeof minimum === "number" && typeof maximum === "number" && maximum <= minimum) {
+      fail(`${path}.max`, "Expected max to be greater than min.");
+    }
+    if (
+      value.format !== undefined &&
+      (typeof value.format !== "string" || !PROGRESS_FORMAT_SET.has(value.format))
+    ) {
+      fail(`${path}.format`, "Expected number or percent.");
+    }
+  }
+
   const copy: PlainObject = {};
   for (const [key, entry] of Object.entries(value)) {
     if (isTextInput && (key === "multiline" || key === "minLines")) continue;
     if (isNumberInput && (key === "step" || key === "decimalPlaces")) continue;
     if (isBadge && key === "tone") continue;
+    if (isProgress && ["label", "value", "min", "max", "format"].includes(key)) continue;
     copy[key] = visit(entry, `${path}.${key}`, supportsSdk12);
   }
   if (isMultiSelect) copy.type = "select";
   if (isBadge) copy.type = "text";
+  if (isProgress) {
+    copy.type = "text";
+    copy.text = String(value.value);
+  }
   return copy;
 }
 

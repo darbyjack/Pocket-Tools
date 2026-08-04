@@ -1,7 +1,7 @@
-#include "PocketQuickJsBadge.h"
+#include "PocketQuickJsProgress.h"
 
-#define kSdk badgeSdk()
-#define kRunner badgeRunner()
+#define kSdk progressSdk()
+#define kRunner progressRunner()
 #include "PocketQuickJsRuntime.cpp"
 #undef kRunner
 #undef kSdk
