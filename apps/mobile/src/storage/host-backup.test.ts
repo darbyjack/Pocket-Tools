@@ -92,7 +92,7 @@ test("rejects internal namespaces", () => {
     () =>
       parseHostBackup({
         ...backup,
-        retained: [{ ...backup.retained[0]!, appId: "__pocket_preview__example" }],
+        retained: [{ ...backup.retained[0]!, appId: "lifecycle-diagnostic-example" }],
       }),
     /internal host namespace/,
   );
