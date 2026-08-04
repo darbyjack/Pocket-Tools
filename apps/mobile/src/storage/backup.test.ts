@@ -6,12 +6,12 @@ import {
   MINI_APP_BACKUP_VERSION,
   parseMiniAppBackup,
   stringifyMiniAppBackup,
-  type MiniAppBackupV1,
+  type MiniAppBackupV2,
 } from "./backup.ts";
 
 const timestamp = "2026-08-03T21:30:00.000Z";
 
-function validBackup(): MiniAppBackupV1 {
+function validBackup(): MiniAppBackupV2 {
   return {
     format: MINI_APP_BACKUP_FORMAT,
     version: MINI_APP_BACKUP_VERSION,
@@ -36,10 +36,18 @@ function validBackup(): MiniAppBackupV1 {
       },
     ],
     timers: [{ id: "activeTimer", startedAt: timestamp }],
+    notifications: [
+      {
+        id: "dailyReminder",
+        title: "Daily reminder",
+        trigger: { type: "daily", hour: 8, minute: 30, delivery: "standard" },
+        open: { screen: "home" },
+      },
+    ],
   };
 }
 
-test("round-trips the exact versioned backup contract", () => {
+test("round-trips the exact version-2 backup contract", () => {
   const backup = validBackup();
   const serialized = stringifyMiniAppBackup(backup);
 
@@ -47,18 +55,23 @@ test("round-trips the exact versioned backup contract", () => {
   assert.equal(serialized.endsWith("\n"), true);
 });
 
-test("rejects unsupported formats and versions", () => {
+test("rejects unsupported formats and version-1 documents", () => {
   assert.throws(
     () => parseMiniAppBackup({ ...validBackup(), format: "other" }),
     /BACKUP_INVALID: backup\.format/,
   );
   assert.throws(
-    () => parseMiniAppBackup({ ...validBackup(), version: 2 }),
+    () => parseMiniAppBackup({ ...validBackup(), version: 1 }),
     /BACKUP_INVALID: backup\.version/,
   );
 });
 
-test("rejects unknown fields rather than treating them as compatibility data", () => {
+test("rejects missing notification state and unknown fields", () => {
+  const { notifications: _notifications, ...withoutNotifications } = validBackup();
+  assert.throws(
+    () => parseMiniAppBackup(withoutNotifications),
+    /BACKUP_INVALID: backup\.notifications is required/,
+  );
   assert.throws(
     () => parseMiniAppBackup({ ...validBackup(), legacy: true }),
     /BACKUP_INVALID: backup\.legacy is not supported/,
@@ -70,9 +83,11 @@ test("rejects duplicate state identities", () => {
   const setting = backup.settings[0];
   const record = backup.records[0];
   const timer = backup.timers[0];
+  const notification = backup.notifications[0];
   assert.ok(setting !== undefined);
   assert.ok(record !== undefined);
   assert.ok(timer !== undefined);
+  assert.ok(notification !== undefined);
 
   assert.throws(
     () => parseMiniAppBackup({ ...backup, settings: [...backup.settings, setting] }),
@@ -86,9 +101,17 @@ test("rejects duplicate state identities", () => {
     () => parseMiniAppBackup({ ...backup, timers: [...backup.timers, timer] }),
     /duplicate id activeTimer/,
   );
+  assert.throws(
+    () =>
+      parseMiniAppBackup({
+        ...backup,
+        notifications: [...backup.notifications, notification],
+      }),
+    /duplicate ID dailyReminder/,
+  );
 });
 
-test("rejects invalid timestamps, record IDs, and non-finite values", () => {
+test("rejects invalid timestamps, record IDs, notification shapes, and non-finite values", () => {
   const backup = validBackup();
   const record = backup.records[0];
   assert.ok(record !== undefined);
@@ -112,6 +135,36 @@ test("rejects invalid timestamps, record IDs, and non-finite values", () => {
         settings: [{ name: "hourlyRate", value: Number.POSITIVE_INFINITY }],
       }),
     /finite numbers/,
+  );
+  assert.throws(
+    () =>
+      parseMiniAppBackup({
+        ...backup,
+        notifications: [
+          {
+            id: "dailyReminder",
+            title: "Daily reminder",
+            trigger: { type: "daily", hour: 24, minute: 0 },
+          },
+        ],
+      }),
+    /hour must be an integer from 0 to 23/,
+  );
+});
+
+test("rejects more than 64 desired schedules", () => {
+  const backup = validBackup();
+  assert.throws(
+    () =>
+      parseMiniAppBackup({
+        ...backup,
+        notifications: Array.from({ length: 65 }, (_, index) => ({
+          id: `reminder${index}`,
+          title: `Reminder ${index}`,
+          trigger: { type: "immediate" },
+        })),
+      }),
+    /at most 64 schedules/,
   );
 });
 
