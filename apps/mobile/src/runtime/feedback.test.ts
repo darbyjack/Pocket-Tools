@@ -35,12 +35,7 @@ test("performs output after operations and rerender but before feedback", async 
   );
 
   events.push(`feedback:${message}`);
-  assert.deepEqual(events, [
-    "commit",
-    "rerender",
-    "share:Exported value",
-    "feedback:Shared",
-  ]);
+  assert.deepEqual(events, ["commit", "rerender", "share:Exported value", "feedback:Shared"]);
 });
 
 test("does not perform output or feedback when operation application fails", async () => {

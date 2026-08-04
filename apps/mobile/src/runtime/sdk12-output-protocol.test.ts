@@ -21,9 +21,7 @@ function response(effects: unknown, operations: unknown = []): string {
 }
 
 test("parses dormant copy and share effects", () => {
-  const copy = parseDormantSdk12RuntimeResponse(
-    response([{ type: "copy", text: "Copied value" }]),
-  );
+  const copy = parseDormantSdk12RuntimeResponse(response([{ type: "copy", text: "Copied value" }]));
   assert.deepEqual(copy.value.effects, [{ type: "copy", text: "Copied value" }]);
 
   const share = parseDormantSdk12RuntimeResponse(
@@ -62,9 +60,7 @@ test("preserves output while parsing dormant notification operations", () => {
 test("counts output limits by Unicode code point", () => {
   const text = "😀".repeat(10_000);
   const title = "😀".repeat(120);
-  const parsed = parseDormantSdk12RuntimeResponse(
-    response([{ type: "share", title, text }]),
-  );
+  const parsed = parseDormantSdk12RuntimeResponse(response([{ type: "share", title, text }]));
   assert.deepEqual(parsed.value.effects, [{ type: "share", title, text }]);
 });
 
