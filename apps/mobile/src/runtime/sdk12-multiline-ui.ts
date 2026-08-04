@@ -18,8 +18,23 @@ export function validateSdkPageNode(
   validatePageNode(legacyCompatible, legacyInspection(inspection), { allowDormantSdk12: true });
 }
 
-export const validatePageNodeWithDormantFormHints = validateSdkPageNode;
-export const validatePageNodeWithDormantMultiline = validateSdkPageNode;
+/** @deprecated SDK 1.2 is public; use validateSdkPageNode. */
+export function validatePageNodeWithDormantFormHints(
+  value: unknown,
+  inspection?: MiniAppInspection,
+  _options?: unknown,
+): asserts value is PageNode {
+  validateSdkPageNode(value, inspection);
+}
+
+/** @deprecated SDK 1.2 is public; use validateSdkPageNode. */
+export function validatePageNodeWithDormantMultiline(
+  value: unknown,
+  inspection?: MiniAppInspection,
+  _options?: unknown,
+): asserts value is PageNode {
+  validateSdkPageNode(value, inspection);
+}
 
 function stripAndValidateSdk12Extensions(
   value: unknown,
