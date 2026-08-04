@@ -14,7 +14,6 @@ import { inspectMiniApp } from "./src/runtime/quickjs";
 import { stringifyMiniAppBackup } from "./src/storage/backup";
 import { createMiniAppBackup } from "./src/storage/backup-storage";
 import {
-  deleteInstalledMiniApp,
   initializeDatabase,
   listInstalledMiniApps,
   rollbackInstalledMiniApp,
@@ -23,6 +22,7 @@ import {
 } from "./src/storage/database";
 import { stringifyHostBackup } from "./src/storage/host-backup";
 import { createHostBackup } from "./src/storage/host-backup-storage";
+import { deleteInstalledMiniAppWithNotifications } from "./src/storage/notification-removal";
 import { ErrorNotice } from "./src/ui/ErrorNotice";
 import { HostBackupEditor } from "./src/ui/HostBackupEditor";
 import { HostSettings } from "./src/ui/HostSettings";
@@ -127,7 +127,7 @@ export default function App() {
     (app: InstalledMiniApp) => {
       const remove = async (deleteData: boolean) => {
         try {
-          await deleteInstalledMiniApp(app.id, deleteData);
+          await deleteInstalledMiniAppWithNotifications(app.id, deleteData);
           await refreshApps();
           setRoute({ name: "library" });
         } catch (caught) {
