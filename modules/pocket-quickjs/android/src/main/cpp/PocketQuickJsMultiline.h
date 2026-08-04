@@ -72,9 +72,36 @@ inline const char* multilineRunner() {
       );
     }
 
+    const isNumberInput = value.type === "number-input";
+    const hasStep = Object.prototype.hasOwnProperty.call(value, "step");
+    const hasDecimalPlaces = Object.prototype.hasOwnProperty.call(value, "decimalPlaces");
+    if (isNumberInput && (hasStep || hasDecimalPlaces)) {
+      if (sdkVersion !== "1.2") {
+        fail("VALIDATION_FAILED", `${path}: Numeric input hints require SDK 1.2.`);
+      }
+      if (hasStep &&
+          (typeof value.step !== "number" || !Number.isFinite(value.step) || value.step <= 0)) {
+        fail("VALIDATION_FAILED", `${path}.step must be a finite number greater than zero.`);
+      }
+      if (hasDecimalPlaces &&
+          (!Number.isInteger(value.decimalPlaces) ||
+           value.decimalPlaces < 0 ||
+           value.decimalPlaces > 6)) {
+        fail("VALIDATION_FAILED", `${path}.decimalPlaces must be an integer from 0 to 6.`);
+      }
+      state.annotations.set(
+        path,
+        Object.freeze({
+          ...(hasStep ? { step: value.step } : {}),
+          ...(hasDecimalPlaces ? { decimalPlaces: value.decimalPlaces } : {}),
+        }),
+      );
+    }
+
     const sanitized = {};
     for (const [key, entry] of Object.entries(value)) {
       if (isTextInput && (key === "multiline" || key === "minLines")) continue;
+      if (isNumberInput && (key === "step" || key === "decimalPlaces")) continue;
       sanitized[key] = sanitizeNode(entry, `${path}.${key}`, sdkVersion, state, depth + 1);
     }
     state.seen.delete(value);
