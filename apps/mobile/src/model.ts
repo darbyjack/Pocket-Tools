@@ -1,13 +1,10 @@
 import type {
-  ActionConfirmation,
   ActionControl,
-  ActionIntent,
   CollectionDefinition as PublicCollectionDefinition,
   ColumnNode as PublicColumnNode,
   FieldDefinition as PublicFieldDefinition,
   ListItemNode as PublicListItemNode,
   ListNode as PublicListNode,
-  MetricNode,
   MiniAppManifest as PublicMiniAppManifest,
   PageNode as PublicPageNode,
   RowNode as PublicRowNode,
