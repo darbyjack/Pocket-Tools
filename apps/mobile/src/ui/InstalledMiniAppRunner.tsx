@@ -37,7 +37,7 @@ export function InstalledMiniAppRunner({
 
       <MiniAppRuntimePanel
         initialScreen={initialScreen}
-        initialScreenInput={initialScreenInput}
+        {...(initialScreenInput === undefined ? {} : { initialScreenInput })}
         source={app.activeSource}
         storageId={app.id}
       />
