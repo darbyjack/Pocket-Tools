@@ -1,12 +1,12 @@
 package com.darbyjack.pockettools.quickjs
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import androidx.test.ext.junit.runners.AndroidJUnit4
 
 @RunWith(AndroidJUnit4::class)
 class PocketQuickJsSdk12ListRowTest {
@@ -31,7 +31,8 @@ class PocketQuickJsSdk12ListRowTest {
 
   @Test
   fun rejectsPrimaryActionsBelowSdk12() {
-    val source = definition(validPrimaryAction()).replace("sdkVersion: '1.2'", "sdkVersion: '1.1'")
+    val source =
+      definition(validPrimaryAction()).replace("sdkVersion: '1.2'", "sdkVersion: '1.1'")
     assertEquals("INVALID_UI_TREE", errorCode(run(source, renderRequest())))
   }
 
