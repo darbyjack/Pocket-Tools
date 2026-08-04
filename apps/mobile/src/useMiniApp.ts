@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { MiniAppInspection, PageNode, RuntimeSnapshot, SerializableValue } from "./model";
 import { completeRuntimeAction } from "./runtime/feedback";
@@ -48,6 +48,8 @@ export function useMiniApp(
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pendingFeedback, setPendingFeedback] = useState<string | null>(null);
+  const activeSource = useRef(source);
+  activeSource.current = source;
 
   const storageIdFor = useCallback(
     (currentInspection: MiniAppInspection) => requestedStorageId ?? currentInspection.manifest.id,
@@ -159,6 +161,7 @@ export function useMiniApp(
   const invokeAction = useCallback(
     async (action: string, input?: SerializableValue) => {
       if (inspection === null || source === null) return;
+      const actionSource = source;
       setError(null);
       setFeedback(null);
       setPendingFeedback(null);
@@ -171,19 +174,26 @@ export function useMiniApp(
         const baseSnapshot = await loadRuntimeSnapshot(inspection, storageId, "action", { action });
         const actionSnapshot: RuntimeSnapshot =
           input === undefined ? baseSnapshot : { ...baseSnapshot, actionInput: input };
-        const response = await invokeMiniAppAction(source, actionSnapshot);
+        const response = await invokeMiniAppAction(actionSource, actionSnapshot);
         const message = await completeRuntimeAction(
           response.value,
           (operations) => applyRuntimeOperations(inspection, storageId, operations),
-          () => refresh(inspection, screen, screenInput),
+          async () => {
+            const rendered = await render(inspection, screen, screenInput);
+            if (activeSource.current !== actionSource) return;
+            setSnapshot(rendered.snapshot);
+            setPage(rendered.page);
+          },
         );
+        if (activeSource.current !== actionSource) return;
         if (message !== null) setPendingFeedback(message);
       } catch (caught) {
+        if (activeSource.current !== actionSource) return;
         setPendingFeedback(null);
         setError(formatMiniAppError(caught));
       }
     },
-    [inspection, refresh, screen, screenInput, source, storageIdFor],
+    [inspection, render, screen, screenInput, source, storageIdFor],
   );
 
   const navigate = useCallback(
