@@ -264,7 +264,19 @@ export interface FeedbackEffect {
   readonly message: string;
 }
 
-export type RuntimeEffect = FeedbackEffect;
+export interface CopyEffect {
+  readonly type: "copy";
+  readonly text: string;
+}
+
+export interface ShareEffect {
+  readonly type: "share";
+  readonly title?: string;
+  readonly text: string;
+}
+
+export type OutputEffect = CopyEffect | ShareEffect;
+export type RuntimeEffect = FeedbackEffect | OutputEffect;
 
 export interface RuntimeValue {
   readonly inspection?: MiniAppInspection;
