@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  parseDormantSdk12RuntimeResponse,
-  parseRuntimeResponse,
-} from "./protocol.ts";
+import { parseDormantSdk12RuntimeResponse, parseRuntimeResponse } from "./protocol.ts";
 
 function response(): string {
   return JSON.stringify({

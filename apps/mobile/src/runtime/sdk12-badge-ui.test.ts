@@ -66,7 +66,12 @@ test("rejects badge nodes below SDK 1.2", () => {
 test("rejects invalid badge text, tones, and unknown properties", () => {
   const options = { allowDormantSdk12: true } as const;
   assert.throws(
-    () => validatePageNodeWithDormantFormHints(page({ type: "badge", text: "" }), inspection("1.2"), options),
+    () =>
+      validatePageNodeWithDormantFormHints(
+        page({ type: "badge", text: "" }),
+        inspection("1.2"),
+        options,
+      ),
     /1 to 80 characters/,
   );
   assert.throws(

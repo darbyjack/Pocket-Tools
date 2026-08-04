@@ -1,8 +1,4 @@
-import type {
-  MiniAppInspection,
-  PageNode,
-  SettingDefinition,
-} from "../model.ts";
+import type { MiniAppInspection, PageNode, SettingDefinition } from "../model.ts";
 import { BADGE_TONES } from "./sdk12-badge.ts";
 import { validatePageNode, type UiValidationOptions } from "./ui-validation.ts";
 
@@ -123,7 +119,9 @@ function visit(value: unknown, path: string, supportsSdk12: boolean): unknown {
   return copy;
 }
 
-function legacyInspection(inspection: MiniAppInspection | undefined): MiniAppInspection | undefined {
+function legacyInspection(
+  inspection: MiniAppInspection | undefined,
+): MiniAppInspection | undefined {
   if (inspection === undefined) return undefined;
   return {
     ...inspection,

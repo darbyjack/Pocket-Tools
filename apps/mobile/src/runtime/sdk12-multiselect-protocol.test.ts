@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  parseDormantSdk12RuntimeResponse,
-  parseRuntimeResponse,
-} from "./protocol.ts";
+import { parseDormantSdk12RuntimeResponse, parseRuntimeResponse } from "./protocol.ts";
 
 function response(): string {
   return JSON.stringify({
@@ -40,9 +37,7 @@ function response(): string {
         title: "Tags",
         children: [{ type: "multi-select", setting: "tags", label: "Tags" }],
       },
-      operations: [
-        { type: "setting-set", setting: "tags", value: ["work", "personal"] },
-      ],
+      operations: [{ type: "setting-set", setting: "tags", value: ["work", "personal"] }],
     },
   });
 }
