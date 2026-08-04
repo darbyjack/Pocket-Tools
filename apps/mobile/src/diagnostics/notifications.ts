@@ -157,10 +157,7 @@ function buildRequest(kind: NotificationAcceptanceKind, now: Date): Notification
 
   return {
     id: "replacementReminder",
-    title:
-      kind === "replacementA"
-        ? "Pocket Tools replacement A"
-        : "Pocket Tools replacement B",
+    title: kind === "replacementA" ? "Pocket Tools replacement A" : "Pocket Tools replacement B",
     body: "Only the most recently scheduled replacement should fire.",
     trigger: {
       type: "date",
