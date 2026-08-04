@@ -1,4 +1,8 @@
-import type { MiniAppInspection, PageNode } from "../model.ts";
+import type {
+  MiniAppInspection,
+  PageNode,
+  SettingDefinition,
+} from "../model.ts";
 import { validatePageNode, type UiValidationOptions } from "./ui-validation.ts";
 
 type PlainObject = Record<string, unknown>;
@@ -9,7 +13,7 @@ export function validatePageNodeWithDormantFormHints(
   options: UiValidationOptions = {},
 ): asserts value is PageNode {
   const legacyCompatible = stripAndValidateFormHints(value, inspection, options);
-  validatePageNode(legacyCompatible, inspection, options);
+  validatePageNode(legacyCompatible, legacyInspection(inspection), options);
 }
 
 export function validatePageNodeWithDormantMultiline(
@@ -79,13 +83,45 @@ function visit(value: unknown, path: string, supportsSdk12: boolean): unknown {
     }
   }
 
+  const isMultiSelect = value.type === "multi-select";
+  if (isMultiSelect) {
+    if (!supportsSdk12) fail(path, "Multi-select inputs require SDK 1.2.");
+    exactKeys(value, ["type", "setting", "label"], path);
+  }
+
   const copy: PlainObject = {};
   for (const [key, entry] of Object.entries(value)) {
     if (isTextInput && (key === "multiline" || key === "minLines")) continue;
     if (isNumberInput && (key === "step" || key === "decimalPlaces")) continue;
     copy[key] = visit(entry, `${path}.${key}`, supportsSdk12);
   }
+  if (isMultiSelect) copy.type = "select";
   return copy;
+}
+
+function legacyInspection(inspection: MiniAppInspection | undefined): MiniAppInspection | undefined {
+  if (inspection === undefined) return undefined;
+  return {
+    ...inspection,
+    settings: Object.fromEntries(
+      Object.entries(inspection.settings).map(([name, definition]) => [
+        name,
+        legacySettingDefinition(definition),
+      ]),
+    ),
+  };
+}
+
+function legacySettingDefinition(definition: SettingDefinition): SettingDefinition {
+  if (definition.type !== "multi-select") return definition;
+  return {
+    type: "select",
+    label: definition.label,
+    ...(definition.description === undefined ? {} : { description: definition.description }),
+    ...(definition.visibleWhen === undefined ? {} : { visibleWhen: definition.visibleWhen }),
+    default: definition.options[0]?.value ?? "",
+    options: definition.options,
+  };
 }
 
 function supportsDormantSdk12(
@@ -94,6 +130,13 @@ function supportsDormantSdk12(
 ): boolean {
   if (options.allowDormantSdk12 !== true) return false;
   return inspection === undefined || inspection.manifest.sdkVersion === "1.2";
+}
+
+function exactKeys(object: PlainObject, allowed: readonly string[], path: string): void {
+  const allowedKeys = new Set(allowed);
+  for (const key of Object.keys(object)) {
+    if (!allowedKeys.has(key)) fail(`${path}.${key}`, "Unknown UI property.");
+  }
 }
 
 function isPlainObject(value: unknown): value is PlainObject {
