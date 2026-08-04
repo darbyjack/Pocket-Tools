@@ -119,16 +119,10 @@ function visit(value: unknown, path: string, supportsSdk12: boolean): unknown {
     if (typeof value.value !== "number" || !Number.isFinite(value.value)) {
       fail(`${path}.value`, "Expected a finite number.");
     }
-    if (
-      value.min !== undefined &&
-      (typeof value.min !== "number" || !Number.isFinite(value.min))
-    ) {
+    if (value.min !== undefined && (typeof value.min !== "number" || !Number.isFinite(value.min))) {
       fail(`${path}.min`, "Expected a finite number.");
     }
-    if (
-      value.max !== undefined &&
-      (typeof value.max !== "number" || !Number.isFinite(value.max))
-    ) {
+    if (value.max !== undefined && (typeof value.max !== "number" || !Number.isFinite(value.max))) {
       fail(`${path}.max`, "Expected a finite number.");
     }
     const minimum = value.min ?? 0;
