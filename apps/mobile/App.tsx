@@ -23,19 +23,25 @@ import {
 } from "./src/storage/database";
 import { stringifyHostBackup } from "./src/storage/host-backup";
 import { createHostBackup } from "./src/storage/host-backup-storage";
+import { ErrorNotice } from "./src/ui/ErrorNotice";
 import { HostBackupEditor } from "./src/ui/HostBackupEditor";
+import { HostSettings } from "./src/ui/HostSettings";
 import { InstalledMiniAppRunner } from "./src/ui/InstalledMiniAppRunner";
 import { LifecycleDiagnostics } from "./src/ui/LifecycleDiagnostics";
 import { MiniAppBackupEditor } from "./src/ui/MiniAppBackupEditor";
 import { MiniAppEditor, type MiniAppEditorMode } from "./src/ui/MiniAppEditor";
 import { MiniAppLibrary } from "./src/ui/MiniAppLibrary";
+import { MiniAppManagement } from "./src/ui/MiniAppManagement";
+import { colors, radii } from "./src/ui/theme";
 
 type Route =
   | { readonly name: "library" }
+  | { readonly name: "settings" }
   | { readonly name: "backup" }
   | { readonly name: "hostBackup" }
   | { readonly name: "diagnostics" }
   | { readonly name: "run"; readonly appId: string }
+  | { readonly name: "manage"; readonly appId: string }
   | {
       readonly name: "editor";
       readonly mode: MiniAppEditorMode;
@@ -113,10 +119,7 @@ export default function App() {
         message: stringifyHostBackup(backup),
       });
     } catch (caught) {
-      Alert.alert(
-        "Complete backup failed",
-        caught instanceof Error ? caught.message : String(caught),
-      );
+      Alert.alert("Backup failed", caught instanceof Error ? caught.message : String(caught));
     }
   }, []);
 
@@ -132,54 +135,46 @@ export default function App() {
         }
       };
 
-      Alert.alert(
-        `Remove ${app.name}?`,
-        "You can keep its isolated settings, records, and timers for a later reinstall, or remove all of its data now.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Remove app",
-            style: "destructive",
-            onPress: () => void remove(false),
-          },
-          {
-            text: "Remove app and data",
-            style: "destructive",
-            onPress: () => void remove(true),
-          },
-        ],
-      );
+      Alert.alert(`Remove ${app.name}?`, "Keep its saved data for a later reinstall?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Keep data",
+          style: "destructive",
+          onPress: () => void remove(false),
+        },
+        {
+          text: "Remove data too",
+          style: "destructive",
+          onPress: () => void remove(true),
+        },
+      ]);
     },
     [refreshApps],
   );
 
   const rollback = useCallback(
     (app: InstalledMiniApp) => {
-      Alert.alert(
-        `Roll back ${app.name}?`,
-        "The current source and last-known-good source will be swapped. App data is not changed.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Roll back",
-            onPress: () => {
-              void (async () => {
-                try {
-                  const inspection = await inspectMiniApp(app.lastKnownGoodSource);
-                  await rollbackInstalledMiniApp(app.id, inspection);
-                  await refreshApps();
-                  setRoute({ name: "run", appId: app.id });
-                } catch (caught) {
-                  Alert.alert(
-                    "Rollback failed",
-                    caught instanceof Error ? caught.message : String(caught),
-                  );
-                }
-              })();
-            },
+      Alert.alert(`Roll back ${app.name}?`, "This restores the previous script version.", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Roll back",
+          onPress: () => {
+            void (async () => {
+              try {
+                const inspection = await inspectMiniApp(app.lastKnownGoodSource);
+                await rollbackInstalledMiniApp(app.id, inspection);
+                await refreshApps();
+                setRoute({ name: "run", appId: app.id });
+              } catch (caught) {
+                Alert.alert(
+                  "Rollback failed",
+                  caught instanceof Error ? caught.message : String(caught),
+                );
+              }
+            })();
           },
-        ],
-      );
+        },
+      ]);
     },
     [refreshApps],
   );
@@ -198,56 +193,62 @@ export default function App() {
   }, [refreshApps]);
 
   const selectedApp =
-    route.name === "run" || route.name === "editor"
+    route.name === "run" || route.name === "manage" || route.name === "editor"
       ? (apps.find((app) => app.id === route.appId) ?? null)
       : null;
   const routeRequiresMissingApp =
-    route.name === "run" || (route.name === "editor" && route.mode !== "create");
+    route.name === "run" ||
+    route.name === "manage" ||
+    (route.name === "editor" && route.mode !== "create");
 
   let content: ReactNode;
   if (loading) {
     content = (
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Loading installed mini apps…</Text>
+        <Text style={styles.loadingText}>Opening Pocket Tools…</Text>
       </View>
     );
   } else if (startupError !== null) {
     content = (
-      <View accessibilityRole="alert" style={styles.startupError}>
-        <Text style={styles.startupErrorTitle}>Pocket Tools could not start</Text>
-        <Text selectable style={styles.startupErrorText}>
-          {startupError}
-        </Text>
+      <View style={styles.errorContainer}>
+        <ErrorNotice
+          detail={startupError}
+          message="Close the app and try again."
+          title="Pocket Tools couldn’t start"
+        />
       </View>
     );
   } else if (route.name === "library") {
     content = (
       <MiniAppLibrary
         apps={apps}
-        onBackupAll={() => void exportAllBackup()}
         onCreate={() => setRoute({ name: "editor", mode: "create", appId: null })}
-        onDelete={removeApp}
-        onDiagnostics={() => setRoute({ name: "diagnostics" })}
-        onDuplicate={(app) => setRoute({ name: "editor", mode: "duplicate", appId: app.id })}
-        onEdit={(app) => setRoute({ name: "editor", mode: "edit", appId: app.id })}
-        onExport={(app) => void exportSource(app)}
         onOpen={(app) => setRoute({ name: "run", appId: app.id })}
-        onRestore={() => setRoute({ name: "backup" })}
+        onSettings={() => setRoute({ name: "settings" })}
+      />
+    );
+  } else if (route.name === "settings") {
+    content = (
+      <HostSettings
+        onBack={() => setRoute({ name: "library" })}
+        onBackupAll={() => void exportAllBackup()}
+        onDiagnostics={() => setRoute({ name: "diagnostics" })}
         onRestoreAll={() => setRoute({ name: "hostBackup" })}
+        onRestoreOne={() => setRoute({ name: "backup" })}
       />
     );
   } else if (route.name === "backup") {
     content = (
       <MiniAppBackupEditor
-        onCancel={() => setRoute({ name: "library" })}
+        onCancel={() => setRoute({ name: "settings" })}
         onRestored={(restored) => void handleSaved(restored)}
       />
     );
   } else if (route.name === "hostBackup") {
     content = (
       <HostBackupEditor
-        onCancel={() => setRoute({ name: "library" })}
+        onCancel={() => setRoute({ name: "settings" })}
         onRestored={() => void handleHostRestored()}
       />
     );
@@ -256,23 +257,21 @@ export default function App() {
       <LifecycleDiagnostics
         onBack={() => {
           void refreshApps();
-          setRoute({ name: "library" });
+          setRoute({ name: "settings" });
         }}
       />
     );
   } else if (routeRequiresMissingApp && selectedApp === null) {
     content = (
-      <View style={styles.startupError}>
-        <Text style={styles.startupErrorTitle}>Mini app not found</Text>
-        <Text style={styles.startupErrorText}>
-          The installation was removed or is no longer available.
-        </Text>
+      <View style={styles.missingCard}>
+        <Text style={styles.missingTitle}>Tool not found</Text>
+        <Text style={styles.missingText}>It may have been removed.</Text>
         <Pressable
           accessibilityRole="button"
           onPress={() => setRoute({ name: "library" })}
           style={styles.returnButton}
         >
-          <Text style={styles.returnButtonText}>Return to library</Text>
+          <Text style={styles.returnButtonText}>Back to Pocket Tools</Text>
         </Pressable>
       </View>
     );
@@ -282,32 +281,37 @@ export default function App() {
         installed={selectedApp}
         key={`${route.mode}:${route.appId ?? "new"}`}
         mode={route.mode}
-        onCancel={() => setRoute({ name: "library" })}
+        onCancel={() =>
+          setRoute(
+            route.mode === "create" || selectedApp === null
+              ? { name: "library" }
+              : { name: "manage", appId: selectedApp.id },
+          )
+        }
         onSaved={(saved) => void handleSaved(saved)}
       />
     );
-  } else if (selectedApp !== null) {
+  } else if (route.name === "manage" && selectedApp !== null) {
+    content = (
+      <MiniAppManagement
+        app={selectedApp}
+        onBack={() => setRoute({ name: "run", appId: selectedApp.id })}
+        onBackup={() => void exportBackup(selectedApp)}
+        onDelete={() => removeApp(selectedApp)}
+        onDuplicate={() =>
+          setRoute({ name: "editor", mode: "duplicate", appId: selectedApp.id })
+        }
+        onEdit={() => setRoute({ name: "editor", mode: "edit", appId: selectedApp.id })}
+        onExport={() => void exportSource(selectedApp)}
+        onRollback={() => rollback(selectedApp)}
+      />
+    );
+  } else if (route.name === "run" && selectedApp !== null) {
     content = (
       <InstalledMiniAppRunner
         app={selectedApp}
         onBack={() => setRoute({ name: "library" })}
-        onBackup={() => void exportBackup(selectedApp)}
-        onDuplicate={() =>
-          setRoute({
-            name: "editor",
-            mode: "duplicate",
-            appId: selectedApp.id,
-          })
-        }
-        onEdit={() =>
-          setRoute({
-            name: "editor",
-            mode: "edit",
-            appId: selectedApp.id,
-          })
-        }
-        onExport={() => void exportSource(selectedApp)}
-        onRollback={() => rollback(selectedApp)}
+        onManage={() => setRoute({ name: "manage", appId: selectedApp.id })}
       />
     );
   } else {
@@ -334,7 +338,7 @@ function visibleInstalledApps(installed: readonly InstalledMiniApp[]): readonly 
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: "#eef1f5",
+    backgroundColor: colors.background,
     flex: 1,
   },
   centered: {
@@ -345,37 +349,39 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   loadingText: {
-    color: "#475467",
+    color: colors.textMuted,
     fontSize: 15,
   },
-  startupError: {
-    backgroundColor: "#fff1f0",
-    borderColor: "#fda29b",
-    borderRadius: 16,
+  errorContainer: {
+    padding: 18,
+  },
+  missingCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.card,
     borderWidth: 1,
     gap: 10,
     margin: 18,
-    padding: 16,
+    padding: 18,
   },
-  startupErrorTitle: {
-    color: "#912018",
-    fontSize: 17,
+  missingTitle: {
+    color: colors.text,
+    fontSize: 18,
     fontWeight: "800",
   },
-  startupErrorText: {
-    color: "#b42318",
-    fontFamily: "monospace",
-    fontSize: 13,
+  missingText: {
+    color: colors.textMuted,
+    fontSize: 14,
   },
   returnButton: {
     alignSelf: "flex-start",
-    backgroundColor: "#912018",
-    borderRadius: 10,
-    paddingHorizontal: 13,
-    paddingVertical: 9,
+    backgroundColor: colors.brand,
+    borderRadius: radii.button,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   returnButtonText: {
-    color: "#ffffff",
+    color: colors.surface,
     fontSize: 14,
     fontWeight: "700",
   },
