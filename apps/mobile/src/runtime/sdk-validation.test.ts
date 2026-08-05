@@ -12,12 +12,18 @@ const entryCollection = collection({
   dueAt: field.datetime({ optional: true }),
 });
 
-test("validates every frozen setting value type", () => {
+const temporalCollection = collection({
+  dueDate: field.date(),
+  recordedAt: field.datetime(),
+});
+
+test("validates every frozen setting value type with the declared SDK version", () => {
   assert.doesNotThrow(() =>
     assertSettingValue(
       setting.text({ label: "Title", default: "A", maxLength: 10 }),
       "Hello",
       "settings.title",
+      "1.0",
     ),
   );
   assert.doesNotThrow(() =>
@@ -25,6 +31,7 @@ test("validates every frozen setting value type", () => {
       setting.boolean({ label: "Enabled", default: true }),
       false,
       "settings.enabled",
+      "1.0",
     ),
   );
   assert.doesNotThrow(() =>
@@ -32,6 +39,7 @@ test("validates every frozen setting value type", () => {
       setting.number({ label: "Count", default: 1, min: 0, max: 5 }),
       3,
       "settings.count",
+      "1.0",
     ),
   );
   assert.doesNotThrow(() =>
@@ -46,6 +54,46 @@ test("validates every frozen setting value type", () => {
       }),
       "two",
       "settings.mode",
+      "1.0",
+    ),
+  );
+});
+
+test("validates public SDK 1.2 date and multi-select setting values", () => {
+  assert.doesNotThrow(() =>
+    assertSettingValue(
+      setting.date({ label: "Due date", default: "2026-08-04" }),
+      "2026-08-05",
+      "settings.dueDate",
+      "1.2",
+    ),
+  );
+  assert.doesNotThrow(() =>
+    assertSettingValue(
+      setting.datetime({
+        label: "Reminder",
+        default: "2026-08-04T12:00:00.000Z",
+      }),
+      "2026-08-05T12:30:00.000Z",
+      "settings.reminderAt",
+      "1.2",
+    ),
+  );
+  assert.doesNotThrow(() =>
+    assertSettingValue(
+      setting.multiSelect({
+        label: "Tags",
+        options: [
+          { label: "Home", value: "home" },
+          { label: "Work", value: "work" },
+        ],
+        default: ["home"],
+        minSelections: 1,
+        maxSelections: 2,
+      }),
+      ["home", "work"],
+      "settings.tags",
+      "1.2",
     ),
   );
 });
@@ -57,8 +105,22 @@ test("rejects invalid persisted setting values", () => {
         setting.number({ label: "Count", default: 1, min: 0, max: 5 }),
         10,
         "settings.count",
+        "1.0",
       ),
     /VALIDATION_FAILED: settings.count/,
+  );
+  assert.throws(
+    () =>
+      assertSettingValue(
+        setting.datetime({
+          label: "Reminder",
+          default: "2026-08-04T12:00:00.000Z",
+        }),
+        "2026-08-05T07:30:00.000-05:00",
+        "settings.reminderAt",
+        "1.2",
+      ),
+    /canonical UTC date-time/,
   );
 });
 
@@ -68,16 +130,84 @@ test("validates exact inserts and partial updates", () => {
       entryCollection,
       { title: "Task", complete: false, amount: null },
       "operations[0].record",
+      false,
+      "1.1",
     ),
   );
   assert.doesNotThrow(() =>
-    assertRecordInput(entryCollection, { complete: true }, "operations[0].changes", true),
+    assertRecordInput(
+      entryCollection,
+      { complete: true },
+      "operations[0].changes",
+      true,
+      "1.1",
+    ),
+  );
+});
+
+test("uses the explicit manifest version for temporal record validation", () => {
+  assert.doesNotThrow(() =>
+    assertRecordInput(
+      temporalCollection,
+      {
+        dueDate: "2026-08-05",
+        recordedAt: "2026-08-05T12:30:00.000Z",
+      },
+      "record",
+      false,
+      "1.2",
+    ),
+  );
+  assert.throws(
+    () =>
+      assertRecordInput(
+        temporalCollection,
+        {
+          dueDate: "2026-08-05",
+          recordedAt: "2026-08-05T07:30:00.000-05:00",
+        },
+        "record",
+        false,
+        "1.2",
+      ),
+    /canonical UTC date-time/,
+  );
+  assert.throws(
+    () =>
+      assertRecordInput(
+        temporalCollection,
+        {
+          dueDate: "2026-08-05",
+          recordedAt: "2026-08-05T12:30:00.000Z",
+        },
+        "record",
+        false,
+        "1.1",
+      ),
+    /Date fields require SDK 1.2/,
+  );
+});
+
+test("retains SDK 1.1 date-time compatibility when explicitly requested", () => {
+  assert.doesNotThrow(() =>
+    assertRecordInput(
+      entryCollection,
+      {
+        title: "Task",
+        complete: false,
+        amount: null,
+        dueAt: "2026-08-05T07:30:00.000-05:00",
+      },
+      "record",
+      false,
+      "1.1",
+    ),
   );
 });
 
 test("rejects missing, unknown, host-owned, and invalid record fields", () => {
   assert.throws(
-    () => assertRecordInput(entryCollection, { title: "Task" }, "record"),
+    () => assertRecordInput(entryCollection, { title: "Task" }, "record", false, "1.1"),
     /record.complete: Required field is missing/,
   );
   assert.throws(
@@ -86,17 +216,31 @@ test("rejects missing, unknown, host-owned, and invalid record fields", () => {
         entryCollection,
         { title: "Task", complete: false, unknown: true },
         "record",
+        false,
+        "1.1",
       ),
     /record.unknown: Unknown collection field/,
   );
   assert.throws(
     () =>
-      assertRecordInput(entryCollection, { id: "owned", title: "Task", complete: false }, "record"),
+      assertRecordInput(
+        entryCollection,
+        { id: "owned", title: "Task", complete: false },
+        "record",
+        false,
+        "1.1",
+      ),
     /record.id: Record metadata is host-owned/,
   );
   assert.throws(
     () =>
-      assertRecordInput(entryCollection, { title: "Task", complete: false, amount: -1 }, "record"),
+      assertRecordInput(
+        entryCollection,
+        { title: "Task", complete: false, amount: -1 },
+        "record",
+        false,
+        "1.1",
+      ),
     /record.amount: Value is below the minimum/,
   );
 });
