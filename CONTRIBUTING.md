@@ -1,29 +1,51 @@
 # Contributing
 
-Read [AGENTS.md](AGENTS.md) before making changes.
+Read [AGENTS.md](AGENTS.md) and the [documentation index](docs/README.md) before making changes.
 
 ## Development flow
 
-1. Choose an unblocked issue from the Pocket Tools wayfinder map.
-2. Claim it before beginning work.
-3. Create an `agent/<description>` branch from `main`.
-4. Keep the change limited to the smallest working end-to-end slice described by the issue.
-5. Run `pnpm check`.
-6. Open a pull request linking the issue.
+1. Start from the latest `main`.
+2. Create an `agent/<description>` branch.
+3. Keep the change limited to one coherent working slice.
+4. Update implementation, validation, declarations, examples, and documentation together when the public SDK changes.
+5. Run the required checks.
+6. Open a pull request describing behavior, compatibility impact, documentation changes, and validation results.
 
-Do not add host-only shortcuts for behavior that belongs in the public mini-app SDK. Bathroom Pay must remain a normal script rather than a privileged built-in feature.
+No GitHub Actions workflows are enabled. Do not add one as an incidental part of another change.
 
-Do not land a standalone shell, renderer, storage framework, or runtime abstraction unless the same pull request uses it in the working product path.
+## Required repository checks
 
-## Contract changes
+```bash
+pnpm sync:mini-apps:check
+pnpm sdk:declarations:check
+pnpm format
+pnpm check
+```
 
-Changes to `packages/sdk-contract` require:
+`pnpm format` may rewrite files. Review the resulting diff, then rerun `pnpm check`.
 
-- A concrete requirement from the working slice being implemented
-- Updated validation tests
-- Updated documentation and examples
-- Removal of obsolete APIs rather than compatibility shims, fallbacks, deprecations, or migrations
+Android or native-runtime changes also require the build and connected-test procedure in [`apps/mobile/README.md`](apps/mobile/README.md).
 
-Do not add an API because it may be useful later. Add it when a working mini app needs it.
+## Public SDK changes
 
-Every value crossing the script/host boundary must remain serializable according to `SerializableValue`.
+The released public source of truth is:
+
+- [`packages/sdk-contract/src/`](packages/sdk-contract/src/)
+- generated declarations in [`packages/sdk-contract/dist/`](packages/sdk-contract/dist/)
+- the executable QuickJS SDK and runner
+- host protocol, validation, renderer, storage, and native services
+- [`docs/SDK_1_2_CONTRACT.md`](docs/SDK_1_2_CONTRACT.md)
+- [`docs/AGENT_AUTHORING.md`](docs/AGENT_AUTHORING.md)
+- canonical fixtures and examples
+
+A contract change must update every affected layer in the same pull request. Do not invent APIs for possible future use or expose a partial capability. Preserve SDK 1.0 and 1.1 behavior unless an explicit versioned decision says otherwise.
+
+Every value crossing the script/host boundary must remain finite and serializable according to `SerializableValue`.
+
+## Architecture rules
+
+- Mini-app behavior belongs in ordinary script source, not a privileged host branch.
+- Bundled examples and pasted tools must use the same installed-source path.
+- Scripts never receive native objects, database handles, storage namespaces, or ambient device authority.
+- Host mutations remain validated and transactional.
+- Remove obsolete documentation and paths instead of preserving competing sources of truth.

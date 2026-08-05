@@ -1,145 +1,154 @@
 # Pocket Tools Architecture
 
-## Purpose
+Pocket Tools is an Android-first Expo host for offline utilities authored as single JavaScript modules. The host owns native UI, persistence, lifecycle, installation, validation, failure containment, output, and Android services. A mini-app owns only its declarative definition and synchronous business logic.
 
-Pocket Tools is an Android-first Expo host for personal utilities authored as single JavaScript modules. The host owns native UI, persistence, navigation, lifecycle recovery, validation, installation, and failure containment. A mini app owns only its declarative definition and business logic.
+Bathroom Pay, Tip Splitter, and the SDK 1.2 acceptance fixture are ordinary scripts, not privileged host features.
 
-Bathroom Pay and Tip Splitter are reference scripts, not host features. No additional example app is required to extend the platform.
-
-## Implemented boundaries
+## End-to-end path
 
 ```text
-Expo / React Native host
-  ├─ installed mini-app library and source editor
-  ├─ isolated preview and last-known-good source lifecycle
-  ├─ generic source lifecycle hook
-  ├─ host-owned active-screen navigation and serializable route input
-  ├─ strict response and UI validation
-  ├─ declarative native renderer
-  │    └─ settings-bound native controls
-  ├─ Expo SQLite host state
-  │    ├─ installed source and manifest metadata
-  │    ├─ per-mini-app validated settings
-  │    ├─ schema-validated isolated records
-  │    └─ durable start/get/stop timers
-  └─ local Expo native module
-       ├─ bounded JNI adapter
-       ├─ frozen executable @pocket-tools/sdk module
-       └─ fresh QuickJS-NG runtime and context per invocation
+source module
+  → local or on-device inspection and validation
+  → isolated preview namespace
+  → retained-state render gate
+  → installed active source
+  → fresh bounded QuickJS-NG runtime
+  → virtual @pocket-tools/sdk module
+  → validated page, operations, effects, and notification intent
+  → one host-owned SQLite transaction
+  → native rerender and post-commit Android effects
 ```
 
-A script never receives a React Native component, native module, SQLite handle, filesystem path, process environment, authentication token, or another mini app's state.
+Bundled examples are synchronized into a generated catalog only for one-time seeding. After insertion into `installed_mini_apps`, bundled and pasted tools use the same execution path.
 
-## Script and module format
-
-A mini app is one ES module. It imports the virtual `@pocket-tools/sdk` module and default-exports the result of `defineMiniApp(...)`.
-
-The QuickJS module loader resolves only that host-provided module. External packages, relative imports, dynamic remote code, Node modules, and filesystem imports are rejected.
-
-## Frozen canonical contract
-
-`packages/sdk-contract` is the public source of truth for SDK v1:
-
-- Manifest and frozen SDK identifier
-- Text, boolean, number, money, and select settings
-- Text, boolean, number, money, and datetime collection fields
-- Insert, get, update, remove, query, count, and sum
-- Typed equality and range filters, sorting, offset, and limit
-- Synchronous screens and actions
-- Finite serializable screen and action input
-- Host-owned screen navigation
-- Declarative layout, copy, input, interaction, display, list, summary, and timer nodes
-- Start/get/stop durable timers
-- Serializable bridge values
-- Definition and value validation
-
-`PocketQuickJsSources.h` contains the matching executable builders and runtime client behavior available inside QuickJS. Contract changes must update the TypeScript contract, executable SDK, response model, host validators, renderer, SQLite adapter, reference scripts, documentation, and tests together.
-
-SDK v1 is frozen for the MVP. Additions to the public surface require an explicit post-MVP version decision and are not added opportunistically to v1.
-
-## Runtime request model
-
-React Native sends QuickJS a serializable snapshot containing:
-
-- Current host time
-- Current validated setting values
-- Current collection records
-- Active timer snapshots
-- Requested inspection, screen, or action
-- Optional finite serializable screen or action input
-
-The native runner passes the exported definition and host snapshot to a runtime-owned function as arguments. Host state is never installed on writable globals.
-
-QuickJS returns a page and/or explicit operations. React Native validates the native response shape. The active inspection then validates UI setting bindings, action targets, navigation targets, and interaction input. SQLite independently validates every setting and record value before applying operations transactionally.
-
-## Runtime lifecycle
-
-Each inspection, render, or action request:
-
-1. Validates trusted host limits and input sizes.
-2. Creates one QuickJS runtime and context.
-3. Installs only the frozen virtual SDK module and bounded console.
-4. Compiles and evaluates the mini-app source.
-5. Drains queued promise jobs and rejects unhandled promise failures.
-6. Invokes the requested synchronous screen or action with optional serializable input.
-7. Validates bridge values, query inputs, UI targets, and operation output.
-8. Serializes a bounded structured response.
-9. Disposes the context and runtime before returning to React Native.
-
-The execution state outlives QuickJS teardown so native callback pointers never refer to expired stack state.
-
-## Rendering and navigation
-
-Scripts return serialized UI trees. The host validates exact node properties, value types, settings bindings, action names, screen names, interaction input, node count, and depth before mapping nodes to owned React Native components.
-
-Settings-bound controls request validated host writes; scripts never receive mutable controls or host references. The host rerenders the current screen after setting updates and actions. `ui.navigation` changes the host-owned active screen and may carry finite serializable route input. The host preserves that input across later rerenders.
-
-A button may carry finite serializable action input. This lets a generated CRUD utility target a record by host-owned ID without relying on writable globals, a second mutable state system, or app-specific host behavior.
-
-Timers and `liveTimer` metrics update from durable timestamps in React Native. The script is not re-executed every second.
-
-## Persistence model
-
-Expo SQLite stores installed source records separately from script-owned state.
-
-`installed_mini_apps` stores the permanent manifest ID, current metadata, active source, last-known-good source, installation timestamp, and update timestamp. The manifest ID is immutable during edit because it is also the permanent state namespace.
-
-Settings, records, and active timers are stored under a trusted host-selected storage ID. Ordinary installed execution uses the manifest ID. Preview uses an internal disposable storage ID that scripts cannot select or observe.
-
-Record IDs and `createdAt`/`updatedAt` metadata are host-owned. Collection writes are schema validated both in QuickJS and again before SQLite mutation. An action's operation list is applied in one transaction; any failure rolls back the complete action.
-
-The pre-release project deliberately has no schema migrations, deprecated aliases, or compatibility paths. Development data may be reset when the current pre-release schema changes.
-
-## Installed source lifecycle
-
-`examples/*.miniapp.js` files are synchronized into a generated JSON catalog only as one-time seed input. On first launch the host inspects each seed and inserts it into `installed_mini_apps`. The generated catalog is not a second runtime path.
-
-The on-device editor validates source through the embedded runtime. Preview uses a disposable namespace. For an update, current settings, records, and timers are cloned into preview so the candidate first render sees representative state without mutating the installed namespace.
-
-The active source changes only after the exact current editor source renders successfully. An update moves the old active source to `last_known_good_source` in the same SQLite statement. Validation, preview, or first-render failure therefore leaves the working installation unchanged.
-
-Rollback swaps active and last-known-good source without changing app data. Export uses the Android share sheet. Duplicate starts from source only and requires a new manifest ID. Removal can retain or delete isolated state.
-
-See [Installed Mini-App Lifecycle](INSTALLED_MINI_APPS.md) for the complete workflow.
-
-## Failure model
-
-Each invocation has independent source, request, result, memory, stack, execution-time, log, UI-node, and UI-depth limits. Blocking waits are disabled and pending jobs are drained under the same deadline.
-
-Malformed definitions, settings, records, queries, operations, interaction input, inspections, UI trees, native responses, and promise failures become structured errors. A failed invocation cannot retain globals, partially apply an action, or poison the next runtime.
-
-The editor preserves runtime error codes, bounded script stacks, and captured console output. Failed candidates are never committed to the active installed source.
-
-## Repository shape
+## Repository layers
 
 ```text
-apps/mobile/                    Expo Android host, installed library, editor, validators, renderer, SQLite adapter
-modules/pocket-quickjs/         Android QuickJS-NG sandbox and executable SDK
-packages/sdk-contract/          frozen public SDK v1 TypeScript contract
-packages/authoring-tools/       local validate, inspect, declaration, and agent-authoring tooling
-examples/                       existing reference mini-app seed scripts
-scripts/                        one-time bundled-seed synchronization
-docs/                           architecture, security, SDK, authoring, installation, and build documentation
+apps/mobile/
+  Expo Android host, editor, installed-tool library, renderer,
+  protocol validation, lifecycle coordination, and SQLite adapters
+
+modules/pocket-quickjs/
+  QuickJS-NG native module, sandbox limits, executable SDK,
+  runtime wrapper, and Android instrumentation
+
+modules/pocket-notifications/
+  Android notification scheduling, exact-access handling,
+  reconciliation, recovery, and native validation
+
+packages/sdk-contract/
+  released TypeScript SDK contract and generated declarations
+
+packages/authoring-tools/
+  local validate, inspect, typecheck, declaration, and parity tooling
+
+examples/
+  ordinary compatibility reference mini-apps
+
+docs/
+  maintained authoring, contract, architecture, lifecycle,
+  Android, backup, and release documentation
 ```
 
-Additional packages are created only when a working product layer needs a separate concern.
+## Contract authority
+
+Pocket Tools supports SDK 1.0, 1.1, and 1.2. SDK 1.2 is the current public contract.
+
+A contract capability must agree across:
+
+- TypeScript source and generated declarations
+- composed local authoring runtime
+- embedded QuickJS builders and clients
+- inspection and runtime response models
+- host protocol and version gates
+- native UI validation and rendering
+- SQLite validation and transactions
+- output and notification services
+- templates, fixtures, examples, and documentation
+
+A lower-version manifest receives only the authority declared by that version. Internal implementation names do not create public API.
+
+## Script format and module loading
+
+A mini-app is one ES module that imports only `@pocket-tools/sdk` and default-exports one `defineMiniApp(...)` result.
+
+The native module loader rejects relative or absolute files, external packages, Node modules, remote URLs, re-exports, and unsupported dynamic imports. Scripts do not execute in the React Native JavaScript runtime.
+
+## Invocation lifecycle
+
+Each inspection, screen render, or action:
+
+1. validates source and request limits
+2. creates a fresh QuickJS runtime and context
+3. installs the executable virtual SDK and bounded console
+4. compiles and evaluates the source
+5. invokes one synchronous operation with a serializable host snapshot
+6. validates definition use, queries, UI, operations, effects, and targets
+7. serializes a bounded response
+8. disposes the context and runtime
+
+No writable script global survives an invocation. Host state is passed as function arguments. Durable timers and scheduled notifications do not keep JavaScript alive.
+
+## Request and response model
+
+React Native provides a validated snapshot containing current host time, declared setting values, collection records, timer state, desired notification state where required, the requested screen or action, and optional finite serializable input.
+
+The runtime may return:
+
+- inspection metadata
+- one declarative page
+- ordered durable operations
+- bounded post-commit effects
+- bounded console diagnostics
+
+React Native independently validates the response envelope and exact shapes. The active inspection validates setting bindings, collection use, action and screen targets, notification routing, and manifest-version authority.
+
+## Action transaction model
+
+SDK 1.2 action clients update an in-runtime working snapshot and record explicit operations. Later reads and queries in the same action observe prior successful calls.
+
+Before persistence, the host validates the complete action result and external preconditions that must fail atomically. It then applies setting, record, timer, and notification-registry operations in list order inside one SQLite transaction.
+
+After commit, the host:
+
+1. reconciles Android notification state
+2. reloads committed tool state
+3. rerenders the active screen
+4. performs at most one output effect
+5. displays at most one feedback effect
+
+A validation or SQLite failure persists nothing and performs no effects. A post-commit Android failure cannot roll back durable data; desired notification state remains recoverable through reconciliation.
+
+## UI, navigation, and timers
+
+Scripts return serialized nodes. The host owns React Native components, layout, accessibility, setting controls, confirmation, destructive presentation, and event propagation.
+
+Navigation is host-owned and may carry finite serializable input. The host preserves active screen and route input across rerenders.
+
+Timers store UTC start timestamps under the installed namespace. React Native derives elapsed display after process death; QuickJS does not run continuously.
+
+## Persistence and namespaces
+
+`installed_mini_apps` stores immutable manifest ID, current metadata, active source, last-known-good source, and installation timestamps.
+
+Settings, records, timers, and desired notifications are isolated by a trusted host-selected namespace. Ordinary installed execution uses the manifest ID. Preview and diagnostics use reserved disposable namespaces that scripts cannot select or observe.
+
+Record IDs and timestamps are host-owned. Unknown fields and invalid values fail closed.
+
+## Installation lifecycle
+
+The editor validates source through the same executable SDK used on Android. Preview runs against a disposable clone of retained ordinary state. Notification requests remain preview-only.
+
+The exact candidate must pass isolated first render and a final read-only render against retained installed state. Only then may install or update persist source. A successful update moves the previous active source to `last_known_good_source` atomically.
+
+Rollback swaps the two validated sources without changing durable tool data. Duplicate starts from source only and requires a new manifest ID. Removal always deletes the installation and desired notifications; ordinary state may optionally be retained.
+
+See [Installed Mini-App Lifecycle](INSTALLED_MINI_APPS.md).
+
+## Failure containment
+
+Independent limits cover source, request, result, heap, stack, execution time, logs, bridge complexity, UI node count, UI depth, operations, effects, queries, and notification schedules.
+
+Malformed source, definitions, state, queries, operations, effects, notifications, UI, native responses, and unsupported asynchronous behavior become structured errors. A failed invocation cannot retain globals, partially commit an action, perform an effect, replace active source, or poison the next invocation.
+
+See [Security Model](SECURITY_MODEL.md) for the complete trust boundary.

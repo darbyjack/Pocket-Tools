@@ -1,99 +1,72 @@
 # Lifecycle and Namespace Diagnostics
 
-Pocket Tools includes a host-owned diagnostics screen for proving the installed-script persistence boundary on Android. Open **Settings**, then choose **Diagnostics** under **Advanced**.
+Pocket Tools includes host-owned Android diagnostics for repeatable verification of namespace isolation, failure recovery, deletion behavior, and process-death timer recovery.
 
-The diagnostics use temporary SDK v1 scripts and the same QuickJS, operation validation, installed-source, and Expo SQLite paths as ordinary installed mini apps. They do not add a public SDK capability or another reference mini app.
+Open **Settings → Advanced → Diagnostics**.
 
-## Immediate host suite
+The diagnostics use temporary ordinary scripts and the production QuickJS, validation, installed-source, and SQLite paths. They do not add public SDK capability or privileged tool behavior.
 
-**Run isolation and recovery suite** performs the following in one repeatable run:
+## Isolation and recovery suite
 
-1. Creates and installs two temporary scripts with different manifest IDs.
-2. Gives both scripts the same setting name, collection name, field name, screen names, action names, and timer ID.
-3. Stores different setting values in the two namespaces.
-4. Invokes each script through QuickJS to insert a record and start a durable timer.
-5. Reloads both snapshots and proves each script sees only its own setting, record, and timer.
-6. Renders the first script's `home`, `details`, and `home` screens through QuickJS and proves navigation rendering does not mutate persisted state.
-7. Runs an action that intentionally throws before returning operations.
-8. Proves the failed invocation persisted no setting, record, or timer changes.
-9. Runs a valid action immediately afterward and proves the fresh QuickJS invocation succeeds.
-10. Removes one installed script while retaining its data, reinstalls the same manifest ID, and proves the state returns.
-11. Removes the script with data and proves its complete namespace is empty.
-12. Removes all temporary diagnostic installations and data.
+**Run isolation and recovery suite**:
 
-The screen reports separate pass/fail results for namespace isolation, navigation stability, failed-invocation recovery, and deletion semantics.
+1. installs two temporary tools with different manifest IDs
+2. gives them colliding setting, collection, field, screen, action, and timer names
+3. writes distinct state under each namespace
+4. proves each tool reads only its own settings, records, and timer
+5. renders multiple screens and proves navigation is non-mutating
+6. runs an intentionally failed action
+7. proves the failed invocation persisted nothing
+8. runs a valid action immediately afterward
+9. removes and reinstalls one tool with retained ordinary data
+10. removes the tool with data and proves the namespace is empty
+11. cleans all temporary installations and state
+
+The screen reports independent results for namespace isolation, navigation stability, failed-invocation recovery, and removal semantics.
 
 ## Force-stop timer recovery
 
-Durable timer recovery is intentionally a two-launch procedure because an in-process test cannot prove process death.
+This is a two-launch procedure because an in-process test cannot prove process death.
 
 1. Press **Prepare force-stop test**.
-2. Pocket Tools installs a temporary diagnostic script, starts its host-managed timer through the ordinary action path, and saves a checkpoint containing the installed app ID, persisted start timestamp, and current host-launch token.
-3. Force-stop the application:
+2. Record the prepared checkpoint.
+3. Force-stop Pocket Tools:
 
    ```bash
    adb shell am force-stop com.darbyjack.pockettools
    ```
 
-4. Confirm the host process is absent:
+4. Confirm no process remains:
 
    ```bash
    adb shell pidof com.darbyjack.pockettools
    ```
 
-   The command must print no PID. This is the manual evidence that neither React Native nor QuickJS remained alive while the timer was active.
+   The command must print no PID.
 
-5. Wait at least one second and reopen Pocket Tools.
-6. Open **Settings**, choose **Diagnostics**, and press **Resume after relaunch**.
-7. Pocket Tools verifies:
-   - The React Native host has a different launch token from the one that prepared the checkpoint.
-   - The temporary installation survived.
-   - The timer has the exact persisted start timestamp.
-   - Reconstructed elapsed time includes the period while the process was absent.
-   - Reconstructed elapsed time agrees with the current host clock.
-   - The recovered timer can be stopped through the ordinary action path.
-8. The temporary installation, namespace, and checkpoint are removed.
+5. Wait long enough for elapsed time to change.
+6. Reopen Pocket Tools.
+7. Return to Diagnostics and press **Resume after relaunch**.
 
-Pressing Resume during the original host launch does not consume the checkpoint. The screen reports that a relaunch is still required; returning to Settings and reopening Diagnostics reloads the pending checkpoint from SQLite.
+The resumed diagnostic verifies a new host-launch token, the exact persisted timer start timestamp, elapsed time including process absence, agreement with the host clock, and normal timer stop behavior.
 
-The timer is never backed by a resident QuickJS context or background JavaScript. Recovery is derived from the UTC start timestamp stored by the host.
+The timer is reconstructed from host-owned UTC state. No QuickJS context or background JavaScript remains alive.
 
-## Crash and abandoned-state cleanup
+## Cleanup
 
-Temporary diagnostic manifest IDs use the reserved `lifecycle-diagnostic-` prefix and are hidden from the normal tool list. User-installed scripts cannot use this prefix.
+Diagnostic manifest IDs use the reserved `lifecycle-diagnostic-` prefix and are hidden from the normal library. User tools cannot claim that prefix.
 
-At startup, Pocket Tools removes abandoned diagnostic installations and data while preserving the single installation referenced by an active force-stop checkpoint. The Reset action also removes the pending checkpoint and its temporary state.
+Startup removes abandoned diagnostic state while preserving the one installation referenced by an active force-stop checkpoint. **Reset diagnostics** removes the checkpoint and its temporary namespace.
 
-## Fast repository checks
-
-The normal repository test command includes:
-
-- Durable elapsed-time reconstruction tests
-- Preview and diagnostic namespace-prefix tests
-- Installer rejection of reserved diagnostic IDs
-- QuickJS inspection of the internal multi-screen lifecycle fixture against frozen SDK v1
-
-Run:
+## Repository and Android validation
 
 ```bash
-pnpm check
-```
-
-These fast tests do not replace the Android force-stop procedure.
-
-## Android build and device run
-
-```bash
-corepack enable
-pnpm install
 pnpm check
 pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
 cd apps/mobile/android
-./gradlew :app:assembleDebug connectedDebugAndroidTest
+./gradlew :app:assembleDebug connectedDebugAndroidTest --max-workers=4
 ```
 
-Then open the application and complete both diagnostics from **Settings**.
+Repository tests cover elapsed-time reconstruction, reserved namespace rejection, cleanup rules, and executable diagnostic fixtures. They do not replace the physical `pidof` observation.
 
-## Evidence status
-
-Code and repeatable diagnostic procedures are included in this phase. A passing Android build, immediate suite result, `pidof` observation, and resumed timer result must be recorded after they are actually run. Do not mark issue #7 complete based only on static review.
+Record actual device results in the pull request or release record rather than editing this maintained procedure into an implementation diary.

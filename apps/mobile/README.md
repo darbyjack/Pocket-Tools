@@ -1,10 +1,18 @@
 # Pocket Tools Mobile
 
-This is an Expo SDK 57 Android development build. It cannot run in Expo Go because Pocket Tools contains custom Android QuickJS and notification modules.
+Pocket Tools Mobile is an Expo SDK 57 Android development build with custom QuickJS-NG and notification native modules. It cannot run in Expo Go.
 
-The mobile host is mini-app agnostic. Bundled reference scripts are installed into SQLite once on first launch. Pasted and bundled scripts then run through the same installed-source QuickJS, storage, timer, notification, effect, and renderer path.
+The host is mini-app agnostic. Bundled reference scripts are seeded into SQLite once; bundled and pasted tools then use the same installed-source runtime, storage, renderer, lifecycle, output, and notification path.
 
-## Run
+## Requirements
+
+- Node.js 24.16 or newer
+- pnpm 11.17.0 through Corepack
+- Android Studio and an Expo SDK 57-compatible Android SDK
+- Android NDK 26 or newer
+- a connected `arm64-v8a` Android device for the configured build target
+
+## Run the development build
 
 From the repository root:
 
@@ -14,28 +22,68 @@ pnpm install
 pnpm android
 ```
 
-`pnpm android` discovers every `examples/*.miniapp.js` file, regenerates the one-time seed catalog, generates `apps/mobile/android`, downloads the pinned QuickJS-NG source during CMake configuration, compiles the native modules, installs the debug application, and starts Metro.
+`pnpm android` synchronizes `examples/*.miniapp.js`, generates Android native files as needed, builds the custom native modules, installs the debug app, and starts Metro.
 
-Adding another bundled example is not required for ordinary mini-app development. New utilities should be authored against the public SDK declarations and pasted through the Android editor.
+Ordinary mini-app development does not require adding a bundled example or rebuilding the host. Author against the public declarations, validate locally, and paste the source through **Add tool**.
 
-## Installed script workflow
+## Repository validation
 
-1. Choose **Add tool** from Pocket Tools.
-2. Paste one SDK 1.0, 1.1, or 1.2 JavaScript module.
-3. Choose **Check**.
-4. Choose **Preview**.
-5. Exercise representative settings, actions, output, and notifications in preview.
-6. Choose **Install tool** after the preview is ready.
+```bash
+pnpm sync:mini-apps:check
+pnpm sdk:declarations:check
+pnpm format
+pnpm check
+```
 
-Editing an installed tool clones its settings, records, and timers into preview storage. Preview actions never write to the installed namespace or retain installed notification registrations. The source is updated only after preview succeeds, and the previous active source becomes the last-known-good rollback source.
+No GitHub Actions workflows are enabled. Run these checks manually before pull-request readiness.
 
-Open a tool and choose **Manage** for edit, duplicate, script export, backup, rollback, notification settings, and removal. Open **Settings** for complete backup, restore, global notification settings, and developer diagnostics.
+## Regenerate Android
 
-See [`docs/INSTALLED_MINI_APPS.md`](../../docs/INSTALLED_MINI_APPS.md) for the complete lifecycle and [`docs/SDK_1_2_ANDROID_NOTIFICATIONS.md`](../../docs/SDK_1_2_ANDROID_NOTIFICATIONS.md) for Android delivery behavior.
+After native module, Expo configuration, or Gradle-property changes:
 
-## Galaxy S24 Ultra build target
+```bash
+pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
+```
 
-Pocket Tools is intentionally configured for the Samsung Galaxy S24 Ultra's 64-bit ARM runtime:
+On Windows PowerShell:
+
+```powershell
+Set-Location C:\Users\Glare\Documents\Projects\Pocket-Tools
+pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
+Set-Location .\apps\mobile\android
+```
+
+Close Android Studio, Gradle daemons, Explorer windows, terminals, or other processes holding `apps/mobile/android` when clean prebuild reports `EBUSY`.
+
+## Build APKs
+
+From `apps/mobile/android`:
+
+```powershell
+.\gradlew.bat assembleDebug
+.\gradlew.bat assembleRelease
+```
+
+Outputs:
+
+```text
+apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+```
+
+Install an APK on the connected device:
+
+```powershell
+adb install -r .\app\build\outputs\apk\release\app-release.apk
+```
+
+Use the debug path instead when installing the debug artifact.
+
+The release APK is not a distribution-ready artifact until the intended private signing configuration is applied.
+
+## ARM64 target
+
+The Expo config plugin writes:
 
 ```properties
 reactNativeArchitectures=arm64-v8a
@@ -43,124 +91,79 @@ android.enableMinifyInReleaseBuilds=true
 android.enableShrinkResourcesInReleaseBuilds=true
 ```
 
-The Expo config plugin writes these values into the generated `android/gradle.properties` on every prebuild. Both debug and release builds omit ARMv7 and x86/x86_64 native binaries. Release builds additionally run R8 and remove unused Android resources.
+Debug and release builds omit ARMv7 and x86/x86_64 native binaries. Release builds additionally use R8 and resource shrinking.
 
-Consequences:
-
-- Native build work and APK size are reduced.
-- The APK remains suitable for the Galaxy S24 Ultra and other `arm64-v8a` Android devices.
-- The APK will not install on x86 Android emulators or 32-bit ARM devices.
-- This configuration does not replace the final private signing setup.
-
-After changing or pulling native build configuration, regenerate Android before building:
-
-```powershell
-Set-Location C:\Users\Glare\Documents\Projects\Pocket-Tools
-
-pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
-Set-Location .\apps\mobile\android
-
-.\gradlew.bat assembleDebug
-.\gradlew.bat assembleRelease
-```
-
-APK outputs:
-
-```text
-apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
-apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-```
-
-Confirm the connected phone supports the selected ABI:
+Confirm device support:
 
 ```powershell
 adb shell getprop ro.product.cpu.abilist
 ```
 
-The output must include `arm64-v8a`. Confirm the APK contains no other native ABI directories:
+The result must include `arm64-v8a`.
+
+Confirm packaged native libraries:
 
 ```powershell
 jar tf .\app\build\outputs\apk\release\app-release.apk |
   Select-String '^lib/'
 ```
 
-Every listed native library path should begin with `lib/arm64-v8a/`.
+Every native library path should begin with `lib/arm64-v8a/`.
 
-## Build and native instrumentation
+## Connected Android tests
 
-No GitHub Actions workflow is enabled. With an Android device connected:
+With a device connected:
 
 ```bash
-pnpm install
-pnpm sdk:declarations
-pnpm sync:mini-apps
-pnpm format
-pnpm check
 pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
 cd apps/mobile/android
 ./gradlew :app:assembleDebug connectedDebugAndroidTest --max-workers=4
 ```
 
-The complete validation covers:
+On PowerShell use `.\gradlew.bat`.
 
-- SDK 1.0, 1.1, and 1.2 contract compatibility
-- Timeout interruption, memory pressure, stack and result limits
-- Module restrictions and ambient-global isolation
-- Runtime and storage namespace isolation
-- UI, operation, effect, notification, and bridge validation
-- Transactional setting/record behavior and recovery after failure
-- Notification scheduling, exact-access blocking/recovery, registry reconciliation, and tap routing
-- Declaration, authoring-runtime, and embedded Android wrapper parity
+Connected validation covers SDK-version compatibility, sandbox limits, module isolation, runtime protocol, UI and operation validation, transactional storage, notification scheduling and recovery, declaration/runtime parity, and native integration.
 
-## Final SDK 1.2 physical acceptance
+## Ordinary tool workflow
 
-On the Galaxy S24 Ultra, validate the normal public workflow with a representative SDK 1.2 tool:
+1. Choose **Add tool**.
+2. Paste an SDK 1.0, 1.1, or 1.2 JavaScript module.
+3. Choose **Check**.
+4. Choose **Preview**.
+5. Exercise representative state, actions, output, and notifications.
+6. Choose **Install tool**.
 
-1. Validate and inspect the source locally.
-2. Paste, check, preview, and install it.
-3. Exercise date/date-time and multi-select settings, setting writes, records, queries, aggregates, tappable rows, badges, progress, fixed icons, feedback, copy/share, and notifications.
-4. Confirm transaction rollback after an intentionally invalid action.
-5. Update the source and roll it back.
-6. Duplicate and export it.
-7. Back it up, remove it, and restore it.
-8. Force-stop and reopen the app; verify data, timers, notification registry, and tap routing recover.
-9. Verify TalkBack and large-font behavior for representative controls.
+Editing uses an isolated clone of retained ordinary state. Candidate notification operations remain preview-only. Source changes only after isolated first render and the retained-state render gate succeed.
 
-With the Galaxy Watch4 Classic paired, confirm a normal Pocket Tools phone notification mirrors according to Galaxy Wearable settings. Pocket Tools does not expose a watch API and cannot force or inspect mirroring.
+Open an installed tool and choose **Manage** for edit, rollback, duplicate, export, backup, notification settings, and removal. Open **Settings** for complete backup/restore, global notification status, and diagnostics.
 
-## Run lifecycle and namespace diagnostics
+See:
 
-Open **Settings**, then choose **Diagnostics**.
+- [Installed Mini-App Lifecycle](../../docs/INSTALLED_MINI_APPS.md)
+- [SDK 1.2 Notifications](../../docs/SDK_1_2_NOTIFICATIONS.md)
+- [Release and Ordinary Tool Acceptance](../../docs/ORDINARY_SCRIPT_ACCEPTANCE.md)
 
-The immediate suite uses two temporary installed scripts with the same setting, collection, and timer names to prove:
+## Diagnostics
 
-- Per-manifest setting isolation
-- Per-manifest record isolation
-- Per-manifest timer isolation
-- No persistence from a failed invocation
-- A valid invocation works immediately after a failure
-- Remove-with-retained-data restores state after reinstall
-- Remove-with-data clears the entire namespace
+Open **Settings → Advanced → Diagnostics**.
 
-The force-stop test prepares a temporary installed script and timer, saves a checkpoint, and resumes after relaunch. Use:
+Run the isolation/recovery suite and the two-launch force-stop timer procedure. For the process-death boundary:
 
 ```bash
 adb shell am force-stop com.darbyjack.pockettools
 adb shell pidof com.darbyjack.pockettools
 ```
 
-The second command must print no PID before reopening Pocket Tools. The resumed diagnostic then checks the persisted start timestamp, reconstructed elapsed time, and normal timer stop behavior.
+The second command must print no PID before reopening Pocket Tools.
 
-Temporary diagnostic installations use a reserved manifest prefix, are hidden from the normal library, and are cleaned after each run. Startup removes abandoned diagnostics while preserving an active force-stop checkpoint.
-
-See [`docs/LIFECYCLE_DIAGNOSTICS.md`](../../docs/LIFECYCLE_DIAGNOSTICS.md) for the exact procedure and evidence boundary.
+See [Lifecycle and Namespace Diagnostics](../../docs/LIFECYCLE_DIAGNOSTICS.md).
 
 ## Reset development data
 
-The project intentionally has no general compatibility migration framework during pre-release host development. Clear application data after an intentional host schema change:
+After an intentional pre-release host schema change, clear local development data:
 
 ```bash
 adb shell pm clear com.darbyjack.pockettools
 ```
 
-This command is for development only and is not part of SDK 1.2 tool update, rollback, backup, or restore behavior.
+This is a development command, not part of mini-app update, rollback, backup, or restore behavior.
