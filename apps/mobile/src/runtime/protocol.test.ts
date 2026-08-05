@@ -160,9 +160,8 @@ test("parses public SDK 1.2 setting operations", () => {
 });
 
 test("parses public SDK 1.2 date definitions and nodes through the normal path", () => {
-  const inspection = parseRuntimeResponse(
-    success({ inspection: sdk12DateInspection() }),
-  ).value.inspection;
+  const inspection = parseRuntimeResponse(success({ inspection: sdk12DateInspection() })).value
+    .inspection;
   assert.equal(inspection?.manifest.sdkVersion, "1.2");
   assert.equal(inspection?.settings.dueDate?.type, "date");
   assert.equal(inspection?.settings.reminderAt?.type, "datetime");

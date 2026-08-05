@@ -157,7 +157,8 @@ function visit(value: unknown, path: string, supportsSdk12: boolean): unknown {
       typeof value.label === "string" &&
       typeof value.action === "string");
   const iconPresent = Object.prototype.hasOwnProperty.call(value, "icon");
-  const leadingIconPresent = isListItem && Object.prototype.hasOwnProperty.call(value, "leadingIcon");
+  const leadingIconPresent =
+    isListItem && Object.prototype.hasOwnProperty.call(value, "leadingIcon");
 
   if (isActionControl && iconPresent) {
     validateIcon(value.icon, `${path}.icon`, supportsSdk12);

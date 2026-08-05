@@ -22,7 +22,7 @@ export function assertSettingValue(
   definition: SettingDefinition,
   value: SerializableValue,
   path: string,
-  sdkVersion?: SdkVersion,
+  sdkVersion: SdkVersion,
 ): void {
   switch (definition.type) {
     case "text":
@@ -50,15 +50,15 @@ export function assertSettingValue(
       }
       return;
     case "multi-select":
-      requireSdk12(sdkVersion ?? "1.2", path, "Multi-select settings");
+      requireSdk12(sdkVersion, path, "Multi-select settings");
       assertCanonicalMultiSelectValue(definition, value, path);
       return;
     case "date":
-      requireSdk12(sdkVersion ?? "1.2", path, "Date settings");
+      requireSdk12(sdkVersion, path, "Date settings");
       assertTemporalValue(definition, value, path, "date");
       return;
     case "datetime":
-      requireSdk12(sdkVersion ?? "1.2", path, "Date-time settings");
+      requireSdk12(sdkVersion, path, "Date-time settings");
       assertTemporalValue(definition, value, path, "datetime");
   }
 }
@@ -68,7 +68,7 @@ export function assertRecordInput(
   value: RecordInput,
   path: string,
   partial = false,
-  sdkVersion?: SdkVersion,
+  sdkVersion: SdkVersion = "1.0",
 ): void {
   const fieldNames = new Set(Object.keys(definition.fields));
   const entries = Object.entries(value);
@@ -97,14 +97,13 @@ function assertFieldValue(
   definition: FieldDefinition,
   value: SerializableValue,
   path: string,
-  sdkVersion?: SdkVersion,
+  sdkVersion: SdkVersion,
 ): void {
   if (value === null) {
     if (!definition.optional) fail(path, "Required fields cannot be null.");
     return;
   }
 
-  const effectiveVersion = resolveFieldVersion(definition, sdkVersion);
   switch (definition.type) {
     case "text":
       if (typeof value !== "string") fail(path, "Expected text.");
@@ -126,11 +125,11 @@ function assertFieldValue(
         fail(path, "Value exceeds the maximum.");
       return;
     case "date":
-      requireSdk12(effectiveVersion, path, "Date fields");
+      requireSdk12(sdkVersion, path, "Date fields");
       assertTemporalValue(definition, value, path, "date");
       return;
     case "datetime":
-      if (effectiveVersion !== "1.2") {
+      if (sdkVersion !== "1.2") {
         if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
           fail(path, "Expected an ISO-compatible date-time string.");
         }
@@ -163,15 +162,6 @@ function assertTemporalValue(
   if (definition.max !== undefined && compareCanonicalTemporalValues(text, definition.max) > 0) {
     fail(path, "Value exceeds the maximum.");
   }
-}
-
-function resolveFieldVersion(
-  definition: FieldDefinition,
-  explicit: SdkVersion | undefined,
-): SdkVersion {
-  if (explicit !== undefined) return explicit;
-  if (definition.type === "date") return "1.2";
-  return "hostSdkVersion" in definition && definition.hostSdkVersion === "1.2" ? "1.2" : "1.1";
 }
 
 function requireSdk12(sdkVersion: SdkVersion, path: string, capability: string): void {

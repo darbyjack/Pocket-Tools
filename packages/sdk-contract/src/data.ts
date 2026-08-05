@@ -71,15 +71,7 @@ export function collection(
   return { fields };
 }
 
-export type QueryOperator =
-  | "eq"
-  | "neq"
-  | "gt"
-  | "gte"
-  | "lt"
-  | "lte"
-  | "contains"
-  | "startsWith";
+export type QueryOperator = "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "contains" | "startsWith";
 
 export interface QueryFilter {
   readonly field: string;

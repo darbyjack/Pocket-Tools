@@ -143,24 +143,39 @@ export function validateMiniAppBackupForRestore(
   }
 
   for (const setting of parsed.settings) {
-    const definition =
-      activeInspection.settings[setting.name] ?? lastKnownGoodInspection.settings[setting.name];
+    const activeDefinition = activeInspection.settings[setting.name];
+    const lastKnownGoodDefinition = lastKnownGoodInspection.settings[setting.name];
+    const definition = activeDefinition ?? lastKnownGoodDefinition;
     if (definition === undefined) {
       throw backupError(`backup.settings.${setting.name} is not declared by either saved source.`);
     }
-    assertSettingValue(definition, setting.value, `backup.settings.${setting.name}`);
+    const sdkVersion =
+      activeDefinition === undefined
+        ? lastKnownGoodInspection.manifest.sdkVersion
+        : activeInspection.manifest.sdkVersion;
+    assertSettingValue(definition, setting.value, `backup.settings.${setting.name}`, sdkVersion);
   }
 
   for (const record of parsed.records) {
-    const definition =
-      activeInspection.collections[record.collection] ??
-      lastKnownGoodInspection.collections[record.collection];
+    const activeDefinition = activeInspection.collections[record.collection];
+    const lastKnownGoodDefinition = lastKnownGoodInspection.collections[record.collection];
+    const definition = activeDefinition ?? lastKnownGoodDefinition;
     if (definition === undefined) {
       throw backupError(
         `backup.records.${record.id} uses collection ${record.collection}, which is not declared by either saved source.`,
       );
     }
-    assertRecordInput(definition, record.data, `backup.records.${record.id}.data`);
+    const sdkVersion =
+      activeDefinition === undefined
+        ? lastKnownGoodInspection.manifest.sdkVersion
+        : activeInspection.manifest.sdkVersion;
+    assertRecordInput(
+      definition,
+      record.data,
+      `backup.records.${record.id}.data`,
+      false,
+      sdkVersion,
+    );
   }
 
   if (

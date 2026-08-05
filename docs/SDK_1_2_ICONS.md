@@ -2,15 +2,13 @@
 
 ## Status
 
-This implementation is dormant. It does not activate SDK 1.2 for ordinary authoring, validation, inspection, preview, installation, update, rollback, duplication, export, backup, restore, launch, or removal.
+This capability is public in SDK 1.2 and is available through ordinary authoring, validation, inspection, preview, installation, execution, update, rollback, export, backup/restore, and removal paths where applicable.
 
-The public version boundary remains unchanged:
+- `SDK_VERSION` is `"1.2"`.
+- Supported manifest versions are `"1.0"`, `"1.1"`, and `"1.2"`.
+- The public SDK source, generated declarations, local authoring runtime, embedded QuickJS runtime, host validators, and Android UI/lifecycle paths expose this capability.
 
-- `SDK_VERSION` remains `"1.1"`.
-- `SUPPORTED_SDK_VERSIONS` remains `"1.0"` and `"1.1"`.
-- Public SDK sources, generated declarations, canonical templates, examples, and normal source tooling do not expose icons yet.
-
-This is the final dormant feature slice. The following activation sweep publishes the complete frozen SDK 1.2 contract together.
+Internal source, test, or helper names created during staged implementation may retain `sdk12` or `dormant` compatibility wording. Those names do not gate or expand the public API.
 
 ## Frozen contract
 

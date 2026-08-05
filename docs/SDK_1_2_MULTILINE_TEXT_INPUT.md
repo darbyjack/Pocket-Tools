@@ -2,17 +2,13 @@
 
 ## Status
 
-This slice implements the dormant SDK 1.2 multiline text-input path. SDK 1.2 remains unsupported for ordinary authoring, preview, installation, and updates until the later activation slice.
+This capability is public in SDK 1.2 and is available through ordinary authoring, validation, inspection, preview, installation, execution, update, rollback, export, backup/restore, and removal paths where applicable.
 
-This implementation does not change:
+- `SDK_VERSION` is `"1.2"`.
+- Supported manifest versions are `"1.0"`, `"1.1"`, and `"1.2"`.
+- The public SDK source, generated declarations, local authoring runtime, embedded QuickJS runtime, host validators, and Android UI/lifecycle paths expose this capability.
 
-- `SDK_VERSION`
-- `SUPPORTED_SDK_VERSIONS`
-- public TypeScript declarations
-- starter templates or bundled tools
-- normal source acceptance
-
-SDK 1.0 and 1.1 text inputs retain their existing single-line behavior.
+Internal source, test, or helper names created during staged implementation may retain `sdk12` or `dormant` compatibility wording. Those names do not gate or expand the public API.
 
 ## Frozen contract
 

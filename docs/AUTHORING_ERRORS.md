@@ -11,27 +11,27 @@ pnpm mini-app inspect ./tool.miniapp.js --json
 
 ## Command and source failures
 
-| Code                     | Meaning                                                                          |
-| ------------------------ | -------------------------------------------------------------------------------- |
-| `USAGE_ERROR`            | The command or arguments are invalid.                                            |
-| `SOURCE_READ_FAILED`     | The supplied source file could not be read.                                      |
-| `AUTHORING_TOOL_FAILED`  | The authoring tool itself failed outside the script runtime.                     |
-| `RUNTIME_SOURCE_MISSING` | An expected embedded SDK or runner source cannot be found.                       |
-| `RUNTIME_SOURCE_INVALID` | An embedded source or wrapper cannot be extracted or composed safely.            |
+| Code                     | Meaning                                                               |
+| ------------------------ | --------------------------------------------------------------------- |
+| `USAGE_ERROR`            | The command or arguments are invalid.                                 |
+| `SOURCE_READ_FAILED`     | The supplied source file could not be read.                           |
+| `AUTHORING_TOOL_FAILED`  | The authoring tool itself failed outside the script runtime.          |
+| `RUNTIME_SOURCE_MISSING` | An expected embedded SDK or runner source cannot be found.            |
+| `RUNTIME_SOURCE_INVALID` | An embedded source or wrapper cannot be extracted or composed safely. |
 
 ## Validation and inspection failures
 
-| Code                       | Meaning                                                                                                                                               |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `INVALID_SCRIPT`           | The module does not default-export one valid mini-app definition, lacks `home`, or contains an invalid named group.                                   |
-| `INVALID_MANIFEST`         | The manifest is missing or malformed.                                                                                                                 |
-| `UNSUPPORTED_SDK_VERSION`  | The manifest does not declare a supported version. This host accepts `"1.0"`, `"1.1"`, and `"1.2"`; legacy numeric `1` normalizes to `"1.0"`. |
-| `UNSUPPORTED_MODULE`       | The script imported anything other than `@pocket-tools/sdk`, used a re-export, or used dynamic import.                                                |
-| `TYPECHECK_FAILED`         | The script does not typecheck against the committed SDK 1.2 declarations. JSON output includes TypeScript code, file, line, column, and message.      |
-| `VALIDATION_FAILED`        | Canonical definition, UI, operation, effect, notification, or capability-version validation failed. JSON output may include exact issues.             |
-| `ASYNC_NOT_SUPPORTED`      | The script used top-level await or cannot be inspected synchronously.                                                                                 |
-| `INVALID_BRIDGE_VALUE`     | Inspection or execution produced a value that is not finite and serializable.                                                                         |
-| `INVALID_RUNTIME_RESPONSE` | The embedded runner returned a malformed inspection or runtime shape.                                                                                 |
+| Code                       | Meaning                                                                                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `INVALID_SCRIPT`           | The module does not default-export one valid mini-app definition, lacks `home`, or contains an invalid named group.                              |
+| `INVALID_MANIFEST`         | The manifest is missing or malformed.                                                                                                            |
+| `UNSUPPORTED_SDK_VERSION`  | The manifest does not declare a supported version. This host accepts `"1.0"`, `"1.1"`, and `"1.2"`; legacy numeric `1` normalizes to `"1.0"`.    |
+| `UNSUPPORTED_MODULE`       | The script imported anything other than `@pocket-tools/sdk`, used a re-export, or used dynamic import.                                           |
+| `TYPECHECK_FAILED`         | The script does not typecheck against the committed SDK 1.2 declarations. JSON output includes TypeScript code, file, line, column, and message. |
+| `VALIDATION_FAILED`        | Canonical definition, UI, operation, effect, notification, or capability-version validation failed. JSON output may include exact issues.        |
+| `ASYNC_NOT_SUPPORTED`      | The script used top-level await or cannot be inspected synchronously.                                                                            |
+| `INVALID_BRIDGE_VALUE`     | Inspection or execution produced a value that is not finite and serializable.                                                                    |
+| `INVALID_RUNTIME_RESPONSE` | The embedded runner returned a malformed inspection or runtime shape.                                                                            |
 
 ## Sandbox failures
 

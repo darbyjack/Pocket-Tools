@@ -12,7 +12,10 @@ type HeaderName =
   | "PocketQuickJsProgress.h"
   | "PocketQuickJsIcons.h";
 
-const HEADER_ROOT = new URL("../../../modules/pocket-quickjs/android/src/main/cpp/", import.meta.url);
+const HEADER_ROOT = new URL(
+  "../../../modules/pocket-quickjs/android/src/main/cpp/",
+  import.meta.url,
+);
 const RAW_STRING_END = '\n)POCKET_JS";';
 
 export type RuntimeSourceErrorCode = "RUNTIME_SOURCE_MISSING" | "RUNTIME_SOURCE_INVALID";
@@ -93,10 +96,7 @@ export async function readEmbeddedRuntimeSources(): Promise<EmbeddedRuntimeSourc
     progressRunner,
   );
 
-  let sdk = extractFunctionRawString(
-    headers["PocketQuickJsMultiSelect.h"],
-    "multiSelectSdk",
-  );
+  let sdk = extractFunctionRawString(headers["PocketQuickJsMultiSelect.h"], "multiSelectSdk");
   sdk = insertAfter(
     sdk,
     '  summary: (definition) => typed("summary", definition),\n',
@@ -128,7 +128,9 @@ async function readHeader(name: HeaderName): Promise<string> {
   } catch (caught) {
     throw new RuntimeSourceError(
       "RUNTIME_SOURCE_MISSING",
-      caught instanceof Error ? `Unable to read ${name}: ${caught.message}` : `Unable to read ${name}.`,
+      caught instanceof Error
+        ? `Unable to read ${name}: ${caught.message}`
+        : `Unable to read ${name}.`,
     );
   }
 }
@@ -229,5 +231,7 @@ function insertAfter(
       `${sourceName} could not find its SDK insertion marker.`,
     );
   }
-  return source.slice(0, position + marker.length) + insertion + source.slice(position + marker.length);
+  return (
+    source.slice(0, position + marker.length) + insertion + source.slice(position + marker.length)
+  );
 }

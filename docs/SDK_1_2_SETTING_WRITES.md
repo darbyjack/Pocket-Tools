@@ -2,17 +2,13 @@
 
 ## Status
 
-This is the first internal implementation slice of the frozen [SDK 1.2 contract](SDK_1_2_CONTRACT.md).
+This capability is public in SDK 1.2 and is available through ordinary authoring, validation, inspection, preview, installation, execution, update, rollback, export, backup/restore, and removal paths where applicable.
 
-The slice adds trusted-host and embedded-runtime support for action-driven setting writes and resets, but it does **not** activate SDK 1.2:
+- `SDK_VERSION` is `"1.2"`.
+- Supported manifest versions are `"1.0"`, `"1.1"`, and `"1.2"`.
+- The public SDK source, generated declarations, local authoring runtime, embedded QuickJS runtime, host validators, and Android UI/lifecycle paths expose this capability.
 
-- `SDK_VERSION` remains `"1.1"`.
-- `SUPPORTED_SDK_VERSIONS` remains `"1.0"` and `"1.1"`.
-- Public generated declarations still expose only `settings.get(...)`.
-- Canonical definition validation still rejects `sdkVersion: "1.2"`.
-- Installed, previewed, and authoring-tool scripts therefore cannot reach this incomplete capability.
-
-The dormant native path exists so later SDK 1.2 slices can be implemented and tested behind the activation boundary without publishing a partial contract.
+Internal source, test, or helper names created during staged implementation may retain `sdk12` or `dormant` compatibility wording. Those names do not gate or expand the public API.
 
 ## Internal operation model
 

@@ -169,7 +169,7 @@ Supported triggers are:
 - Daily at a host-local hour and minute.
 - Weekly using weekday 1 through 7 plus hour and minute.
 
-Scheduled date, daily, and weekly notifications may request `standard` or `exact` delivery. Exact delivery is best-effort and may fall back according to Android capability and permission state.
+Scheduled date, daily, and weekly notifications may request `standard` or `exact` delivery. Exact reminders are never silently downgraded: an action requiring unavailable exact access fails before persistence, while an exact reminder restored from backup remains blocked until access is granted.
 
 The host owns permission prompts, channels, scheduling, reconciliation, startup recovery, removal cleanup, tap routing, and Android notification behavior. A notification `open.screen` must reference a declared screen and may carry finite serializable input.
 

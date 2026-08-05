@@ -432,7 +432,7 @@ Rules:
 - Daily and weekly times are interpreted by the host in local time.
 - Weekday values are 1 through 7.
 - `standard` is the default delivery.
-- `exact` is best-effort and may fall back depending on Android capability and permission state.
+- `exact` is never silently downgraded. Scheduling an exact reminder without exact-alarm access fails before persistence; an exact reminder restored from backup remains blocked until access is granted.
 - The host owns permission prompts, channels, reconciliation, startup recovery, removal cleanup, and tap routing.
 - Scripts cannot inspect Android permissions, delivery success, paired watches, or Galaxy Wearable settings.
 

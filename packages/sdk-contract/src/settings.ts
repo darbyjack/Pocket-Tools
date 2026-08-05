@@ -51,8 +51,7 @@ export interface SelectSetting extends SettingBase<"select", SelectValue> {
   readonly options: readonly SelectOption[];
 }
 
-export interface MultiSelectSetting
-  extends SettingBase<"multi-select", readonly SelectValue[]> {
+export interface MultiSelectSetting extends SettingBase<"multi-select", readonly SelectValue[]> {
   readonly options: readonly SelectOption[];
   readonly minSelections?: number;
   readonly maxSelections?: number;

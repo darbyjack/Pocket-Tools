@@ -109,7 +109,7 @@ The complete validation covers:
 - Runtime and storage namespace isolation
 - UI, operation, effect, notification, and bridge validation
 - Transactional setting/record behavior and recovery after failure
-- Notification scheduling, exact-delivery fallback, registry reconciliation, and tap routing
+- Notification scheduling, exact-access blocking/recovery, registry reconciliation, and tap routing
 - Declaration, authoring-runtime, and embedded Android wrapper parity
 
 ## Final SDK 1.2 physical acceptance

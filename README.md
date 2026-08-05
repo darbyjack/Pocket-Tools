@@ -63,7 +63,7 @@ SDK 1.2 adds:
 - Host-owned badges, progress, and fixed semantic icons
 - Host feedback plus copy/share output effects
 - Immediate, date, daily, and weekly local notifications
-- Android notification permission, channels, exact-delivery fallback, startup recovery, restore reconciliation, removal cleanup, and tap routing
+- Android notification permission, channels, exact-access blocking/recovery, startup recovery, restore reconciliation, removal cleanup, and tap routing
 - Phone notification mirroring through normal Android/Galaxy Wearable settings to a paired watch
 
 The SDK intentionally excludes arbitrary network, filesystem, location, secrets, custom native modules, script-owned platform components, arbitrary background JavaScript, and permission manifests. Notifications, clipboard, and sharing are available only through the narrow documented host-owned SDK clients.

@@ -135,13 +135,7 @@ test("validates exact inserts and partial updates", () => {
     ),
   );
   assert.doesNotThrow(() =>
-    assertRecordInput(
-      entryCollection,
-      { complete: true },
-      "operations[0].changes",
-      true,
-      "1.1",
-    ),
+    assertRecordInput(entryCollection, { complete: true }, "operations[0].changes", true, "1.1"),
   );
 });
 

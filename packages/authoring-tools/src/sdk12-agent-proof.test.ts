@@ -4,10 +4,7 @@ import test from "node:test";
 
 import { inspectMiniAppSource } from "./inspection.ts";
 
-const FIXTURE_URL = new URL(
-  "../../../docs/fixtures/sdk12-agent-proof.miniapp.js",
-  import.meta.url,
-);
+const FIXTURE_URL = new URL("../../../docs/fixtures/sdk12-agent-proof.miniapp.js", import.meta.url);
 
 test("the docs-only proof tool validates through the public SDK 1.2 authoring path", async () => {
   const source = await readFile(FIXTURE_URL, "utf8");

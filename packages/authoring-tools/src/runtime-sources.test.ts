@@ -6,13 +6,7 @@ import { readEmbeddedRuntimeSources } from "./runtime-sources.ts";
 test("reconstructs the exact composed Android SDK 1.2 runtime", async () => {
   const sources = await readEmbeddedRuntimeSources();
 
-  for (const builder of [
-    "multiSelect",
-    "badge",
-    "progress",
-    "dateInput",
-    "datetimeInput",
-  ]) {
+  for (const builder of ["multiSelect", "badge", "progress", "dateInput", "datetimeInput"]) {
     assert.match(sources.sdk, new RegExp(`\\b${builder}:`));
   }
 

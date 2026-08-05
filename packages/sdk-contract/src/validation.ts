@@ -132,12 +132,7 @@ function validateSetting(
     exactKeys(setting, [...common, "min", "max"], path, issues);
     requireSdk12(sdkVersion, `${path}.type`, issues);
   } else if (type === "multi-select") {
-    exactKeys(
-      setting,
-      [...common, "options", "minSelections", "maxSelections"],
-      path,
-      issues,
-    );
+    exactKeys(setting, [...common, "options", "minSelections", "maxSelections"], path, issues);
     requireSdk12(sdkVersion, `${path}.type`, issues);
   } else {
     addIssue(issues, `${path}.type`, "Unsupported setting type.");
@@ -206,7 +201,10 @@ function validateSetting(
 
   const optionValues = validateOptions(setting.options, `${path}.options`, issues);
   if (type === "select") {
-    if (!isSelectValue(setting.default) || !optionValues.some((entry) => entry === setting.default)) {
+    if (
+      !isSelectValue(setting.default) ||
+      !optionValues.some((entry) => entry === setting.default)
+    ) {
       addIssue(issues, `${path}.default`, "Must exactly match one declared option value.");
     }
     return;
@@ -262,11 +260,7 @@ function validateSetting(
   }
 }
 
-function validateOptions(
-  value: unknown,
-  path: string,
-  issues: ValidationIssue[],
-): SelectValue[] {
+function validateOptions(value: unknown, path: string, issues: ValidationIssue[]): SelectValue[] {
   const options = Array.isArray(value) ? value : null;
   if (options === null || options.length === 0 || options.length > 100) {
     addIssue(issues, path, "Must contain between 1 and 100 options.");

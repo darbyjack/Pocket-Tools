@@ -23,23 +23,29 @@ const sdk12DateTimeSetting: SettingDefinition = {
 };
 
 test("validates canonical date setting values and bounds", () => {
-  assert.doesNotThrow(() => assertSettingValue(dateSetting, "2026-08-03", "dueDate"));
+  assert.doesNotThrow(() => assertSettingValue(dateSetting, "2026-08-03", "dueDate", "1.2"));
   assert.throws(
-    () => assertSettingValue(dateSetting, "2026-02-30", "dueDate"),
+    () => assertSettingValue(dateSetting, "2026-02-30", "dueDate", "1.2"),
     /canonical YYYY-MM-DD/,
   );
   assert.throws(
-    () => assertSettingValue(dateSetting, "2027-01-01", "dueDate"),
+    () => assertSettingValue(dateSetting, "2027-01-01", "dueDate", "1.2"),
     /exceeds the maximum/,
   );
 });
 
 test("enforces canonical UTC date-time setting values", () => {
   assert.doesNotThrow(() =>
-    assertSettingValue(sdk12DateTimeSetting, "2026-08-04T03:30:00.000Z", "reminderAt"),
+    assertSettingValue(sdk12DateTimeSetting, "2026-08-04T03:30:00.000Z", "reminderAt", "1.2"),
   );
   assert.throws(
-    () => assertSettingValue(sdk12DateTimeSetting, "2026-08-03T22:30:00.000-05:00", "reminderAt"),
+    () =>
+      assertSettingValue(
+        sdk12DateTimeSetting,
+        "2026-08-03T22:30:00.000-05:00",
+        "reminderAt",
+        "1.2",
+      ),
     /canonical UTC date-time/,
   );
   assert.throws(
@@ -72,6 +78,8 @@ test("validates date and SDK 1.2 date-time collection records", () => {
         recordedAt: "2026-08-04T03:30:00.000Z",
       },
       "record",
+      false,
+      "1.2",
     ),
   );
   assert.throws(
@@ -83,6 +91,8 @@ test("validates date and SDK 1.2 date-time collection records", () => {
           recordedAt: "2026-08-04T03:30:00Z",
         },
         "record",
+        false,
+        "1.2",
       ),
     /canonical YYYY-MM-DD/,
   );

@@ -47,7 +47,7 @@ test("accepts numeric input hints only through the dormant SDK 1.2 path", () => 
 
   assert.throws(
     () => validatePageNodeWithDormantFormHints(value, inspection("1.2")),
-    /require SDK 1\.2/,
+    /step: Unknown UI property/,
   );
   assert.doesNotThrow(() =>
     validatePageNodeWithDormantFormHints(value, inspection("1.2"), {

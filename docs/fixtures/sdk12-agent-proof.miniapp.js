@@ -272,6 +272,10 @@ export default defineMiniApp({
   },
 });
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 function requireRecordId(value) {
   if (typeof value !== "string") throw new Error("A record ID is required.");
   return value;

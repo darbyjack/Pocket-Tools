@@ -24,7 +24,7 @@ test("accepts every frozen badge tone only through dormant SDK 1.2 validation", 
     const value = page({ type: "badge", text: "Ready", tone });
     assert.throws(
       () => validatePageNodeWithDormantFormHints(value, inspection("1.2")),
-      /require SDK 1\.2/,
+      /Unsupported UI node type: badge/,
     );
     assert.doesNotThrow(() =>
       validatePageNodeWithDormantFormHints(value, inspection("1.2"), {
