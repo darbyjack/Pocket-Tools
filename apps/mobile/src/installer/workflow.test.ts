@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { DIAGNOSTIC_APP_ID_PREFIX } from "../storage/namespaces.ts";
@@ -7,6 +8,8 @@ import {
   createPreviewStorageId,
   isCurrentSourceApproved,
 } from "./workflow.ts";
+
+const FIRST_RENDER_URL = new URL("./first-render.ts", import.meta.url);
 
 test("an update cannot change the permanent manifest ID", () => {
   assert.doesNotThrow(() => assertCandidateIdentity("edit", "daily-tool", "daily-tool"));
@@ -43,4 +46,11 @@ test("preview storage IDs are internal and deterministic for supplied entropy", 
   const id = createPreviewStorageId(1_700_000_000_000, 0.5);
   assert.match(id, /^__preview__[a-z0-9]+$/);
   assert.equal(id, createPreviewStorageId(1_700_000_000_000, 0.5));
+});
+
+test("installation first render uses the public SDK validator", async () => {
+  const source = await readFile(FIRST_RENDER_URL, "utf8");
+  assert.match(source, /import \{ validateSdkPageNode \}/);
+  assert.match(source, /validateSdkPageNode\(response\.value\.page, inspection\);/);
+  assert.doesNotMatch(source, /import \{ validatePageNode \}/);
 });

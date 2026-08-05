@@ -2,82 +2,84 @@
 
 ## Security objective
 
-A mini-app script may compute values and use the frozen offline SDK without gaining ambient authority over the phone, host application, another script, or host-owned services.
+A mini-app may compute values and use the documented Pocket Tools SDK without gaining ambient authority over the phone, host application, another tool, or host-owned services.
 
-Every script is untrusted, including scripts produced by an agent, pasted by the device owner, bundled as a reference, or previously installed successfully.
+Every script is untrusted, including scripts produced by an agent, pasted by the device owner, bundled as a reference, restored from backup, or previously installed successfully.
 
 ## Trust boundaries
 
 Trusted:
 
 - Signed Pocket Tools host code
-- The frozen SDK v1 TypeScript contract
-- The matching embedded QuickJS SDK and runner
-- Host-owned React Native and SQLite services
+- The public SDK 1.0, 1.1, and 1.2 TypeScript contract
+- The matching composed QuickJS SDK and runner
+- Host-owned React Native, SQLite, clipboard/share, and Android notification services
 - Host-selected installed and preview storage namespaces
+- Host-owned notification identifiers, channels, pending intents, and reconciliation state
 
 Untrusted:
 
-- Pasted, bundled, installed, preview, and rollback mini-app source
+- Pasted, bundled, installed, preview, rollback, duplicated, exported, and restored mini-app source
 - Script manifests and definitions
 - Script-generated queries and UI trees
-- Script-requested operations
-- Script console output
+- Script-requested operations, effects, and notification requests
+- Script console output and interaction input
+- Backup documents supplied by the user
 
 ## Core invariants
 
 1. Scripts execute in QuickJS-NG, not the React Native JavaScript runtime.
-2. Every inspection, render, and action receives a fresh runtime and context.
+2. Every inspection, render, and action receives a fresh bounded runtime and context.
 3. The module loader resolves only `@pocket-tools/sdk`.
-4. Cross-boundary values are finite JSON-compatible values made from plain objects and arrays.
+4. Cross-boundary values are finite serializable values made from plain objects and arrays.
 5. Native objects and host references never enter the script runtime.
 6. Host state is passed as function arguments, not writable globals.
 7. SQLite namespaces are selected by trusted host code; scripts cannot provide or discover a storage namespace.
-8. Settings, records, queries, operation lists, action targets, screen targets, and UI trees are validated before use.
-9. SQLite independently validates every persisted setting and record write.
-10. One action's writes are applied in one transaction or not at all.
-11. Running timers do not imply running script code.
-12. Runtime, allocation, response-decoding, and validation failures become structured errors.
-13. Preview state is isolated from installed state under a disposable host-only namespace.
-14. Installed source changes only after the exact candidate source passes validation and its first isolated native render.
+8. Definitions, settings, records, queries, operations, effects, notification requests, targets, and UI trees are validated before use.
+9. SQLite independently validates every persisted setting and record value using the inspected manifest version.
+10. One action's durable writes are applied in one transaction or not at all.
+11. Notification reconciliation and output/feedback effects occur only after the durable transaction commits.
+12. Running timers and scheduled notifications do not imply running script code.
+13. Runtime, allocation, decoding, validation, persistence, and native failures become structured host errors.
+14. Preview state is isolated from installed state under a disposable host-only namespace.
+15. Installed source changes only after the exact candidate passes validation and its first isolated native render.
+16. Notification taps navigate only to a validated installed screen; they never invoke a mini-app action.
 
-## Frozen host authority
+## Public host authority
 
-SDK v1 exposes only:
+The SDK exposes only bounded host-owned capabilities:
 
-- Declared isolated settings
+- Declared isolated settings, including action-only `set` and `reset`
 - Declared isolated collection records
-- Validated insert, get, update, remove, query, count, and sum behavior
+- Validated local queries and numeric aggregates
 - Durable start/get/stop timers
 - Current host time
-- Host-owned screen navigation
-- Native rendering of the frozen declarative UI nodes
+- Host-owned screen navigation and declarative UI rendering
+- One bounded feedback request per action
+- One bounded copy or share request per action
+- Tool-scoped local notification schedule, cancel, and cancel-all requests
 
-No capability or permission framework exists because SDK v1 has no file, network, notification, location, secret, or custom-native authority to grant.
+No general permission or capability framework exists. The SDK does not grant arbitrary files, network, location, secrets, sensors, native modules, platform components, background JavaScript, or remote push access.
 
 ## Source installation boundary
 
 The installation record is host-owned SQLite data containing manifest metadata, active source, last-known-good source, and timestamps. A script cannot read or modify its installation record.
 
-The on-device editor inspects a candidate through the same embedded SDK and runner used by ordinary execution. A candidate is not stored as active source merely because its manifest parses successfully. The exact current editor source must complete a first render in preview before install or update becomes available.
+The on-device editor and local authoring command execute the same composed SDK and runner used by ordinary Android execution. A candidate is not stored as active source merely because its manifest parses. The exact current source must pass inspection and complete a first render in isolated preview before install or update becomes available.
 
-For updates, the host clones the installed app's current settings, records, and timers into a disposable preview namespace. Preview operations can mutate only the clone. Validation, preview, or first-render failure leaves both active source and installed state unchanged.
+For updates, the host clones installed settings, records, and timers into disposable preview storage. Preview operations can mutate only the clone. Preview notification requests do not acquire authority over an installed tool's registry. Validation, preview, or first-render failure leaves active source and installed state unchanged.
 
-A successful update moves the old active source to last-known-good source in the same SQLite statement that installs the candidate. Rollback validates the saved source before swapping it back. Rollback never changes script-owned state.
+A successful update moves the old active source to last-known-good source while installing the candidate. Rollback validates the saved source before swapping it back. Duplicate copies source into the editor but does not copy state and requires a new manifest ID.
 
 Bundled references are one-time installation seeds, not trusted code and not a privileged execution path.
 
-## Runtime isolation
+## Runtime isolation and limits
 
-Each request creates a new QuickJS runtime and context and disposes them before returning.
+Each request creates and disposes a new QuickJS runtime and context. Scripts cannot observe globals left by an earlier invocation and do not receive React Native, Expo, Node.js, filesystem, SQLite, process environment, authentication, permission, or Android-service globals.
 
-Scripts cannot observe globals left by an earlier invocation. They do not receive React Native, Expo, Node.js, filesystem, SQLite, process environment, authentication, or host-request globals.
+The module loader rejects external packages, relative and absolute paths, remote URLs, Node modules, re-exports, and dynamic imports outside the virtual SDK module.
 
-The module loader rejects external packages, relative and absolute paths, remote URLs, Node modules, and imports outside the virtual SDK module.
-
-## Runtime limits
-
-Current trusted-host defaults are:
+Current trusted-host defaults include:
 
 - 512 KiB maximum script source
 - 2 MiB maximum host request
@@ -90,96 +92,117 @@ Current trusted-host defaults are:
 - 512 rendered UI nodes
 - 16 levels of UI-tree depth
 
-The native module validates configuration values against hard ceilings. These defaults are implementation limits, not future compatibility promises, and remain adjustable for Android benchmarking.
+These are host implementation limits, not script-controlled settings. QuickJS interrupt, memory, stack, job-draining, source, response, log, graph-complexity, node-count, and depth checks fail closed.
 
-QuickJS's interrupt handler enforces the deadline during script execution and pending-job draining. Memory and stack limits use QuickJS runtime controls. Source, request, result, log, UI-node, and UI-depth bounds are enforced before output is used by React Native.
-
-## Promise and blocking behavior
-
-Blocking waits are disabled. The host drains pending jobs after module evaluation and after screen/action execution.
-
-Unhandled promise rejections become `UNHANDLED_PROMISE_REJECTION`. Screens and actions are synchronous; returning a promise produces `ASYNC_NOT_SUPPORTED`.
+Screens and actions are synchronous. Returning a promise or using unsupported asynchronous module behavior fails the invocation. No host wait keeps QuickJS alive for a timer, notification, share sheet, or future callback.
 
 ## Bridge and response validation
 
-Allowed bridge values are:
+Allowed bridge values are `null`, finite numbers, strings, booleans, arrays of allowed values, and plain objects with safe string keys and allowed values.
 
-- `null`
-- finite numbers
-- strings
-- booleans
-- arrays containing allowed values
-- plain objects with safe string keys and allowed values
+Dates cross as canonical strings. `undefined`, functions, symbols, bigints, cycles, class instances, unsafe prototype keys, non-finite numbers, native handles, and excessively complex graphs are rejected.
 
-Dates cross as strings. `undefined`, native handles, functions, symbols, bigints, cycles, class instances, unsafe prototype keys, non-finite numbers, and excessively complex object graphs are rejected.
+QuickJS validates runtime inputs, query use, working-state mutation, requested operations/effects, notification intent, targets, and broad UI structure. React Native then validates the response envelope, logs, inspection definitions, exact operation/effect shapes, exact UI properties, setting bindings, action/screen targets, notification targets, and version gates.
 
-QuickJS validates runtime inputs, collection/query use, requested operations, targets, and broad UI structure. React Native then validates the response envelope, logs, inspection definitions, exact operation shapes, exact UI properties, setting bindings, action targets, and navigation targets.
+Unknown keys are rejected rather than ignored.
 
-## Settings and data isolation
+## Settings, data, and transactional isolation
 
-Ordinary installed execution loads and writes state under the installed manifest ID. Preview uses an internal ID beginning with a reserved host-only prefix. A script receives neither value and cannot construct SQL.
+Ordinary execution loads and writes state under the installed manifest ID. Preview uses a reserved host-only ID. A script receives neither value and cannot construct SQL.
 
-Settings are checked against their declared type, options, text bounds, and numeric bounds before persistence and again when loaded.
+Settings are checked against their declared type, options, selection bounds, canonical temporal representation, text bounds, and numeric bounds before persistence and again when loaded. Action-only setting writes are recorded as explicit operations.
 
-Collection fields are required unless explicitly optional. Unknown fields, host-owned `id`/`createdAt`/`updatedAt` properties, invalid types, non-finite values, invalid dates, and bound violations are rejected.
+Collection fields are required unless optional. Unknown fields, host-owned metadata, invalid types, non-finite values, invalid dates, and bound violations are rejected. Record IDs and timestamps remain host-owned.
 
-Query filters are typed. Text and boolean values support equality only. Number, money, and datetime fields support equality and ranges. Only optional fields may compare to `null`. Query fields, ordering, offset, limit, and sum targets are validated in QuickJS.
+Queries are limited to declared collections and fields, documented type-compatible operators, bounded ordering, offset, and limit. Aggregates accept only declared numeric fields. Raw SQL, joins, cross-tool queries, callbacks, predicates, and unbounded expression trees are unavailable.
 
-Insert, update, and remove operations cross the boundary explicitly. SQLite rechecks the declared collection, record ID, exact fields, required values, and merged update before mutating state. All operations from one action execute in one transaction.
-
-Preview clones regenerate host-owned record IDs. SDK v1 has no relational reference field, so no script-visible record relationship is broken by this isolation step.
+Insert, update, remove, setting writes, timer changes, and notification-registry changes cross the boundary explicitly. The host validates the complete action result before applying durable operations in list order inside one SQLite transaction. A validation or SQLite failure rolls back the entire action and performs no output or feedback effects.
 
 ## UI and interaction validation
 
-Scripts never pass React Native components, style objects, event handlers, or native props.
+Scripts never pass React Native components, arbitrary style objects, event handlers, native props, SVG, image URLs, or icon packages.
 
-The host accepts only the frozen node set and exact properties. Settings-bound controls must reference a declared compatible setting. Buttons must reference declared actions. Navigation nodes must reference declared screens. Invalid or oversized trees fail before rendering.
+The host accepts only documented nodes and exact properties. Settings-bound controls must reference compatible declared settings. Buttons and row actions must reference declared actions. Navigation and notification open targets must reference declared screens. Inputs must be finite and serializable.
 
-The host owns active-screen state and rerendering after navigation, settings changes, and actions.
+The fixed icon vocabulary is mapped to host assets. Icons are decorative; script-provided labels remain the accessibility authority. Host code owns confirmation dialogs, disabled behavior, destructive presentation, large-font layout, TalkBack behavior, and event propagation isolation.
 
 ## Timers
 
-Timer IDs are lower camelCase names scoped by the trusted storage namespace. A timer stores a UTC start timestamp. The host reconstructs elapsed time after relaunch without keeping QuickJS or the React Native process alive.
+Timer IDs are lower-camel-case names scoped by the trusted storage namespace. A timer stores a UTC start timestamp. The host reconstructs elapsed time after relaunch without retaining QuickJS or the React Native process.
 
-SDK v1 does not expose pause, resume, arbitrary metadata, notifications, or background JavaScript.
+The SDK exposes no timer callbacks, pause/resume authority, arbitrary timer metadata, or background JavaScript.
 
-## Console logging and failure display
+## Feedback, clipboard, and sharing
 
-The sandbox provides bounded `console.log`, `console.info`, `console.warn`, and `console.error`. Captured messages return as diagnostic records only and never write directly to Android services or persisted state.
+`context.feedback.show`, `context.output.copy`, and `context.output.share` record bounded post-commit effects. Scripts cannot access toast/snackbar objects, read the clipboard, choose MIME types or files, observe the share result, or receive callbacks.
 
-`MiniAppRuntimeError` preserves the machine-readable code, bounded script stack, captured logs, and truncation state. The editor and installed runner present this diagnostic data as text without executing or interpreting it.
+At most one feedback and one output effect are accepted per action. Effects execute only after durable state commits and the active screen rerenders. Canceling a share sheet cannot undo committed state.
 
-## Export, duplicate, and removal
+## Local notification authority
 
-Source export uses the host-owned Android share sheet. The script itself receives no sharing or clipboard capability.
+SQLite is the authoritative desired-notification registry. Android alarms and posted notifications are derived host state.
 
-Duplicate copies source into the editor only. It does not copy state, and installation requires a new manifest ID.
+A script may only schedule, replace, cancel, or cancel all notifications owned by its installed manifest ID. Requests are validated for stable ID, title/body limits, trigger shape, canonical date-time, recurrence bounds, delivery mode, declared open screen, serializable input, and per-tool schedule limits.
 
-Removal deletes the trusted installation record. The user explicitly chooses whether isolated settings, records, and timers are retained for reinstall or deleted. A script cannot trigger installation, export, duplication, rollback, or removal.
+Pocket Tools owns:
 
-## Failure handling
+- Android notification permission and the reminders channel
+- Exact-alarm access checks and guidance
+- Host notification and pending-intent identifiers
+- Standard and exact AlarmManager scheduling
+- Startup, foreground, boot, package-update, clock, timezone, restore, update, and removal reconciliation
+- Blocked/failed status and retry
+- Tap-routing cache and deep-link validation
 
-Failures use machine-readable codes for invalid source, definitions, settings, records, queries, operations, actions, screens, timers, UI, bridge values, unsupported modules, promises, runtime limits, native allocation, and malformed native responses.
+Denied notification permission or a disabled channel leaves desired schedules blocked for later reconciliation. Exact reminders are never silently downgraded: an action requiring unavailable exact access fails before SQLite persistence. An exact reminder restored from backup remains exact and blocked until access is granted.
 
-A failed invocation cannot retain global state, partially apply an action, change active source, or poison the next invocation. Disposable preview rows may be removed at startup without affecting installed namespaces.
+Notification delivery never wakes or retains QuickJS. A tap opens the validated tool screen or a safe fallback and never runs an action. Tools cannot inspect Android permission state, channel state, delivery success, paired watches, or whether Galaxy Wearable mirrored a notification.
+
+## Backup, restore, removal, and recovery
+
+Portable tool and complete-host backup format v2 contain validated desired notification state in addition to source and durable tool data. They exclude Android pending-intent IDs, permission/channel state, reconciliation errors, delivery history, and other device-specific derived state.
+
+Restore validates the complete document and every included source before replacing host state. Notification reconciliation derives fresh Android schedules from committed desired state. Invalid documents or failed durable writes leave the previous installation unchanged.
+
+Removing a tool always removes its desired notifications and cancels derived Android schedules, even when settings, records, and timers are retained for reinstall. A script cannot trigger installation, update, rollback, duplication, export, backup, restore, or removal.
+
+## Console logging and failures
+
+The sandbox provides bounded `console.log`, `console.info`, `console.warn`, and `console.error`. Logs return as diagnostic text only and never write directly to Android services or persisted state.
+
+Machine-readable errors preserve stable categories, bounded script stack and logs, and truncation state. A failed invocation cannot retain global state, partially apply durable operations, perform effects, change active source, or poison the next invocation.
+
+Post-commit Android scheduling or output failures cannot roll back committed SQLite state. The notification registry remains authoritative and recoverable; the host exposes failure status and retries reconciliation later.
 
 ## Manual verification
 
-No GitHub Actions workflow is enabled. Run repository checks and Android instrumentation manually:
+No GitHub Actions workflow is enabled. Run repository and Android validation manually:
 
 ```bash
 pnpm install
-pnpm check
+pnpm sdk:declarations
 pnpm sync:mini-apps
+pnpm format
+pnpm check
 pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
 cd apps/mobile/android
-./gradlew :app:assembleDebug connectedDebugAndroidTest
+./gradlew :app:assembleDebug connectedDebugAndroidTest --max-workers=4
 ```
 
-The Android suite covers sandbox containment, runtime recovery, frozen SDK builders, inspection metadata, multiple screens, native input nodes, typed filters, offset/limit behavior, and explicit insert/update/remove operations.
+Final SDK 1.2 acceptance additionally proves normal authoring, preview, installation, setting/data transactions, UI, effects, notifications, update, rollback, duplication, export, backup/restore, removal, force-stop recovery, TalkBack, and paired Galaxy Watch notification mirroring.
 
-The installed-script phase additionally requires manual device checks for preview isolation, failed-update preservation, rollback, source export, retained-data reinstall, and full-data deletion.
+## Deliberate exclusions
 
-## Deferred capabilities
+Pocket Tools exposes no:
 
-Network, files, secrets, location, notifications, public distribution, remote installation, cloud synchronization, custom native components, arbitrary background jobs, schema migrations, and compatibility shims require separately approved post-MVP designs. SDK v1 contains no placeholder authority for them.
+- General network or remote push access
+- Arbitrary file access, attachments, or incoming share intents
+- Location, camera, microphone, contacts, health, Bluetooth, or sensor access
+- Secret or credential storage
+- Custom native modules or arbitrary React Native components
+- Script-defined notification channels, sounds, images, actions, or Do Not Disturb bypass
+- Background QuickJS, workers, callbacks, or exact background task execution
+- Dedicated Wear OS app, tiles, complications, watch targeting, or watch-native actions
+- Cloud synchronization, accounts, remote installation, or public distribution authority
+
+Future capability expansion requires another explicit SDK contract and full host-boundary review.

@@ -69,7 +69,7 @@ test("keeps normal parsing and lower SDK versions closed to icon fields", () => 
   const value = page([{ type: "button", label: "Add", action: "openItem", icon: "add" }]);
   assert.throws(
     () => validatePageNodeWithDormantFormHints(value, inspection("1.2")),
-    /Fixed host icons require SDK 1\.2/,
+    /icon: Unknown UI property/,
   );
   for (const sdkVersion of ["1.0", "1.1"] as const) {
     assert.throws(

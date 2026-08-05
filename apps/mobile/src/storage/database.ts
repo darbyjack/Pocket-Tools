@@ -361,7 +361,12 @@ export async function ensureSettingDefaults(
   const database = await databasePromise;
   await database.withTransactionAsync(async () => {
     for (const [name, definition] of Object.entries(inspection.settings)) {
-      assertSettingValue(definition, definition.default, `settings.${name}.default`);
+      assertSettingValue(
+        definition,
+        definition.default,
+        `settings.${name}.default`,
+        inspection.manifest.sdkVersion,
+      );
       await database.runAsync(
         `INSERT OR IGNORE INTO settings (app_id, name, value_json)
          VALUES (?, ?, ?)`,
@@ -383,7 +388,7 @@ export async function setSetting(
   if (definition === undefined) {
     throw new Error(`VALIDATION_FAILED: settings.${name}: Unknown setting.`);
   }
-  assertSettingValue(definition, value, `settings.${name}`);
+  assertSettingValue(definition, value, `settings.${name}`, inspection.manifest.sdkVersion);
 
   const database = await databasePromise;
   await database.runAsync(
@@ -414,7 +419,7 @@ export async function loadRuntimeSnapshot(
     const definition = inspection.settings[row.name];
     if (definition === undefined) continue;
     const value = JSON.parse(row.value_json) as SerializableValue;
-    assertSettingValue(definition, value, `settings.${row.name}`);
+    assertSettingValue(definition, value, `settings.${row.name}`, inspection.manifest.sdkVersion);
     settings[row.name] = value;
   }
 
@@ -430,7 +435,13 @@ export async function loadRuntimeSnapshot(
     );
     records[collectionName] = rows.map((row) => {
       const data = JSON.parse(row.data_json) as Record<string, SerializableValue>;
-      assertRecordInput(definition, data, `records.${collectionName}.${row.id}`);
+      assertRecordInput(
+        definition,
+        data,
+        `records.${collectionName}.${row.id}`,
+        false,
+        inspection.manifest.sdkVersion,
+      );
       return {
         ...data,
         id: row.id,
@@ -479,7 +490,13 @@ export async function applyRuntimeOperations(
       switch (operation.type) {
         case "insert": {
           const definition = requireCollection(inspection, operation.collection, index);
-          assertRecordInput(definition, operation.record, `operations[${index}].record`);
+          assertRecordInput(
+            definition,
+            operation.record,
+            `operations[${index}].record`,
+            false,
+            inspection.manifest.sdkVersion,
+          );
           const timestamp = new Date().toISOString();
           await database.runAsync(
             `INSERT INTO records (
@@ -496,7 +513,13 @@ export async function applyRuntimeOperations(
         case "update": {
           const definition = requireCollection(inspection, operation.collection, index);
           assertRecordId(operation.id, `operations[${index}].id`);
-          assertRecordInput(definition, operation.changes, `operations[${index}].changes`, true);
+          assertRecordInput(
+            definition,
+            operation.changes,
+            `operations[${index}].changes`,
+            true,
+            inspection.manifest.sdkVersion,
+          );
           const existing = await database.getFirstAsync<{ readonly data_json: string }>(
             `SELECT data_json FROM records
              WHERE id = ? AND app_id = ? AND collection_name = ?`,
@@ -511,7 +534,13 @@ export async function applyRuntimeOperations(
             ...(JSON.parse(existing.data_json) as Record<string, SerializableValue>),
             ...operation.changes,
           };
-          assertRecordInput(definition, merged, `operations[${index}].record`);
+          assertRecordInput(
+            definition,
+            merged,
+            `operations[${index}].record`,
+            false,
+            inspection.manifest.sdkVersion,
+          );
           const result = await database.runAsync(
             `UPDATE records SET data_json = ?, updated_at = ?
              WHERE id = ? AND app_id = ? AND collection_name = ?`,
@@ -542,13 +571,23 @@ export async function applyRuntimeOperations(
         }
         case "setting-set": {
           const definition = requireSdk12Setting(inspection, operation.setting, index);
-          assertSettingValue(definition, operation.value, `operations[${index}].value`);
+          assertSettingValue(
+            definition,
+            operation.value,
+            `operations[${index}].value`,
+            inspection.manifest.sdkVersion,
+          );
           await writeSettingInTransaction(database, storageId, operation.setting, operation.value);
           break;
         }
         case "setting-reset": {
           const definition = requireSdk12Setting(inspection, operation.setting, index);
-          assertSettingValue(definition, definition.default, `operations[${index}].default`);
+          assertSettingValue(
+            definition,
+            definition.default,
+            `operations[${index}].default`,
+            inspection.manifest.sdkVersion,
+          );
           await writeSettingInTransaction(
             database,
             storageId,

@@ -41,7 +41,7 @@ test("accepts bounded multiline text input only through the dormant SDK 1.2 path
 
   assert.throws(
     () => validatePageNodeWithDormantMultiline(value, inspection("1.2")),
-    /require SDK 1\.2/,
+    /multiline: Unknown UI property/,
   );
   assert.doesNotThrow(() =>
     validatePageNodeWithDormantMultiline(value, inspection("1.2"), {

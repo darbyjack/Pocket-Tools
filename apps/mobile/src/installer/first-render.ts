@@ -1,6 +1,6 @@
 import type { MiniAppInspection, RuntimeSnapshot, SerializableValue } from "../model";
 import { renderMiniApp } from "../runtime/quickjs";
-import { validatePageNode } from "../runtime/ui-validation";
+import { validateSdkPageNode } from "../runtime/sdk12-multiline-ui";
 import { loadRuntimeSnapshot } from "../storage/database";
 
 export async function assertFirstRenderAgainstRetainedState(
@@ -25,5 +25,5 @@ export async function assertFirstRenderAgainstRetainedState(
   if (response.value.page === undefined) {
     throw new Error("INSTALLATION_FAILED: The candidate returned no home page.");
   }
-  validatePageNode(response.value.page, inspection);
+  validateSdkPageNode(response.value.page, inspection);
 }

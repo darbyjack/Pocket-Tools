@@ -2,18 +2,14 @@
 
 ## Status
 
-This document freezes the public SDK 1.2 design before implementation begins.
+This is the released public SDK 1.2 contract. Pocket Tools advertises SDK 1.2 only as the complete surface defined here; partial or implicit capability expansion remains prohibited.
 
-SDK 1.2 is **not yet supported**. Until the activation slice is complete:
+- `SDK_VERSION` is `"1.2"`.
+- `SUPPORTED_SDK_VERSIONS` is `"1.0"`, `"1.1"`, and `"1.2"`.
+- A manifest may declare `sdkVersion: "1.2"` and use the complete documented surface.
+- Generated declarations, local authoring, embedded QuickJS, Android parsing, persistence, rendering, effects, notifications, backup/restore, and lifecycle paths implement the same contract.
 
-- `SDK_VERSION` remains `"1.1"`.
-- `SUPPORTED_SDK_VERSIONS` remains `"1.0"` and `"1.1"`.
-- A manifest declaring `sdkVersion: "1.2"` remains invalid.
-- Generated declarations and the embedded QuickJS module must not expose incomplete 1.2 APIs.
-
-Implementation may land in focused internal slices, but the host must advertise SDK 1.2 only after every required capability in this contract is implemented, documented, and covered by compatibility and physical Android acceptance.
-
-SDK 1.0 and 1.1 behavior remains frozen. A script must continue to declare the lowest SDK version whose features it uses.
+SDK 1.0 and 1.1 behavior remains frozen. A script must continue to declare the lowest SDK version whose features it uses. Internal files or compatibility aliases created during staged implementation do not create additional public API.
 
 ## Design principles
 
@@ -30,7 +26,7 @@ SDK 1.0 and 1.1 behavior remains frozen. A script must continue to declare the l
 
 SDK 1.2 introduces new definition fields, UI nodes, context clients, operations, and effects. Every 1.2-only shape is rejected for manifests declaring 1.0 or 1.1.
 
-The final activation slice must:
+The public release uses:
 
 ```ts
 export const SDK_VERSION = "1.2" as const;
@@ -39,7 +35,7 @@ export const SUPPORTED_SDK_VERSIONS = ["1.0", "1.1", SDK_VERSION] as const;
 
 Legacy numeric `sdkVersion: 1` continues to normalize only to SDK 1.0.
 
-The implementation must apply version checks at all relevant boundaries:
+The host applies version checks at all relevant boundaries:
 
 - definition validation
 - embedded SDK builders
@@ -649,20 +645,20 @@ Icons are host-owned and decorative. Text labels remain mandatory for every acti
 
 # Backup format decision
 
-Notification schedules change portable state. The implementation must create explicit backup format version 2 for both:
+Notification schedules change portable state. SDK 1.2 uses explicit backup format version 2 for both:
 
 - `pocket-tools-mini-app`
 - `pocket-tools-host`
 
 Version 2 adds the tool's validated desired notification schedules.
 
-Following the project's pre-release no-compatibility rule, the version-2 restore path is not required to accept version-1 documents. The implementation PR must update export, restore, validation, documentation, malformed-input tests, and device acceptance together. No reader may silently infer missing notification state.
+Following the project's pre-release no-compatibility rule, the version-2 restore path is not required to accept version-1 documents. Export, restore, validation, documentation, malformed-input tests, and device acceptance use version 2 together. No reader may silently infer missing notification state.
 
 Settings, date values, multi-select values, and other SDK data continue to use the existing serializable setting and record containers and do not independently require another backup field.
 
 # Stable error categories
 
-Implementation must preserve existing error codes and add stable categories for SDK 1.2 failures:
+The host preserves existing error codes and defines these stable categories for SDK 1.2 failures:
 
 - `VALIDATION_FAILED` for invalid definitions, values, UI, targets, query types, and operation payloads.
 - `UNSUPPORTED_SDK_VERSION` where the current host cannot accept the manifest capability version.
@@ -730,7 +726,7 @@ Exact message text may be refined during implementation, but category meanings m
 - mirrored phone notification delivery to the paired Galaxy Watch4 Classic when enabled in Galaxy Wearable
 - SDK 1.0 and 1.1 scripts running on the same build
 
-# Implementation order
+# Delivery history
 
 1. Transactional setting writes and resets.
 2. Date and date-time definitions, values, inputs, and queries.
@@ -744,7 +740,7 @@ Exact message text may be refined during implementation, but category meanings m
 10. Smaller form and UI additions.
 11. Complete SDK 1.2 activation, declarations, authoring documentation, compatibility, and physical acceptance.
 
-Each implementation slice must keep `sdkVersion: "1.2"` disabled until the final activation slice. A slice may add internal models and tests, but it must not expose an API that an agent can use before the complete advertised contract exists.
+These capabilities were delivered in focused internal slices and activated together as the complete SDK 1.2 release. Internal compatibility aliases and historical test names do not expose any capability beyond this contract.
 
 # Deliberate exclusions
 

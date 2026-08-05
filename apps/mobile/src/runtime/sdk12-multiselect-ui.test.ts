@@ -39,7 +39,7 @@ test("accepts multi-select UI only through dormant SDK 1.2 validation", () => {
 
   assert.throws(
     () => validatePageNodeWithDormantFormHints(value, inspection("1.2")),
-    /require SDK 1\.2/,
+    /Unsupported UI node type: multi-select/,
   );
   assert.doesNotThrow(() =>
     validatePageNodeWithDormantFormHints(value, inspection("1.2"), {

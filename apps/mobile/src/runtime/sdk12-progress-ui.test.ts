@@ -55,7 +55,7 @@ test("keeps normal parsing and lower SDK versions closed to progress nodes", () 
   const value = page({ type: "progress", value: 25 });
   assert.throws(
     () => validatePageNodeWithDormantFormHints(value, inspection("1.2")),
-    /Progress nodes require SDK 1\.2/,
+    /Unsupported UI node type: progress/,
   );
   for (const sdkVersion of ["1.0", "1.1"] as const) {
     assert.throws(

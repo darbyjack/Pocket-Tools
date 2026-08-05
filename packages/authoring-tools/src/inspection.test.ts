@@ -8,11 +8,11 @@ import { AuthoringTypecheckError } from "./typecheck.ts";
 
 const TEMPLATE_URL = new URL("../../../docs/fixtures/agent-template.miniapp.js", import.meta.url);
 
-test("inspects the canonical SDK 1.1 template through the embedded runner", async () => {
+test("inspects the canonical SDK 1.2 template through the embedded runner", async () => {
   const source = await readFile(TEMPLATE_URL, "utf8");
   const inspection = await inspectMiniAppSource(source);
   assert.equal(inspection.manifest.id, "replace-with-tool-id");
-  assert.equal(inspection.manifest.sdkVersion, "1.1");
+  assert.equal(inspection.manifest.sdkVersion, "1.2");
   assert.deepEqual(inspection.screens, ["home"]);
   assert.deepEqual(Object.keys(inspection.settings), ["message"]);
 });

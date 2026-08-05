@@ -2,9 +2,13 @@
 
 ## Status
 
-This slice implements the Android host for the notification contract frozen in `SDK_1_2_CONTRACT.md`.
+This capability is public in SDK 1.2 and is available through ordinary authoring, validation, inspection, preview, installation, execution, update, rollback, export, backup/restore, and removal paths where applicable.
 
-SDK 1.2 remains publicly disabled. Normal authoring, inspection, preview, and installation still reject a manifest declaring `sdkVersion: "1.2"` until the final activation slice.
+- `SDK_VERSION` is `"1.2"`.
+- Supported manifest versions are `"1.0"`, `"1.1"`, and `"1.2"`.
+- The public SDK source, generated declarations, local authoring runtime, embedded QuickJS runtime, host validators, and Android UI/lifecycle paths expose this capability.
+
+Internal source, test, or helper names created during staged implementation may retain `sdk12` or `dormant` compatibility wording. Those names do not gate or expand the public API.
 
 ## Architecture
 

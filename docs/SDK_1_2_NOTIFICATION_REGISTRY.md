@@ -2,17 +2,13 @@
 
 ## Status
 
-This is the first local-notification implementation slice of the frozen [SDK 1.2 contract](SDK_1_2_CONTRACT.md).
+This capability is public in SDK 1.2 and is available through ordinary authoring, validation, inspection, preview, installation, execution, update, rollback, export, backup/restore, and removal paths where applicable.
 
-It implements dormant notification operations, trusted validation, the authoritative desired-schedule registry, transactional persistence, removal semantics, reconciliation inputs, and backup version 2. It does **not** activate SDK 1.2 or schedule Android notifications yet.
+- `SDK_VERSION` is `"1.2"`.
+- Supported manifest versions are `"1.0"`, `"1.1"`, and `"1.2"`.
+- The public SDK source, generated declarations, local authoring runtime, embedded QuickJS runtime, host validators, and Android UI/lifecycle paths expose this capability.
 
-The following remain unchanged:
-
-- `SDK_VERSION` is still `"1.1"`.
-- `SUPPORTED_SDK_VERSIONS` still contains only `"1.0"` and `"1.1"`.
-- Public SDK TypeScript sources and generated declarations remain unchanged.
-- Ordinary inspection, preview, installation, and authoring still reject `sdkVersion: "1.2"`.
-- No notification permission, channel, icon, Android alarm, tap-routing, or watch-delivery behavior exists in this slice.
+Internal source, test, or helper names created during staged implementation may retain `sdk12` or `dormant` compatibility wording. Those names do not gate or expand the public API.
 
 ## Dormant action protocol
 

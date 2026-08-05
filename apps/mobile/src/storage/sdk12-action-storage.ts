@@ -65,7 +65,13 @@ export async function applySdk12RuntimeOperations(
       switch (operation.type) {
         case "insert": {
           const definition = requireCollection(inspection, operation.collection, index);
-          assertRecordInput(definition, operation.record, `operations[${index}].record`);
+          assertRecordInput(
+            definition,
+            operation.record,
+            `operations[${index}].record`,
+            false,
+            inspection.manifest.sdkVersion,
+          );
           await database.runAsync(
             `INSERT INTO records (
                id, app_id, collection_name, data_json, created_at, updated_at
@@ -81,7 +87,13 @@ export async function applySdk12RuntimeOperations(
         case "update": {
           const definition = requireCollection(inspection, operation.collection, index);
           assertRecordId(operation.id, `operations[${index}].id`);
-          assertRecordInput(definition, operation.changes, `operations[${index}].changes`, true);
+          assertRecordInput(
+            definition,
+            operation.changes,
+            `operations[${index}].changes`,
+            true,
+            inspection.manifest.sdkVersion,
+          );
           const existing = await database.getFirstAsync<{ readonly data_json: string }>(
             `SELECT data_json FROM records
              WHERE id = ? AND app_id = ? AND collection_name = ?`,
@@ -96,7 +108,13 @@ export async function applySdk12RuntimeOperations(
             ...(JSON.parse(existing.data_json) as Record<string, SerializableValue>),
             ...operation.changes,
           };
-          assertRecordInput(definition, merged, `operations[${index}].record`);
+          assertRecordInput(
+            definition,
+            merged,
+            `operations[${index}].record`,
+            false,
+            inspection.manifest.sdkVersion,
+          );
           const result = await database.runAsync(
             `UPDATE records SET data_json = ?, updated_at = ?
              WHERE id = ? AND app_id = ? AND collection_name = ?`,
@@ -127,13 +145,23 @@ export async function applySdk12RuntimeOperations(
         }
         case "setting-set": {
           const definition = requireSetting(inspection, operation.setting, index);
-          assertSettingValue(definition, operation.value, `operations[${index}].value`);
+          assertSettingValue(
+            definition,
+            operation.value,
+            `operations[${index}].value`,
+            inspection.manifest.sdkVersion,
+          );
           await writeSetting(database, storageId, operation.setting, operation.value);
           break;
         }
         case "setting-reset": {
           const definition = requireSetting(inspection, operation.setting, index);
-          assertSettingValue(definition, definition.default, `operations[${index}].default`);
+          assertSettingValue(
+            definition,
+            definition.default,
+            `operations[${index}].default`,
+            inspection.manifest.sdkVersion,
+          );
           await writeSetting(database, storageId, operation.setting, definition.default);
           break;
         }

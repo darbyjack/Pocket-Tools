@@ -2,17 +2,13 @@
 
 ## Status
 
-This is the second internal implementation slice of the frozen [SDK 1.2 contract](SDK_1_2_CONTRACT.md).
+This capability is public in SDK 1.2 and is available through ordinary authoring, validation, inspection, preview, installation, execution, update, rollback, export, backup/restore, and removal paths where applicable.
 
-The slice implements date and date-time definitions, values, native controls, storage validation, and temporal query behavior, but it does **not** activate SDK 1.2:
+- `SDK_VERSION` is `"1.2"`.
+- Supported manifest versions are `"1.0"`, `"1.1"`, and `"1.2"`.
+- The public SDK source, generated declarations, local authoring runtime, embedded QuickJS runtime, host validators, and Android UI/lifecycle paths expose this capability.
 
-- `SDK_VERSION` remains `"1.1"`.
-- `SUPPORTED_SDK_VERSIONS` remains `"1.0"` and `"1.1"`.
-- Public generated declarations do not expose the new builders or nodes.
-- The canonical agent template and authoring guide remain on SDK 1.1.
-- Ordinary inspection, preview, and installation still reject `sdkVersion: "1.2"`.
-
-The dormant path is reachable only through explicit internal parsing and native instrumentation used to build the complete SDK 1.2 implementation safely before activation.
+Internal source, test, or helper names created during staged implementation may retain `sdk12` or `dormant` compatibility wording. Those names do not gate or expand the public API.
 
 ## Canonical values
 
