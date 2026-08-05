@@ -1,124 +1,78 @@
 # Portable Mini-App Backups
 
-Pocket Tools can export one installed mini app as versioned JSON and restore it without rebuilding the Android host.
+Pocket Tools can export one installed tool as versioned JSON and restore it without rebuilding the Android host.
 
-A single-app backup contains:
+## Included state
 
-- Active source
-- Last-known-good rollback source
-- Manifest metadata and installation timestamps
-- Isolated setting values
-- Isolated records with host-owned IDs and timestamps
-- Active durable timer start timestamps
-- Validated desired notification schedules
+A version-2 tool backup contains:
 
-The backup does not contain unrelated app state, host diagnostics, preview namespaces, derived Android schedule IDs, reconciliation errors, application binaries, signing material, or device-specific secrets.
+- active source and last-known-good source
+- manifest metadata and installation timestamps
+- validated setting values
+- records with host-owned IDs and timestamps
+- active timer UTC start timestamps
+- validated desired notification schedules
+
+It excludes unrelated tools, preview and diagnostic namespaces, Android alarm or pending-intent IDs, notification permission/channel state, reconciliation errors, delivery history, binaries, signing material, and device secrets.
 
 ## Export
 
-1. Open an installed tool.
-2. Choose **Manage**.
-3. Choose **Back up tool**.
-4. Use the Android share sheet to save or send the JSON text.
-5. Preserve the suggested title `<Tool Name>.pocket-tools-backup.json` when the destination supports naming shared text.
+Open the installed tool and choose **Manage → Back up tool**. The Android share sheet receives the versioned JSON text.
 
-**Export script** remains source-only. **Back up tool** is the portable stateful format.
+**Export script** is source-only. **Back up tool** is the portable stateful format.
 
 ## Restore
 
-1. Open **Settings**.
-2. Choose **Restore a tool**.
-3. Paste one complete version 2 backup document.
-4. Choose **Check backup**.
-5. Review the tool and state counts.
-6. Choose **Restore tool**.
+Open **Settings → Restore a tool**, paste one complete backup, choose **Check backup**, review the summary, and choose **Restore tool**.
 
-If the manifest ID has no installation or retained namespace, Pocket Tools creates the installation and restores its state.
+Replacing an installed or retained manifest ID requires explicit confirmation. Source, settings, records, timers, and desired notifications are replaced in one transaction. Any parse, validation, inspection, or SQLite failure leaves the existing installation unchanged.
 
-If the same manifest ID is installed or has data retained after removal, Pocket Tools requires explicit confirmation before replacing it. Replacement is transactional: source, settings, records, timers, and desired notification schedules are all replaced together, or the previous installation and retained state remain unchanged.
+## Validation
 
-Restored notification schedules become pending desired state. Android delivery is derived from that registry during reconciliation; platform schedule identifiers and prior delivery status are never trusted from a backup.
+Before persistence, the host:
 
-## Validation boundary
+1. requires `format: "pocket-tools-mini-app"` and `version: 2`
+2. rejects unknown fields and unsupported versions
+3. inspects both saved sources through the embedded QuickJS runtime
+4. confirms both sources use the backed-up manifest ID
+5. validates manifest metadata
+6. validates settings and records against the applicable source schema
+7. validates timer IDs and UTC timestamps
+8. validates notification IDs, text, triggers, delivery, open targets, and finite input
+9. enforces duplicate, reserved-namespace, graph, and schedule limits
 
-Before SQLite changes begin, Pocket Tools:
+Version-1 documents are intentionally unsupported. There are no fallback readers or migrations.
 
-1. Parses the exact `pocket-tools-mini-app` version 2 format.
-2. Rejects version 1 documents, unknown fields, and unsupported versions rather than applying compatibility behavior.
-3. Validates both saved sources through the embedded QuickJS inspection path.
-4. Confirms both sources use the backed-up manifest ID.
-5. Confirms active-source manifest metadata matches the backup metadata.
-6. Validates every setting and record against the active or last-known-good source schema.
-7. Validates notification IDs, titles, bodies, triggers, delivery modes, open screens, and finite inputs.
-8. Requires at least one saved SDK 1.2 source when notification schedules are present.
-9. Rejects duplicate setting names, record IDs, timer IDs, notification IDs, malformed timestamps, invalid record IDs, non-finite values, and more than 64 schedules.
-10. Rejects reserved preview and lifecycle-diagnostic namespaces.
+## Timers
 
-Data retained only for the last-known-good source remains portable so rollback state is not silently discarded.
+An active timer restores its original UTC start timestamp. The host reconstructs elapsed time at render; restore does not replay JavaScript.
 
-## Timer behavior
+## Notifications
 
-An active timer is stored as its original UTC start timestamp. Restoring it does not replay JavaScript or synthesize elapsed values. On the next render, the host reconstructs elapsed time from that persisted timestamp in the same way it does after process death.
+Only desired schedules are portable. Android identifiers and device authority are derived again during reconciliation.
 
-## Notification behavior
+An exact request remains exact. When current Android access is unavailable, the schedule remains blocked until access is granted; it is never silently downgraded.
 
-Only desired requests are portable. The backup does not contain:
-
-- Android notification identifiers
-- permission state
-- exact-alarm special-access state
-- channel state
-- blocked or failed reconciliation messages
-- delivery history
-- watch-delivery state
-
-A restored exact request remains exact. The host does not silently downgrade it. If current device access is unavailable, later reconciliation records a host-owned blocked state until the user grants access or changes the reminder.
-
-## Format stability
-
-The current format is:
+## Format outline
 
 ```json
 {
   "format": "pocket-tools-mini-app",
   "version": 2,
-  "exportedAt": "2026-08-03T21:30:00.000Z",
+  "exportedAt": "2026-08-04T23:30:00.000Z",
   "app": {
     "id": "example-tool",
     "name": "Example Tool",
     "activeSource": "...",
     "lastKnownGoodSource": "...",
-    "installedAt": "2026-08-03T20:00:00.000Z",
-    "updatedAt": "2026-08-03T21:00:00.000Z"
+    "installedAt": "2026-08-04T20:00:00.000Z",
+    "updatedAt": "2026-08-04T21:00:00.000Z"
   },
   "settings": [],
   "records": [],
   "timers": [],
-  "notifications": [
-    {
-      "id": "dailyReminder",
-      "title": "Daily reminder",
-      "trigger": {
-        "type": "daily",
-        "hour": 8,
-        "minute": 30,
-        "delivery": "standard"
-      }
-    }
-  ]
+  "notifications": []
 }
 ```
 
-There are no migrations, deprecated aliases, or fallback readers. Version 1 documents are intentionally unsupported after the version-2 cutover.
-
-## Android acceptance
-
-Full notification delivery acceptance belongs to the Android scheduling slice. The final backup acceptance must prove:
-
-1. `pnpm check` passes.
-2. A tool with recognizable settings, records, an active timer, and desired reminders exports exact version-2 JSON.
-3. Removing the app deletes desired reminders even when ordinary data is retained.
-4. Restoring the backup restores source, settings, records, timer state, rollback availability, and desired reminders.
-5. Replacement leaves obsolete platform schedules queued for cancellation and restored schedules queued for reconciliation.
-6. Malformed, version-1, wrong-manifest, schema-invalid, duplicate-notification, and over-limit backups leave the installed app unchanged.
-7. Force-stop and relaunch preserve the restored desired registry.
+Use the [release and acceptance procedure](ORDINARY_SCRIPT_ACCEPTANCE.md) to verify export, removal, replacement, restore, timer recovery, and notification reconciliation on Android.

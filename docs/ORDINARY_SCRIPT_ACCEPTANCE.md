@@ -1,27 +1,22 @@
-# Ordinary Agent-Script Acceptance
+# Release and Ordinary Tool Acceptance
 
-This procedure proves that the existing Bathroom Pay source works as an ordinary SDK v1 script through the same published workflow available to any agent-authored mini app. It does not add Bathroom Pay behavior to the host or require rebuilding Pocket Tools after the initial development build is installed.
+This is the maintained release procedure for Pocket Tools and the public SDK 1.2 contract. Record run-specific evidence in the pull request or release record, not in this document.
 
-Tracker: [#10](https://github.com/darbyjack/Pocket-Tools/issues/10)
+## Acceptance sources
 
-## Verification status
+Use:
 
-- Procedure prepared: complete
-- Static host-specific branch audit: pending local checkout
-- `pnpm check`: pending local checkout
-- SDK v1 validation and inspection: pending local checkout
-- Physical Android acceptance: pending physical device
+- [`fixtures/sdk12-agent-proof.miniapp.js`](fixtures/sdk12-agent-proof.miniapp.js) for SDK 1.2
+- [`../examples/bathroom-pay.miniapp.js`](../examples/bathroom-pay.miniapp.js) for SDK 1.1 compatibility
+- [`../examples/tip-splitter.miniapp.js`](../examples/tip-splitter.miniapp.js) for SDK 1.0 compatibility
 
-Do not mark this acceptance complete until the command results, Android device details, and observed outcomes are recorded in this document or the pull request.
+The SDK 1.2 fixture must remain authorable from only:
 
-## Authority and source boundary
+- [`AGENT_AUTHORING.md`](AGENT_AUTHORING.md)
+- [`AGENT_PROMPT.md`](AGENT_PROMPT.md)
+- [`../packages/sdk-contract/dist/`](../packages/sdk-contract/dist/)
 
-The acceptance participant starts with only:
-
-1. [`AGENT_AUTHORING.md`](AGENT_AUTHORING.md), the canonical SDK v1 authoring entry point.
-2. [`bathroom-pay.miniapp.js`](../examples/bathroom-pay.miniapp.js), the existing ordinary script source.
-
-Do not change SDK v1, add another example, add a host hook, or rebuild the host to apply any source change during the Android procedure.
+No source may rely on internal helper names, undocumented APIs, or tool-specific host behavior.
 
 ## 1. Repository checks
 
@@ -30,213 +25,141 @@ From the repository root:
 ```bash
 corepack enable
 pnpm install
+pnpm sync:mini-apps:check
+pnpm sdk:declarations:check
+pnpm format
 pnpm check
 ```
 
-Record the exact result before beginning Android validation.
+Review the diff after formatting. Generated declarations and the bundled example catalog must have no unexplained drift.
 
-## 2. Validate and inspect the source
-
-Run both human-readable commands:
+Validate and inspect all acceptance sources:
 
 ```bash
+pnpm validate:mini-app ./docs/fixtures/sdk12-agent-proof.miniapp.js
+pnpm inspect:mini-app ./docs/fixtures/sdk12-agent-proof.miniapp.js
 pnpm validate:mini-app ./examples/bathroom-pay.miniapp.js
 pnpm inspect:mini-app ./examples/bathroom-pay.miniapp.js
+pnpm validate:mini-app ./examples/tip-splitter.miniapp.js
+pnpm inspect:mini-app ./examples/tip-splitter.miniapp.js
 ```
 
-Also retain machine-readable output when practical:
+## 2. Contract and compatibility matrix
+
+Automated validation must prove:
+
+- SDK 1.0 and 1.1 definitions and behavior remain valid.
+- Every SDK 1.2 definition, UI node, operation, effect, and notification shape requires a 1.2 manifest.
+- Unknown keys, unsupported enum values, unsafe objects, non-finite values, malformed dates, invalid multi-select arrays, invalid queries, excessive effects, invalid notification targets, and malformed native responses fail closed.
+- One failed action rolls back setting, record, timer, and notification-registry mutations and performs no effects.
+- A valid invocation succeeds immediately after a failed invocation.
+- The authoring guide template matches its executable fixture.
+- generated declarations match source.
+
+## 3. Clean Android build and connected tests
+
+With a compatible ARM64 Android device connected:
 
 ```bash
-pnpm mini-app validate ./examples/bathroom-pay.miniapp.js --json
-pnpm mini-app inspect ./examples/bathroom-pay.miniapp.js --json
+pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
+cd apps/mobile/android
+./gradlew :app:assembleDebug connectedDebugAndroidTest --max-workers=4
 ```
 
-The commands must exit successfully. Inspection must identify:
+Record the device, Android version, commit, build result, and instrumentation test counts. Separate dependency or packaging warnings from failures.
 
-- Manifest: `bathroom-pay`, `Bathroom Pay`, SDK version `1`
-- Settings: `payType`, `hourlyRate`, `annualSalary`, `hoursPerWeek`, `weeksPerYear`
-- Collection: `trips`
-- Screens: `home`, `history`, `settings`
-- Actions: `startTrip`, `endTrip`
+## 4. Ordinary installation path
 
-## 3. Audit host independence
+For each acceptance source:
 
-The host must not contain Bathroom Pay-specific runtime, renderer, storage, navigation, or action branches. Run:
+1. copy the exact source
+2. choose **Add tool**
+3. paste and choose **Check**
+4. preview and confirm first render
+5. install through the ordinary editor
+6. confirm no host rebuild or tool-specific code is required
 
-```bash
-git grep -n -I -E 'bathroom-pay|Bathroom Pay|currentTrip|grossEarnings|effectiveHourlyRate' -- \
-  apps/mobile/App.tsx apps/mobile/src modules packages \
-  ':(exclude)apps/mobile/src/generated/bundled-mini-apps.json'
-```
+The SDK 1.2 fixture should exercise representative date/date-time, multi-select, setting writes, records, queries, aggregates, rows, badges, progress, icons, feedback, copy/share, and notifications.
 
-The command must return no matches. The generated bundled catalog is excluded because it contains the source text used only for one-time installation seeding.
+## 5. State and transaction behavior
 
-Then review all remaining references:
+Verify:
 
-```bash
-git grep -n -I -E 'bathroom-pay|Bathroom Pay|currentTrip|grossEarnings|effectiveHourlyRate'
-```
+- native setting controls persist validated values
+- canonical dates and UTC date-times survive relaunch
+- multi-select values remain ordered, unique, and bounded
+- queries and `count`, `sum`, `min`, `max`, and `average` return expected values
+- same-action reads observe prior successful writes
+- an intentionally invalid later operation rolls back the complete action
+- no feedback or output occurs after a failed action
+- the next valid action succeeds
 
-Every match must be limited to the ordinary script, its generated seed copy, documentation, or acceptance evidence. Any occurrence that changes host behavior for Bathroom Pay fails this acceptance.
+Do not install an intentionally invalid candidate.
 
-## 4. Prepare the ordinary installer path
+## 6. UI, output, and accessibility
 
-Use a physical Android device with the current development build installed.
+Verify:
 
-1. Launch Pocket Tools and record the device model and Android version.
-2. If the one-time seeded **Bathroom Pay** installation is present, choose **Remove** and then **Remove app and data**.
-3. Confirm Bathroom Pay disappears from the library.
-4. Do not rebuild, reinstall, clear app data, or regenerate the bundled catalog after this point.
-5. Copy the exact contents of `examples/bathroom-pay.miniapp.js` for pasting into the Android editor.
+- tappable row and visible-action taps are isolated
+- destructive actions use host confirmation
+- badges, progress, and fixed icons render consistently
+- labels remain authoritative for TalkBack
+- multiline and numeric controls remain usable at large font sizes
+- copy writes only requested text
+- share opens the Android share sheet
+- canceling share does not undo committed state
+- no script can read clipboard contents or observe share completion
 
-PowerShell clipboard helper:
+## 7. Notifications
 
-```powershell
-Get-Content -Raw .\examples\bathroom-pay.miniapp.js | Set-Clipboard
-```
+Verify:
 
-## 5. Paste, preview, and install
+- permission denial and disabled channel retain blocked desired schedules
+- foreground/startup reconciliation recovers when delivery becomes available
+- replacing the same stable ID creates one desired schedule
+- standard immediate or scheduled delivery posts once
+- tapping opens the declared installed screen without invoking an action
+- cancellation removes desired and derived state
+- missing exact-alarm access fails before durable mutation
+- restored exact schedules remain exact and blocked until access is granted
+- force-stop, relaunch, clock/timezone recovery, update, restore, and removal reconcile without duplication
+- a paired watch may mirror the phone notification according to Android/Galaxy Wearable settings; Pocket Tools exposes no watch API
 
-1. Choose **Add script**.
-2. Paste the exact Bathroom Pay source.
-3. Choose **Validate**.
-4. Confirm the editor reports a valid SDK v1 definition for `Bathroom Pay (bathroom-pay)`.
-5. Choose **Preview**.
-6. Confirm **Isolated preview** reaches **First render passed**.
-7. Confirm the preview shows the timer, gross-equivalent live metric, today's summary, **History**, and **Pay settings** navigation.
-8. Choose **Install app**.
-9. Confirm the installed app opens without rebuilding the host.
+## 8. Lifecycle
 
-## 6. Exercise settings, navigation, timer, records, and summaries
+Verify:
 
-### Hourly settings
+- valid update preserves state and creates rollback source
+- invalid update leaves active and rollback source unchanged
+- rollback preserves settings, records, timers, and desired notifications
+- duplicate requires a new manifest ID and copies no state
+- script export contains the active source
+- tool backup/restore preserves both sources and complete portable state
+- complete-host backup/restore replaces all user-owned state atomically
+- removal always clears notifications
+- retain-data removal restores ordinary state on reinstall
+- delete-data removal starts clean
 
-1. Open **Pay settings**.
-2. Confirm **Hourly rate** is visible while the salary fields are hidden.
-3. Set a recognizable hourly rate, such as `3600`, and return to the timer.
-4. Navigate to **History** and back before starting a timer; confirm no state changes and the empty history remains available.
+## 9. Process-death diagnostics
 
-### Durable timer and live metric
+Run both procedures in [Lifecycle and Namespace Diagnostics](LIFECYCLE_DIAGNOSTICS.md). Confirm `adb shell pidof com.darbyjack.pockettools` prints no PID before reopening the app.
 
-1. Choose **Start trip**.
-2. Confirm the timer advances and the gross-equivalent metric updates live.
-3. Navigate to **History**, then **Pay settings**, then back to the timer.
-4. Confirm the same timer remains active and elapsed time was not reset.
+## Evidence record
 
-### Force-stop and relaunch
+Record:
 
-While the timer is still active:
+- date and commit
+- device and Android version
+- repository command results
+- declaration and bundled-catalog drift result
+- validation and inspection results
+- Android build and test counts
+- SDK 1.0/1.1 compatibility result
+- SDK 1.2 ordinary workflow result
+- transaction rollback result
+- accessibility and output result
+- notification permission, exact-access, routing, and recovery result
+- lifecycle, backup, removal, and force-stop result
+- unexpected warnings or defects
 
-```bash
-adb shell am force-stop com.darbyjack.pockettools
-adb shell pidof com.darbyjack.pockettools
-```
-
-The `pidof` command must print no PID.
-
-1. Leave the application stopped long enough for the elapsed time to increase observably.
-2. Reopen Pocket Tools manually.
-3. Open Bathroom Pay.
-4. Confirm the timer includes the force-stopped interval and the live metric resumes from reconstructed elapsed time.
-5. Choose **End trip**.
-6. Confirm today's summary shows one additional trip, nonzero elapsed time, and a nonzero gross equivalent.
-7. Open **History** and confirm the completed trip record is present.
-
-### Salary settings
-
-1. Open **Pay settings** and switch **Pay type** to **Salary**.
-2. Confirm **Annual gross salary**, **Paid hours per week**, and **Paid weeks per year** are visible while **Hourly rate** is hidden.
-3. Enter recognizable valid values, return to the timer, start another trip, and confirm the live metric advances.
-4. End the trip and confirm history and today's summaries include both records.
-5. Navigate to the library and reopen Bathroom Pay; confirm settings, records, and summaries remain intact.
-
-## 7. Apply a valid source update
-
-1. Choose **Edit** for the installed Bathroom Pay app.
-2. Change only this home-screen copy:
-
-```text
-Track a trip with a host-managed timer that remains correct after the app closes.
-```
-
-To:
-
-```text
-Acceptance update active. The host-managed timer still uses the ordinary script path.
-```
-
-3. Keep `manifest.id` as `bathroom-pay` and do not change settings, collection, or timer identifiers.
-4. Choose **Validate**, then **Preview**.
-5. Confirm the updated copy renders and existing settings, records, summaries, and any active timer are present in the isolated preview.
-6. Choose **Update installed app**.
-7. Confirm the updated copy is active and persisted app data is unchanged.
-8. Confirm **Roll back** is now available.
-
-No host rebuild is permitted during this update.
-
-## 8. Reject a failed source update
-
-1. Choose **Edit** again.
-2. Change the History navigation target from `screen: "history"` to `screen: "missingScreen"`.
-3. Choose **Validate** and **Preview** as far as the editor permits.
-4. Confirm the candidate is rejected and **Update installed app** never becomes enabled for the invalid current source.
-5. Choose **Cancel**.
-6. Reopen Bathroom Pay and confirm the valid acceptance-update copy is still active.
-7. Confirm settings, records, summaries, and timer state were not changed.
-8. Confirm **Roll back** remains available, proving the failed candidate did not replace either stored source.
-
-A validation failure or preview/first-render failure is acceptable; persistence of the candidate is not.
-
-## 9. Roll back, export, and remove
-
-### Rollback
-
-1. Choose **Roll back** and confirm the prompt.
-2. Confirm the original home-screen copy is active again.
-3. Confirm settings, records, summaries, and timers are unchanged.
-
-### Export
-
-1. Choose **Export**.
-2. Confirm the Android share sheet opens with the active source as text.
-3. If the Android chooser surfaces the supplied share title, confirm it is `Bathroom Pay.miniapp.js`.
-4. Confirm the exported source contains `id: "bathroom-pay"` and the original home-screen copy.
-
-### Removal
-
-1. Return to the library and choose **Remove**.
-2. Choose **Remove app and data**.
-3. Confirm Bathroom Pay disappears from the library immediately.
-4. Relaunch Pocket Tools and confirm it remains absent.
-5. Confirm the host still opens and other installed scripts remain usable.
-
-No rebuild, reinstall, or application-data reset is permitted for rollback, export, or removal.
-
-## 10. Record observed results
-
-Complete this section only from actual command and physical-device observations.
-
-- Date:
-- Commit:
-- Device:
-- Android version:
-- `pnpm check`:
-- `validate:mini-app`:
-- `inspect:mini-app`:
-- Host-specific branch audit:
-- Paste/validate/preview/install:
-- Hourly settings and visibility:
-- Salary settings and visibility:
-- Live timer and metric:
-- Navigation stability:
-- Force-stop `pidof` result:
-- Relaunch timer recovery:
-- Records and summaries:
-- Valid source update:
-- Failed source update preservation:
-- Rollback:
-- Export:
-- Removal and relaunch:
-- Unexpected behavior:
-
-Issue #10 may close only when every required result above is recorded as passed or an identified defect has been resolved and retested.
+A release is accepted only when every applicable item passes or an identified defect is fixed and retested.

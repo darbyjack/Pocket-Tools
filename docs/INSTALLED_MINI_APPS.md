@@ -1,113 +1,103 @@
 # Installed Mini-App Lifecycle
 
-Pocket Tools stores mini-app source as application data. Installing, updating, or removing a script does not require rebuilding the Android host.
+Pocket Tools stores mini-app source and state as application data. Installing, updating, rolling back, exporting, backing up, restoring, or removing a tool does not require rebuilding the Android host.
 
 ## One execution path
 
-Bundled reference scripts are imported into the installed-app table only once on first launch. After that, bundled and pasted scripts are indistinguishable:
+Bundled examples are seeded once. Bundled and pasted sources then use the same path:
 
 ```text
-installed_mini_apps.active_source
-  → generic inspect and validation
-  → isolated QuickJS-NG runtime
-  → host-owned native renderer
-  → settings, records, and timers under the installed manifest ID
+installed active source
+  → inspection and validation
+  → fresh bounded QuickJS-NG invocation
+  → host validation
+  → native UI and host-owned services
+  → isolated settings, records, timers, and notifications
 ```
 
-There is no app-specific hook, renderer, storage adapter, or runtime branch.
+There is no tool-specific renderer, storage adapter, action branch, or notification path.
 
-## Stored installation record
+## Installation record and namespace
 
-Each installed script stores:
+Each installed tool stores:
 
-- Permanent `manifest.id`
-- Current manifest name, description, and icon
-- Active source
-- Last-known-good source
-- Installation timestamp
-- Last update timestamp
+- immutable `manifest.id`
+- current name, description, and icon metadata
+- active source
+- last-known-good source
+- installation and update timestamps
 
-The manifest ID is the permanent namespace for installed settings, records, and timers. Editing an installed script cannot change it. To create a separate app, duplicate the source and change the manifest ID before previewing or installing.
+The manifest ID is the permanent namespace for settings, records, timers, and desired notifications. Editing cannot change it. Duplication requires a new manifest ID and copies source only.
 
-## Paste and validation
+## Check and inspection
 
-Choose **Add tool** to open the Android editor. It accepts one multiline JavaScript ES module. **Check** executes the script through the frozen embedded SDK and inspects its manifest, settings, collections, screens, and actions.
+**Add tool** accepts one JavaScript ES module. **Check** executes the source through the embedded SDK and validates its manifest, definitions, screens, actions, and public version authority.
 
-Validation errors preserve the runtime error code, script stack, and bounded console output when available. Technical details are hidden by default and can be expanded when needed. The editor does not expose syntax highlighting, formatting, arbitrary imports, or a second SDK implementation.
+Errors preserve stable codes, bounded script stack, validation issues, console output, and truncation state when available. A successful check alone does not authorize installation.
 
 ## Isolated preview
 
-Preview never writes to the installed or retained manifest namespace directly.
+Preview uses a reserved disposable namespace.
 
-Pocket Tools clones any settings, records, and timers already retained under the candidate manifest ID into a temporary namespace. A completely new manifest ID therefore starts empty. An update or reinstall with retained data previews against a disposable copy of that existing state. Record IDs are regenerated inside the clone because record IDs are host-owned and no SDK v1 field can reference another record.
+For an update or reinstall, Pocket Tools clones retained settings, records, and timers into preview. Record IDs are regenerated inside the clone. Desired installed notifications are not copied as active platform authority; preview schedule operations remain isolated from the installed registry.
 
-All preview setting changes, record operations, and timers are written only to that disposable namespace. Preview data is cleared when the source changes, a new preview starts, the editor closes, or installation succeeds. Stale preview namespaces are removed at application startup.
+Preview is cleared when source changes, a new preview begins, the editor closes, installation succeeds, or startup removes abandoned preview state.
 
-The install or update button remains disabled until the exact current source completes its first native render. Changing even one character invalidates the approval.
+The install or update action remains unavailable until the exact current source completes its first native render.
 
-## Final retained-state render gate
+## Retained-state render gate
 
-Immediately before persistence, Pocket Tools performs another read-only home-screen render using the exact retained manifest namespace rather than cloned record IDs. Missing new setting values are supplied from declared defaults only in memory.
+Immediately before persistence, the host performs a read-only home render using the exact retained installed namespace. Missing new setting values are supplied from declared defaults in memory.
 
-This final gate catches candidate schema, retained-data, or record-ID-dependent failures without writing settings, records, timers, or source. A failure leaves the existing installation and retained data unchanged.
+This catches schema, retained-data, notification-target, or record-ID-dependent failures without changing source or state. Failure leaves the current installation untouched.
 
 ## Install and update
 
-A new install writes its source and manifest metadata in one SQLite statement after isolated preview and the retained-state render gate pass.
+A new install persists the validated source and metadata after both render gates pass.
 
-An update does not modify the installed source during validation or preview. After both render gates succeed, Pocket Tools atomically:
+A successful update atomically:
 
-1. Moves the current active source to `last_known_good_source`.
-2. Stores the candidate as the new active source.
-3. Updates manifest metadata and the update timestamp.
+1. moves active source to `last_known_good_source`
+2. stores the candidate as active source
+3. updates manifest metadata and timestamp
 
-Validation, preview, or first-render failure therefore leaves the current installation untouched.
+Settings, records, timers, and desired notification state remain under the same manifest namespace. The committed source is then used for notification reconciliation and normal rendering.
 
-## Tool management
+Validation, preview, or either render-gate failure leaves active source and retained state unchanged.
 
-Open an installed tool and choose **Manage**. The management screen contains edit, duplicate, script export, backup, rollback when available, and removal.
+## Rollback
 
-### Rollback
+**Manage → Roll back** validates the saved source and swaps it with active source. Durable tool data is unchanged. The swap is reversible.
 
-After an update, **Manage** exposes **Roll back**. Pocket Tools validates the saved last-known-good source, then explicitly swaps it with the active source. Settings, records, and timers are not changed.
+A rollback source must still accept the current retained state and notification targets through normal validation.
 
-The swap is reversible, so rolling back again returns to the newer source.
+## Export, duplicate, and backup
 
-### Export and duplication
+- **Export script** shares active source as text.
+- **Duplicate** opens source in the editor without copying state and requires a new manifest ID.
+- **Back up tool** exports version-2 JSON containing both sources, metadata, settings, records, active timer timestamps, and desired notification registry.
 
-**Export script** uses the Android share sheet to send the active source as text.
+See [Portable Mini-App Backups](PORTABLE_BACKUPS.md).
 
-**Duplicate** opens the active source in the editor but does not copy installed state. The user or authoring agent must assign a new manifest ID before checking and preview can pass.
+## Removal
 
-### Removal
+Removing a tool always deletes its installation record and desired notifications and cancels derived Android schedules.
 
-Removing a tool always deletes its installation record. The user chooses whether to:
+The user may:
 
-- Keep isolated settings, records, and timers for a future reinstall with the same manifest ID.
-- Delete the installation and all associated app data.
+- retain settings, records, and timers for a later reinstall using the same manifest ID
+- delete the complete ordinary namespace
 
-## Fixed authority disclosure
+Retained removed-tool state contains no notifications. Reinstallation must pass the same preview and retained-state gates before the namespace becomes active again.
 
-Installed scripts have the same fixed SDK v1 authority as bundled scripts:
+## Recovery
 
-- Isolated local settings
-- Isolated local collections and queries
-- Isolated durable timers
-- Declarative native UI
+On startup and foreground transitions, the host reloads installed source and durable state, clears abandoned preview/diagnostic namespaces, and reconciles desired notifications with Android.
 
-Scripts do not receive network, filesystem, location, notifications, secrets, React Native, Android APIs, custom native modules, or arbitrary background JavaScript.
+Timers recover from persisted UTC start timestamps. Notifications recover from the desired registry. Neither requires a surviving QuickJS or React Native process.
 
-## Manual Android acceptance
+## Authority
 
-Before this phase is considered device-verified, exercise the following on an emulator or device:
+Installed SDK 1.0, 1.1, and 1.2 tools receive only their documented versioned authority. SDK 1.2 includes isolated local settings and records, transactional writes, durable timers, host-owned UI and output, and tool-scoped local notifications.
 
-1. Paste and check a valid SDK v1 script.
-2. Preview it, change settings, add records, and start a timer.
-3. Cancel the editor and verify the installed app was not changed.
-4. Install the script and reopen it after process termination.
-5. Edit and preview an update against cloned current state.
-6. Introduce a validation or first-render failure and verify the active source remains unchanged.
-7. Apply a valid update, roll it back, and verify app data remains intact.
-8. Export and duplicate the source; verify duplicate checking requires a new manifest ID.
-9. Remove the app while keeping data, reinstall the same ID, and verify preview and recovery use retained state.
-10. Remove the app and data, reinstall the same ID, and verify a clean state.
+No installed source receives arbitrary network, filesystem, location, secrets, native modules, platform components, permission manifests, remote push, or background JavaScript.
