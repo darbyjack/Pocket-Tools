@@ -7,6 +7,8 @@ import org.gradle.maven.MavenPomArtifact
 
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.xpath.XPathConstants
+import javax.xml.xpath.XPathFactory
 
 def parsePomLicenseMetadata = { File pomFile ->
   def factory = DocumentBuilderFactory.newInstance()
@@ -20,28 +22,30 @@ def parsePomLicenseMetadata = { File pomFile ->
   factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
 
   def document = factory.newDocumentBuilder().parse(pomFile)
+  def xpath = XPathFactory.newInstance().newXPath()
+  def licenseNodes = xpath.evaluate(
+    "/*[local-name()='project']/*[local-name()='licenses']/*[local-name()='license']",
+    document,
+    XPathConstants.NODESET
+  )
   def licenseNames = []
   def licenseUrls = []
-  def licenseNodes = document.getElementsByTagNameNS("*", "license")
 
   for (int index = 0; index < licenseNodes.length; index += 1) {
     def license = licenseNodes.item(index)
-    def nameNodes = license.getElementsByTagNameNS("*", "name")
-    if (nameNodes.length > 0) {
-      def value = nameNodes.item(0).textContent?.trim()
-      if (value) licenseNames.add(value)
-    }
+    def name = xpath.evaluate("./*[local-name()='name'][1]", license)?.trim()
+    if (name) licenseNames.add(name)
 
-    def urlNodes = license.getElementsByTagNameNS("*", "url")
-    if (urlNodes.length > 0) {
-      def value = urlNodes.item(0).textContent?.trim()
-      if (value) licenseUrls.add(value)
-    }
+    def url = xpath.evaluate("./*[local-name()='url'][1]", license)?.trim()
+    if (url) licenseUrls.add(url)
   }
 
   [
     licenseNames: licenseNames.unique().sort(),
     licenseUrls: licenseUrls.unique().sort(),
+    rootName: document.documentElement?.nodeName,
+    rootNamespace: document.documentElement?.namespaceURI,
+    licenseNodeCount: licenseNodes.length,
   ]
 }
 
@@ -109,6 +113,16 @@ gradle.beforeProject { project ->
               entry.licenseNames = metadata.licenseNames
               entry.licenseUrls = metadata.licenseUrls
               entry.pomResolved = true
+
+              if (key == "org.jspecify:jspecify:1.0.0" && entry.licenseNames.isEmpty()) {
+                def preview = artifact.file.getText("UTF-8")
+                  .replaceAll("\\s+", " ")
+                  .take(400)
+                entry.failure =
+                  "POM diagnostic: file=${artifact.file.name}, size=${artifact.file.length()}, " +
+                  "root=${metadata.rootName}, namespace=${metadata.rootNamespace}, " +
+                  "licenseNodes=${metadata.licenseNodeCount}, preview=${preview}"
+              }
             } catch (Exception cause) {
               entry.failure = "Unable to parse Maven POM: ${cause.message}"
             }
