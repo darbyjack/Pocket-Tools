@@ -25,6 +25,8 @@
     "licenses:pnpm:write": "node scripts/license-inventory.mjs pnpm:write",
     "lint": "oxlint .",
     "mini-app": "pnpm --dir packages/authoring-tools mini-app",
+    "release:android:build": "node scripts/android-release-build.mjs build-one",
+    "release:android:build-all": "node scripts/android-release-build.mjs build-all",
     "release:android:certificate": "node scripts/android-release.mjs certificate",
     "release:android:inspect": "node scripts/android-release.mjs inspect",
     "release:android:sign": "node scripts/android-release.mjs sign",
