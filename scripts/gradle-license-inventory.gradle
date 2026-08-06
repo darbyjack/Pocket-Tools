@@ -10,6 +10,10 @@ import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.xpath.XPathConstants
 import javax.xml.xpath.XPathFactory
 
+def coordinateKey = { group, module, version ->
+  "${group}:${module}:${version}".toString()
+}
+
 def parsePomLicenseMetadata = { File pomFile ->
   def factory = DocumentBuilderFactory.newInstance()
   factory.setNamespaceAware(true)
@@ -69,10 +73,10 @@ gradle.beforeProject { project ->
         def componentIds = configuration.incoming.resolutionResult.allComponents
           .collect { it.id }
           .findAll { it instanceof ModuleComponentIdentifier }
-          .unique { id -> "${id.group}:${id.module}:${id.version}" }
+          .unique { id -> coordinateKey(id.group, id.module, id.version) }
           .sort { left, right ->
-            "${left.group}:${left.module}:${left.version}" <=>
-              "${right.group}:${right.module}:${right.version}"
+            coordinateKey(left.group, left.module, left.version) <=>
+              coordinateKey(right.group, right.module, right.version)
           }
 
         def entries = componentIds.collect { id ->
@@ -86,7 +90,7 @@ gradle.beforeProject { project ->
           ]
         }
         def entriesByKey = entries.collectEntries { entry ->
-          [("${entry.group}:${entry.module}:${entry.version}"): entry]
+          [(coordinateKey(entry.group, entry.module, entry.version)): entry]
         }
 
         if (!componentIds.isEmpty()) {
@@ -97,7 +101,7 @@ gradle.beforeProject { project ->
 
           result.resolvedComponents.each { component ->
             def id = component.id
-            def key = "${id.group}:${id.module}:${id.version}"
+            def key = coordinateKey(id.group, id.module, id.version)
             def entry = entriesByKey[key]
             if (entry == null) return
 
@@ -132,12 +136,16 @@ gradle.beforeProject { project ->
             .findAll { component -> component instanceof UnresolvedComponentResult }
             .each { component ->
               def id = component.id
-              def key = "${id.group}:${id.module}:${id.version}"
+              def key = coordinateKey(id.group, id.module, id.version)
               def entry = entriesByKey[key]
               if (entry != null) {
                 entry.failure = component.failure?.message ?: "Maven POM resolution failed."
               }
             }
+        }
+
+        entries.findAll { entry -> !entry.pomResolved && entry.failure == null }.each { entry ->
+          entry.failure = "Maven POM artifact query returned no matching component."
         }
 
         def outputFile = new File(outputValue)
