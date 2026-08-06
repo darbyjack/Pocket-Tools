@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "android": "pnpm sync:mini-apps && pnpm --dir apps/mobile android",
-    "check": "pnpm sync:mini-apps:check && pnpm sdk:declarations:check && pnpm legal:notices:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "check": "pnpm sync:mini-apps:check && pnpm sdk:declarations:check && pnpm legal:notices:check && pnpm licenses:check && pnpm sbom:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "inspect:mini-app": "pnpm --dir packages/authoring-tools mini-app inspect",
@@ -17,6 +17,7 @@
     "licenses:check": "node scripts/license-inventory.mjs check",
     "licenses:pnpm:check": "node scripts/license-inventory.mjs pnpm:check",
     "licenses:pnpm:write": "node scripts/license-inventory.mjs pnpm:write",
+    "lint": "oxlint .",
     "mini-app": "pnpm --dir packages/authoring-tools mini-app",
     "sbom:check": "node scripts/spdx-sbom.mjs check",
     "sbom:write": "node scripts/spdx-sbom.mjs write",
