@@ -175,11 +175,7 @@ async function loadIdentity(tag) {
 function run(
   executable,
   args,
-  {
-    allowFailure = false,
-    cwd = repositoryRoot,
-    env = process.env,
-  } = {},
+  { allowFailure = false, cwd = repositoryRoot, env = process.env } = {},
 ) {
   const result = spawnSync(executable, args, {
     cwd,
