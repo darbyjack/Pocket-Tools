@@ -1,0 +1,2 @@
+# Keep repository text files byte-stable across Windows, macOS, and Linux.
+* text=auto eol=lf
