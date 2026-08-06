@@ -3,4 +3,7 @@ packages:
   - modules/*
   - packages/*
 
+allowBuilds:
+  esbuild: true
+
 nodeLinker: hoisted
