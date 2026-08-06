@@ -1,14 +1,12 @@
-import * as SQLite from "expo-sqlite";
-
+import { getDatabase } from "../storage/database-connection";
 import type { TimerRecoveryCheckpoint } from "./types";
 
-const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 const CHECKPOINT_KEY = "lifecycle-diagnostic-timer-recovery";
 
 export async function saveTimerRecoveryCheckpoint(
   checkpoint: TimerRecoveryCheckpoint,
 ): Promise<void> {
-  const database = await databasePromise;
+  const database = await getDatabase();
   await database.runAsync(
     `INSERT INTO app_metadata (key, value)
      VALUES (?, ?)
@@ -19,7 +17,7 @@ export async function saveTimerRecoveryCheckpoint(
 }
 
 export async function loadTimerRecoveryCheckpoint(): Promise<TimerRecoveryCheckpoint | null> {
-  const database = await databasePromise;
+  const database = await getDatabase();
   const row = await database.getFirstAsync<{ readonly value: string }>(
     "SELECT value FROM app_metadata WHERE key = ?",
     CHECKPOINT_KEY,
@@ -36,7 +34,7 @@ export async function loadTimerRecoveryCheckpoint(): Promise<TimerRecoveryCheckp
 }
 
 export async function clearTimerRecoveryCheckpoint(): Promise<void> {
-  const database = await databasePromise;
+  const database = await getDatabase();
   await database.runAsync("DELETE FROM app_metadata WHERE key = ?", CHECKPOINT_KEY);
 }
 
