@@ -105,8 +105,6 @@ function compareField(label, actual, expected) {
 
 function validateAbi(abi) {
   if (!RELEASE_ABIS.includes(abi)) {
-    throw new Error(
-      `ANDROID_PROVENANCE_INVALID: abi must be one of ${RELEASE_ABIS.join(", ")}.`,
-    );
+    throw new Error(`ANDROID_PROVENANCE_INVALID: abi must be one of ${RELEASE_ABIS.join(", ")}.`);
   }
 }
