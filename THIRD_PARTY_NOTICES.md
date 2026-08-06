@@ -127,6 +127,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+## caniuse-lite and Can I Use data
+
+The locked JavaScript dependency graph includes `caniuse-lite` version `1.0.30001806`, which redistributes browser compatibility data from caniuse.com.
+
+The data is licensed under the Creative Commons Attribution 4.0 International license (`CC-BY-4.0`). The source is caniuse.com, created and maintained by Alexis Deveria with project contributors. Pocket Tools does not modify the packaged data.
+
+License: https://creativecommons.org/licenses/by/4.0/
+Source: https://caniuse.com/
+
 ## Generated dependency notices
 
 The complete production JavaScript and Android dependency closures are generated from the locked pnpm graph and resolved Gradle release graph. Unknown, missing, unlicensed, forbidden, or unresolved entries block publication until reviewed and recorded.
