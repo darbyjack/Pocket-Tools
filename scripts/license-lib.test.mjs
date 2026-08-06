@@ -12,7 +12,7 @@ import {
 
 const policy = {
   schemaVersion: 1,
-  allowedLicenseIds: ["Apache-2.0", "BSD-3-Clause", "ISC", "MIT"],
+  allowedLicenseIds: ["Apache-2.0", "BSD-3-Clause", "CC-BY-4.0", "ISC", "MIT"],
   aliases: {
     "Apache License 2.0": "Apache-2.0",
     "MIT License": "MIT",
@@ -45,6 +45,8 @@ test("fails closed on forbidden, unknown, and review-required licenses", () => {
   assert.throws(() => validateLicenseExpression("GPL-3.0-only", policy), /LICENSE_FORBIDDEN/);
   assert.throws(() => validateLicenseExpression("Custom", policy), /LICENSE_UNKNOWN/);
   assert.throws(() => validateLicenseExpression("UNKNOWN", policy), /LICENSE_REVIEW_REQUIRED/);
+  assert.throws(() => validateLicenseExpression("CC-BY-3.0", policy), /LICENSE_UNKNOWN/);
+  assert.equal(validateLicenseExpression("CC-BY-4.0", policy), "CC-BY-4.0");
   assert.equal(validateLicenseExpression("MIT OR Apache-2.0", policy), "MIT OR Apache-2.0");
 });
 
