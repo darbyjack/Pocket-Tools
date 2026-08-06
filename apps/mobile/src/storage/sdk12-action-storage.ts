@@ -1,4 +1,4 @@
-import * as SQLite from "expo-sqlite";
+import type * as SQLite from "expo-sqlite";
 
 import type { MiniAppInspection, RuntimeOperation, SerializableValue } from "../model.ts";
 import {
@@ -6,13 +6,12 @@ import {
   assertRecordInput,
   assertSettingValue,
 } from "../runtime/sdk-validation.ts";
+import { getDatabase } from "./database-connection.ts";
 import {
   applyPreparedNotificationOperation,
-  ensureNotificationRegistrySchema,
   prepareNotificationOperations,
 } from "./notification-registry.ts";
 
-const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 const SDK_1_2_OPERATION_LIMIT = 256;
 
 export interface Sdk12ActionStorageOptions {
@@ -36,8 +35,7 @@ export async function applySdk12RuntimeOperations(
     );
   }
 
-  const database = await databasePromise;
-  await ensureNotificationRegistrySchema(database);
+  const database = await getDatabase();
   const notificationOperations = await prepareNotificationOperations(
     database,
     inspection,

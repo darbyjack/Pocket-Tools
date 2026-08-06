@@ -7,11 +7,7 @@ import {
   readCompleteHostBackup,
   readPortableMiniAppBackup,
 } from "./backup-version-dispatch.ts";
-import {
-  MINI_APP_BACKUP_FORMAT,
-  MINI_APP_BACKUP_VERSION,
-  type MiniAppBackupV2,
-} from "./backup.ts";
+import { MINI_APP_BACKUP_FORMAT, MINI_APP_BACKUP_VERSION, type MiniAppBackupV2 } from "./backup.ts";
 import { HOST_BACKUP_FORMAT, HOST_BACKUP_VERSION, type HostBackupV2 } from "./host-backup.ts";
 
 const timestamp = "2026-08-06T13:30:00.000Z";
@@ -98,8 +94,5 @@ test("rejects malformed version envelopes before invoking a version reader", () 
     () => readCompleteHostBackup({ ...hostBackup(), version: 2.5 }),
     /HOST_BACKUP_INVALID: backup\.version must be a non-negative integer/,
   );
-  assert.throws(
-    () => readPortableMiniAppBackup("{"),
-    /BACKUP_INVALID: Backup is not valid JSON/,
-  );
+  assert.throws(() => readPortableMiniAppBackup("{"), /BACKUP_INVALID: Backup is not valid JSON/);
 });

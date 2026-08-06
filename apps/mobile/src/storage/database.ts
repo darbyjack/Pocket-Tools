@@ -1,4 +1,4 @@
-import * as SQLite from "expo-sqlite";
+import type * as SQLite from "expo-sqlite";
 
 import type {
   MiniAppInspection,
@@ -9,9 +9,9 @@ import type {
   TimerSnapshot,
 } from "../model";
 import { assertRecordId, assertRecordInput, assertSettingValue } from "../runtime/sdk-validation";
+import { getDatabase } from "./database-connection";
 import { isPreviewStorageId, PREVIEW_STORAGE_PREFIX } from "./namespaces";
 
-const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 const BUNDLED_SEED_KEY = "bundled-mini-apps-v1";
 
 interface SettingRow {
@@ -59,54 +59,7 @@ export interface BundledMiniAppSeed {
 }
 
 export async function initializeDatabase(): Promise<void> {
-  const database = await databasePromise;
-  await database.execAsync(`
-    PRAGMA journal_mode = WAL;
-    PRAGMA foreign_keys = ON;
-
-    CREATE TABLE IF NOT EXISTS settings (
-      app_id TEXT NOT NULL,
-      name TEXT NOT NULL,
-      value_json TEXT NOT NULL,
-      PRIMARY KEY (app_id, name)
-    );
-
-    CREATE TABLE IF NOT EXISTS records (
-      id TEXT PRIMARY KEY NOT NULL,
-      app_id TEXT NOT NULL,
-      collection_name TEXT NOT NULL,
-      data_json TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE INDEX IF NOT EXISTS records_app_collection
-      ON records (app_id, collection_name, created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS timers (
-      app_id TEXT NOT NULL,
-      timer_id TEXT NOT NULL,
-      started_at TEXT NOT NULL,
-      PRIMARY KEY (app_id, timer_id)
-    );
-
-    CREATE TABLE IF NOT EXISTS installed_mini_apps (
-      app_id TEXT PRIMARY KEY NOT NULL,
-      name TEXT NOT NULL,
-      description TEXT,
-      icon TEXT,
-      active_source TEXT NOT NULL,
-      last_known_good_source TEXT NOT NULL,
-      installed_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS app_metadata (
-      key TEXT PRIMARY KEY NOT NULL,
-      value TEXT NOT NULL
-    );
-  `);
-
+  const database = await getDatabase();
   await database.withTransactionAsync(async () => {
     await database.runAsync(
       "DELETE FROM settings WHERE app_id GLOB ?",
@@ -121,7 +74,7 @@ export async function initializeDatabase(): Promise<void> {
 }
 
 export async function seedBundledMiniAppsOnce(seeds: readonly BundledMiniAppSeed[]): Promise<void> {
-  const database = await databasePromise;
+  const database = await getDatabase();
   await database.withTransactionAsync(async () => {
     const completed = await database.getFirstAsync<{ readonly value: string }>(
       "SELECT value FROM app_metadata WHERE key = ?",
@@ -156,7 +109,7 @@ export async function seedBundledMiniAppsOnce(seeds: readonly BundledMiniAppSeed
 }
 
 export async function listInstalledMiniApps(): Promise<readonly InstalledMiniApp[]> {
-  const database = await databasePromise;
+  const database = await getDatabase();
   const rows = await database.getAllAsync<InstalledMiniAppRow>(
     `SELECT app_id, name, description, icon, active_source,
             last_known_good_source, installed_at, updated_at
@@ -167,7 +120,7 @@ export async function listInstalledMiniApps(): Promise<readonly InstalledMiniApp
 }
 
 export async function getInstalledMiniApp(appId: string): Promise<InstalledMiniApp | null> {
-  const database = await databasePromise;
+  const database = await getDatabase();
   const row = await database.getFirstAsync<InstalledMiniAppRow>(
     `SELECT app_id, name, description, icon, active_source,
             last_known_good_source, installed_at, updated_at
@@ -187,7 +140,7 @@ export async function installMiniApp(
     throw new Error(`INSTALLATION_FAILED: A mini app with ID ${appId} is already installed.`);
   }
 
-  const database = await databasePromise;
+  const database = await getDatabase();
   const timestamp = new Date().toISOString();
   try {
     await database.runAsync(
@@ -238,7 +191,7 @@ export async function updateInstalledMiniApp(
     throw new Error(`INSTALLATION_FAILED: ${appId} is not installed.`);
   }
 
-  const database = await databasePromise;
+  const database = await getDatabase();
   const result = await database.runAsync(
     `UPDATE installed_mini_apps
      SET name = ?, description = ?, icon = ?, active_source = ?,
@@ -276,7 +229,7 @@ export async function rollbackInstalledMiniApp(
     throw new Error(`INSTALLATION_FAILED: ${appId} is not installed.`);
   }
 
-  const database = await databasePromise;
+  const database = await getDatabase();
   const result = await database.runAsync(
     `UPDATE installed_mini_apps
      SET name = ?, description = ?, icon = ?,
@@ -302,7 +255,7 @@ export async function rollbackInstalledMiniApp(
 }
 
 export async function deleteInstalledMiniApp(appId: string, deleteData: boolean): Promise<void> {
-  const database = await databasePromise;
+  const database = await getDatabase();
   await database.withTransactionAsync(async () => {
     await database.runAsync("DELETE FROM installed_mini_apps WHERE app_id = ?", appId);
     if (deleteData) await clearAppDataInTransaction(database, appId);
@@ -317,7 +270,7 @@ export async function preparePreviewStorage(
     throw new Error("INSTALLATION_FAILED: Preview storage must use the reserved host namespace.");
   }
 
-  const database = await databasePromise;
+  const database = await getDatabase();
   await database.withTransactionAsync(async () => {
     await clearAppDataInTransaction(database, previewStorageId);
     if (sourceStorageId === null) return;
@@ -348,7 +301,7 @@ export async function preparePreviewStorage(
 }
 
 export async function clearAppData(storageId: string): Promise<void> {
-  const database = await databasePromise;
+  const database = await getDatabase();
   await database.withTransactionAsync(async () => {
     await clearAppDataInTransaction(database, storageId);
   });
@@ -358,7 +311,7 @@ export async function ensureSettingDefaults(
   inspection: MiniAppInspection,
   storageId = inspection.manifest.id,
 ): Promise<void> {
-  const database = await databasePromise;
+  const database = await getDatabase();
   await database.withTransactionAsync(async () => {
     for (const [name, definition] of Object.entries(inspection.settings)) {
       assertSettingValue(
@@ -390,7 +343,7 @@ export async function setSetting(
   }
   assertSettingValue(definition, value, `settings.${name}`, inspection.manifest.sdkVersion);
 
-  const database = await databasePromise;
+  const database = await getDatabase();
   await database.runAsync(
     `INSERT INTO settings (app_id, name, value_json)
      VALUES (?, ?, ?)
@@ -407,7 +360,7 @@ export async function loadRuntimeSnapshot(
   mode: RuntimeSnapshot["mode"],
   options: { readonly action?: string; readonly screen?: string } = {},
 ): Promise<RuntimeSnapshot> {
-  const database = await databasePromise;
+  const database = await getDatabase();
   const now = new Date();
 
   const settingRows = await database.getAllAsync<SettingRow>(
@@ -483,7 +436,7 @@ export async function applyRuntimeOperations(
   storageId: string,
   operations: readonly RuntimeOperation[],
 ): Promise<void> {
-  const database = await databasePromise;
+  const database = await getDatabase();
 
   await database.withTransactionAsync(async () => {
     for (const [index, operation] of operations.entries()) {

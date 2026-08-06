@@ -80,7 +80,9 @@ export function createReleaseGateReport(input: ReleaseGateReportInput): ReleaseG
   const counts = countOutcomes(checks);
   const blockers = checks
     .filter(
-      (check): check is ReleaseGateCheck & {
+      (
+        check,
+      ): check is ReleaseGateCheck & {
         readonly severity: ReleaseGateBlocker["severity"];
       } => check.outcome === "FAIL" && check.severity !== "standard",
     )

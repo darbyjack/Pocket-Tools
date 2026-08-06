@@ -127,7 +127,9 @@ export async function migrateDatabase(database: SQLite.SQLiteDatabase): Promise<
   while (version < CURRENT_DATABASE_SCHEMA_VERSION) {
     const migration = migrations.find((candidate) => candidate.from === version);
     if (migration === undefined || migration.to !== version + 1) {
-      throw new Error(`DATABASE_MIGRATION_MISSING: No ordered migration exists from schema ${version}.`);
+      throw new Error(
+        `DATABASE_MIGRATION_MISSING: No ordered migration exists from schema ${version}.`,
+      );
     }
 
     await database.withExclusiveTransactionAsync(async (transaction) => {

@@ -1,9 +1,6 @@
 import type * as SQLite from "expo-sqlite";
 
-import {
-  assertCurrentDatabaseSchema,
-  migrateDatabase,
-} from "./database-migrations.ts";
+import { assertCurrentDatabaseSchema, migrateDatabase } from "./database-migrations.ts";
 
 export async function prepareDatabaseForApplication(
   database: SQLite.SQLiteDatabase,

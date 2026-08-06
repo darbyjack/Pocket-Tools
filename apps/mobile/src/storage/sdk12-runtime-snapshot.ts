@@ -1,13 +1,7 @@
-import * as SQLite from "expo-sqlite";
-
 import type { MiniAppInspection, NotificationRequest, RuntimeSnapshot } from "../model.ts";
+import { getDatabase } from "./database-connection.ts";
 import { loadRuntimeSnapshot } from "./database.ts";
-import {
-  ensureNotificationRegistrySchema,
-  readDesiredNotificationRequests,
-} from "./notification-registry.ts";
-
-const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
+import { readDesiredNotificationRequests } from "./notification-registry.ts";
 
 export interface Sdk12RuntimeSnapshot extends RuntimeSnapshot {
   readonly notifications: Readonly<Record<string, NotificationRequest>>;
@@ -22,8 +16,7 @@ export async function loadSdk12RuntimeSnapshot(
   if ((inspection.manifest.sdkVersion as string) !== "1.2") {
     throw new Error("UNSUPPORTED_SDK_VERSION: Notification snapshots require SDK 1.2.");
   }
-  const database = await databasePromise;
-  await ensureNotificationRegistrySchema(database);
+  const database = await getDatabase();
   const [snapshot, requests] = await Promise.all([
     loadRuntimeSnapshot(inspection, storageId, mode, options),
     readDesiredNotificationRequests(database, storageId),
