@@ -19,11 +19,13 @@ const policy = {
     "CC-BY-4.0",
     "ISC",
     "MIT",
+    "MPL-2.0",
   ],
   aliases: {
     "Apache License 2.0": "Apache-2.0",
     "Blue Oak Model License 1.0.0": "BlueOak-1.0.0",
     "MIT License": "MIT",
+    "Mozilla Public License Version 2.0": "MPL-2.0",
   },
   forbiddenPatterns: ["AGPL", "GPL"],
   reviewRequiredPatterns: ["LicenseRef-", "UNKNOWN", "UNLICENSED"],
@@ -60,7 +62,34 @@ test("fails closed on forbidden, unknown, and review-required licenses", () => {
     validateLicenseExpression("Blue Oak Model License 1.0.0", policy),
     "BlueOak-1.0.0",
   );
+  assert.equal(validateLicenseExpression("MPL-2.0", policy), "MPL-2.0");
+  assert.equal(
+    validateLicenseExpression("Mozilla Public License Version 2.0", policy),
+    "MPL-2.0",
+  );
   assert.equal(validateLicenseExpression("MIT OR Apache-2.0", policy), "MIT OR Apache-2.0");
+});
+
+test("uses the reviewed BSD option for a dual-licensed npm package", () => {
+  const inventory = normalizePnpmLicenseReport(
+    {
+      "(BSD-3-Clause OR GPL-2.0)": [{ name: "node-forge", versions: ["1.4.0"] }],
+    },
+    policy,
+    {
+      schemaVersion: 1,
+      packages: {
+        "npm:node-forge@1.4.0": {
+          declaredLicense: "BSD-3-Clause",
+          concludedLicense: "BSD-3-Clause",
+          reason: "Reviewed upstream dual-license grant and selected BSD-3-Clause.",
+        },
+      },
+    },
+  );
+
+  assert.equal(inventory.packages[0].declaredLicense, "BSD-3-Clause");
+  assert.equal(inventory.packages[0].concludedLicense, "BSD-3-Clause");
 });
 
 test("requires an explicit reviewed override for ambiguous Maven POM licenses", () => {
