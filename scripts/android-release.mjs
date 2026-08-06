@@ -35,7 +35,7 @@ switch (command) {
     break;
   }
   case "test-key": {
-    requirePasswordEnvironment();
+    requirePasswordEnvironment({ requireSame: true });
     const tools = await loadTools(argumentsMap);
     const keystore = repositoryPath(requiredArgument(argumentsMap, "keystore"));
     const alias = optionalArgument(argumentsMap, "alias") ?? TEST_SIGNING_ALIAS;
@@ -179,11 +179,19 @@ function run(executable, arguments_) {
   return result.stdout.trim();
 }
 
-function requirePasswordEnvironment() {
+function requirePasswordEnvironment({ requireSame = false } = {}) {
   for (const name of [KEYSTORE_PASSWORD_ENV, KEY_PASSWORD_ENV]) {
     if (!process.env[name]) {
       throw new Error(`ANDROID_SIGNING_INPUT_MISSING: set ${name} without printing or committing it.`);
     }
+  }
+  if (
+    requireSame &&
+    process.env[KEYSTORE_PASSWORD_ENV] !== process.env[KEY_PASSWORD_ENV]
+  ) {
+    throw new Error(
+      "ANDROID_SIGNING_INPUT_INVALID: disposable PKCS#12 test-key generation requires matching keystore and key password values.",
+    );
   }
 }
 
