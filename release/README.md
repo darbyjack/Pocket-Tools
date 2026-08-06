@@ -13,6 +13,7 @@ The current implementation provides:
 - a clean-worktree and exact-HEAD source requirement;
 - clean Expo Android prebuilds and isolated single-ABI Gradle builds;
 - unsigned-intermediate inspection before centralized signing;
+- source-commit and byte-digest binding from unsigned build inspection through signed inspection and final staging;
 - disposable PKCS#12 RSA-4096 test-key generation;
 - 16 KiB alignment, APK signing, signer verification, and public-certificate extraction;
 - AAPT2 and archive inspection of package, version, SDK, ABI, manifest flags, and native libraries;
@@ -79,7 +80,7 @@ pocket-tools-v0.1.0-<abi>-unsigned.apk
 pocket-tools-v0.1.0-<abi>-unsigned.apk.inspection.json
 ```
 
-Each build validates synchronized source inputs, runs clean prebuild, verifies release optimization properties, builds only the selected ABI, confirms the APK is unsigned and aligned, verifies required native libraries, writes a deterministic inspection record, and removes successful generated Android and project-cache output. Failed output remains available for diagnosis.
+Each build validates synchronized source inputs, runs clean prebuild, verifies release optimization properties, builds only the selected ABI, confirms the APK is unsigned and aligned, verifies required native libraries, writes a deterministic inspection record containing the exact source commit and APK digest, and removes successful generated Android and project-cache output. Failed output remains available for diagnosis.
 
 ## Android signing and inspection
 
@@ -116,6 +117,8 @@ pnpm release:android:sign `
   --alias pocket-tools-test-release
 ```
 
+Before signing, the command requires a clean worktree, loads the adjacent unsigned inspection record, verifies the exact input bytes and digest, and rejects a source commit that differs from the current `HEAD`.
+
 Inspect the signed APK and use the exact deterministic inspection filename expected by staging:
 
 ```powershell
@@ -126,6 +129,8 @@ pnpm release:android:inspect `
   --certificate-subject "CN=Pocket Tools Test Release" `
   --output release-work\final-input\0.1.0\pocket-tools-v0.1.0-arm64-v8a.apk.inspection.json
 ```
+
+The default unsigned inspection is resolved from the tag and ABI beneath `release-work/intermediate/`. Pass `--source-inspection <path>` only when deliberately using a non-default intermediate directory. The signed inspection inherits the validated build tag and source commit rather than deriving provenance from the later staging step.
 
 Extract the public certificate once from any verified APK:
 
@@ -167,13 +172,14 @@ The command:
 
 1. requires clean committed source matching the tag;
 2. rejects missing, extra, non-regular, symbolic, or overlapping input/output directories;
-3. compares every signed inspection to the exact APK bytes;
-4. requires all APKs to share one non-debug certificate and one Build Tools version;
-5. binds the APK signer fingerprint to the supplied public certificate;
-6. validates the canonical SPDX 2.3 SBOM and third-party notices;
-7. writes deterministic release metadata and copies the four exact APKs;
-8. writes `SHA256SUMS` last and independently re-verifies all nine release assets; and
-9. writes draft release notes and an acceptance record outside the release asset directory.
+3. requires every signed inspection to name the exact current source commit and release tag;
+4. compares every signed inspection to the exact APK bytes;
+5. requires all APKs to share one non-debug certificate and one Build Tools version;
+6. binds the APK signer fingerprint to the supplied public certificate;
+7. validates the canonical SPDX 2.3 SBOM and third-party notices;
+8. writes deterministic release metadata and copies the four exact APKs;
+9. writes `SHA256SUMS` last and independently re-verifies all nine release assets; and
+10. writes draft release notes and an acceptance record outside the release asset directory.
 
 A failed staging attempt may leave a partial ignored directory for diagnosis. Remove it deliberately before retrying. The generated release notes contain a required known-limitations review marker; edit the publication copy before creating a draft release, never the staged assets.
 
