@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 
 const SPDX_EXPRESSION_CHARACTERS = /^[A-Za-z0-9.+()\-\s]+$/;
 const SPDX_OPERATORS = new Set(["AND", "OR", "WITH"]);
+const LICENSE_LABEL_IGNORABLE_CHARACTERS = /[\u200B-\u200D\u2060\uFEFF]/g;
+const LICENSE_LABEL_WHITESPACE = /[\p{Z}\t\n\r\f\v]+/gu;
 
 export function stableJson(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
@@ -196,8 +198,14 @@ export function validateSpdxDocument(document) {
 }
 
 export function normalizeLicenseName(value, policy) {
-  const name = requireText(String(value), "license");
-  return policy.aliases?.[name] ?? name;
+  const name = canonicalizeLicenseLabel(requireText(String(value), "license"));
+  const exactAlias = policy.aliases?.[name];
+  if (exactAlias !== undefined) return exactAlias;
+
+  for (const [alias, normalized] of Object.entries(policy.aliases ?? {})) {
+    if (canonicalizeLicenseLabel(alias) === name) return normalized;
+  }
+  return name;
 }
 
 export function validateLicenseExpression(expression, policy, packageKey = "package") {
@@ -377,6 +385,14 @@ function findForbiddenPattern(expression, policy) {
   return (policy.forbiddenPatterns ?? []).find((pattern) =>
     upper.includes(String(pattern).toUpperCase()),
   );
+}
+
+function canonicalizeLicenseLabel(value) {
+  return value
+    .normalize("NFKC")
+    .replace(LICENSE_LABEL_IGNORABLE_CHARACTERS, "")
+    .replace(LICENSE_LABEL_WHITESPACE, " ")
+    .trim();
 }
 
 function npmPurl(name, version) {

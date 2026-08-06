@@ -83,6 +83,12 @@ test("fails closed on forbidden, unknown, and review-required licenses", () => {
   assert.equal(validateLicenseExpression("MIT OR Apache-2.0", policy), "MIT OR Apache-2.0");
 });
 
+test("canonicalizes invisible Maven label characters without weakening policy", () => {
+  assert.equal(validateLicenseExpression("\u200BAPACHE-2.\u2060", policy), "Apache-2.0");
+  assert.equal(validateLicenseExpression("MIT\u200B license.", policy), "MIT");
+  assert.throws(() => validateLicenseExpression("G\u200BPL-3.0-only", policy), /LICENSE_FORBIDDEN/);
+});
+
 test("uses the reviewed BSD option for a dual-licensed npm package", () => {
   const inventory = normalizePnpmLicenseReport(
     {
