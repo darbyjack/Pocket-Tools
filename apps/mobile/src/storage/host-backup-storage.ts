@@ -1,9 +1,11 @@
-import * as SQLite from "expo-sqlite";
+import type * as SQLite from "expo-sqlite";
 
 import type { MiniAppInspection, SerializableValue } from "../model.ts";
 import { inspectMiniApp } from "../runtime/quickjs.ts";
 import { validateMiniAppBackupForRestore, type MiniAppBackupV2 } from "./backup.ts";
 import { createMiniAppBackup } from "./backup-storage.ts";
+import { readCompleteHostBackup } from "./backup-version-dispatch.ts";
+import { getDatabase } from "./database-connection.ts";
 import { listInstalledMiniApps, type InstalledMiniApp } from "./database.ts";
 import {
   HOST_BACKUP_FORMAT,
@@ -14,12 +16,9 @@ import {
 } from "./host-backup.ts";
 import { isDiagnosticAppId, isPreviewStorageId } from "./namespaces.ts";
 import {
-  ensureNotificationRegistrySchema,
   prepareNotificationRegistryForHostRestoreInTransaction,
   replaceDesiredNotificationsInTransaction,
 } from "./notification-registry.ts";
-
-const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 
 interface NamespaceRow {
   readonly app_id: string;
@@ -61,7 +60,7 @@ export async function createHostBackup(): Promise<HostBackupV2> {
   const apps = await Promise.all(installed.map(async (app) => createMiniAppBackup(app.id)));
   const installedIds = new Set(installed.map((app) => app.id));
 
-  const database = await databasePromise;
+  const database = await getDatabase();
   const namespaceRows = await database.getAllAsync<NamespaceRow>(
     `SELECT app_id FROM settings
      UNION
@@ -90,7 +89,7 @@ export async function createHostBackup(): Promise<HostBackupV2> {
 }
 
 export async function prepareHostBackup(input: unknown): Promise<PreparedHostBackup> {
-  const backup = parseHostBackup(input);
+  const backup = readCompleteHostBackup(input);
   const apps = await Promise.all(
     backup.apps.map(async (appBackup) => {
       const [activeInspection, lastKnownGoodInspection] = await Promise.all([
@@ -107,7 +106,7 @@ export async function prepareHostBackup(input: unknown): Promise<PreparedHostBac
 export async function restoreHostBackup(
   prepared: PreparedHostBackup,
 ): Promise<readonly InstalledMiniApp[]> {
-  const backup = parseHostBackup(prepared.backup);
+  const backup = readCompleteHostBackup(prepared.backup);
   const preparedById = new Map(prepared.apps.map((entry) => [entry.backup.app.id, entry]));
   if (preparedById.size !== backup.apps.length) {
     throw new Error("HOST_BACKUP_INVALID: Prepared app inspections do not match the backup.");
@@ -130,8 +129,7 @@ export async function restoreHostBackup(
     );
   }
 
-  const database = await databasePromise;
-  await ensureNotificationRegistrySchema(database);
+  const database = await getDatabase();
   try {
     await database.withTransactionAsync(async () => {
       const restoredAt = new Date().toISOString();
