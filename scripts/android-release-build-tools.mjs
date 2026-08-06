@@ -1,5 +1,5 @@
 import { readdir } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { extname, join, resolve } from "node:path";
 
 import { REQUIRED_NATIVE_LIBRARIES } from "./android-release-tools.mjs";
 import {
@@ -41,9 +41,19 @@ export function buildPnpmCommand(
       "ANDROID_BUILD_PNPM_MISSING: invoke the release build through pnpm so npm_execpath identifies the pinned pnpm CLI.",
     );
   }
+
+  const entry = resolve(pnpmEntry);
+  const extension = extname(entry).toLowerCase();
+  if (extension === ".cmd" || extension === ".bat") {
+    throw new Error(
+      "ANDROID_BUILD_PNPM_UNSUPPORTED: npm_execpath must identify a native executable or JavaScript pnpm entrypoint, not a command-shell wrapper.",
+    );
+  }
+
+  const javascriptEntry = extension === ".js" || extension === ".cjs" || extension === ".mjs";
   return {
-    executable: nodeExecutable,
-    args: [resolve(pnpmEntry), ...args],
+    executable: javascriptEntry ? nodeExecutable : entry,
+    args: javascriptEntry ? [entry, ...args] : [...args],
     cwd: resolve(repositoryRoot),
   };
 }
