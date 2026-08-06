@@ -1,4 +1,11 @@
 {
   "schemaVersion": 1,
-  "packages": {}
+  "packages": {
+    "npm:caniuse-lite@1.0.30001806": {
+      "declaredLicense": "CC-BY-4.0",
+      "concludedLicense": "CC-BY-4.0",
+      "reason": "Reviewed caniuse-lite 1.0.30001806 package metadata and the upstream caniuse data licensing statement. The package is distributed under CC BY 4.0 and requires attribution to caniuse.com.",
+      "notice": "Browser compatibility data is sourced from caniuse.com, created and maintained by Alexis Deveria with project contributors, and licensed under CC BY 4.0. Pocket Tools does not modify the packaged data."
+    }
+  }
 }
