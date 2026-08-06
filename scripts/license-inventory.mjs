@@ -17,6 +17,9 @@ const overridesPath = join(repositoryRoot, "licenses", "overrides.json");
 const pnpmInventoryPath = join(repositoryRoot, "licenses", "pnpm-production.json");
 const androidInventoryPath = join(repositoryRoot, "licenses", "android-production.json");
 const androidRawPath = join(repositoryRoot, "licenses", ".android-production.raw.json");
+const HOST_SPECIFIC_OPTIONAL_PACKAGE_PATTERNS = [
+  /^lightningcss(?:-cli)?-(?:android|darwin|freebsd|linux|win32)-/,
+];
 
 const command = process.argv[2];
 const policy = await readJson(policyPath);
@@ -151,10 +154,15 @@ function omitHostSpecificOptionalPackages(raw) {
 }
 
 function isHostSpecificOptionalPackage(entry) {
-  if (entry === null || typeof entry !== "object" || !Array.isArray(entry.paths)) return false;
+  if (entry === null || typeof entry !== "object") return false;
+  const name = typeof entry.name === "string" ? entry.name : "";
+  if (HOST_SPECIFIC_OPTIONAL_PACKAGE_PATTERNS.some((pattern) => pattern.test(name))) {
+    return true;
+  }
+  if (!Array.isArray(entry.paths)) return false;
   return entry.paths.some((packagePath) => {
     try {
-      const manifest = JSON.parse(readFileSync(join(packagePath, "package.json"), "utf8"));
+      const manifest = JSON.parse(readFileSync(join(String(packagePath), "package.json"), "utf8"));
       return [manifest.os, manifest.cpu, manifest.libc].some(
         (constraint) => Array.isArray(constraint) && constraint.length > 0,
       );
