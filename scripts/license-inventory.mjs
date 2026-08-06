@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,7 +60,8 @@ function createPnpmInventory() {
       `LICENSE_PNPM_FAILED: pnpm licenses list failed.\n${result.stderr || result.stdout}`,
     );
   }
-  return normalizePnpmLicenseReport(parseJsonOutput(result.stdout, "pnpm"), policy, overrides);
+  const raw = omitHostSpecificOptionalPackages(parseJsonOutput(result.stdout, "pnpm"));
+  return normalizePnpmLicenseReport(raw, policy, overrides);
 }
 
 async function createAndroidInventory() {
@@ -117,6 +118,55 @@ async function checkInventory(path, actual, writeCommand) {
     );
   }
   console.log(`${path} is current and valid.`);
+}
+
+function omitHostSpecificOptionalPackages(raw) {
+  const omitted = [];
+  const retain = (entry) => {
+    if (!isHostSpecificOptionalPackage(entry)) return true;
+    omitted.push(`${entry.name}@${formatVersions(entry)}`);
+    return false;
+  };
+
+  let normalized;
+  if (Array.isArray(raw)) {
+    normalized = raw.filter(retain);
+  } else if (raw !== null && typeof raw === "object") {
+    normalized = Object.fromEntries(
+      Object.entries(raw).map(([license, entries]) => [
+        license,
+        Array.isArray(entries) ? entries.filter(retain) : entries,
+      ]),
+    );
+  } else {
+    return raw;
+  }
+
+  if (omitted.length > 0) {
+    console.log(
+      `Excluded ${omitted.length} host-specific optional package(s) from the portable production inventory: ${omitted.sort().join(", ")}.`,
+    );
+  }
+  return normalized;
+}
+
+function isHostSpecificOptionalPackage(entry) {
+  if (entry === null || typeof entry !== "object" || !Array.isArray(entry.paths)) return false;
+  return entry.paths.some((packagePath) => {
+    try {
+      const manifest = JSON.parse(readFileSync(join(packagePath, "package.json"), "utf8"));
+      return [manifest.os, manifest.cpu, manifest.libc].some(
+        (constraint) => Array.isArray(constraint) && constraint.length > 0,
+      );
+    } catch {
+      return false;
+    }
+  });
+}
+
+function formatVersions(entry) {
+  if (Array.isArray(entry.versions)) return entry.versions.join(",");
+  return String(entry.version ?? "unknown");
 }
 
 function parseJsonOutput(output, source) {
