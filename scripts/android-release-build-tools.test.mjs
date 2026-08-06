@@ -17,7 +17,9 @@ import {
 } from "./android-release-build-tools.mjs";
 
 const require = createRequire(import.meta.url);
-const { removeReleaseDebugSigning } = require("../apps/mobile/plugins/with-unsigned-release-build.cjs");
+const {
+  removeReleaseDebugSigning,
+} = require("../apps/mobile/plugins/with-unsigned-release-build.cjs");
 
 const GRADLE_FIXTURE = `android {
   signingConfigs {
@@ -59,7 +61,10 @@ test("fails closed when the generated release signing shape changes", () => {
   assert.throws(
     () =>
       removeReleaseDebugSigning(
-        GRADLE_FIXTURE.replace("      signingConfig signingConfigs.debug\n      minify", "      minify"),
+        GRADLE_FIXTURE.replace(
+          "      signingConfig signingConfigs.debug\n      minify",
+          "      minify",
+        ),
       ),
     /UNSIGNED_RELEASE_CONFIG_INVALID/,
   );

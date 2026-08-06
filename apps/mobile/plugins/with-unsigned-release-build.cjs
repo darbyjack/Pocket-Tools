@@ -1,9 +1,7 @@
 function withUnsignedReleaseBuild(config) {
   const { withAppBuildGradle } = require("expo/config-plugins");
   return withAppBuildGradle(config, (gradleConfig) => {
-    gradleConfig.modResults.contents = removeReleaseDebugSigning(
-      gradleConfig.modResults.contents,
-    );
+    gradleConfig.modResults.contents = removeReleaseDebugSigning(gradleConfig.modResults.contents);
     return gradleConfig;
   });
 }

@@ -11,7 +11,9 @@ import {
 
 export function validateReleaseAbi(abi) {
   if (!RELEASE_ABIS.includes(abi)) {
-    throw new Error(`ANDROID_BUILD_ARGUMENT_INVALID: ABI must be one of ${RELEASE_ABIS.join(", ")}.`);
+    throw new Error(
+      `ANDROID_BUILD_ARGUMENT_INVALID: ABI must be one of ${RELEASE_ABIS.join(", ")}.`,
+    );
   }
   return abi;
 }
@@ -45,10 +47,7 @@ export function buildExpoPrebuildCommand(platform = process.platform) {
 
 export function buildGradleCommand({ androidDirectory, abi, projectCacheDirectory, platform }) {
   validateReleaseAbi(abi);
-  const executable = resolve(
-    androidDirectory,
-    platform === "win32" ? "gradlew.bat" : "gradlew",
-  );
+  const executable = resolve(androidDirectory, platform === "win32" ? "gradlew.bat" : "gradlew");
   return {
     executable,
     args: [
@@ -115,7 +114,12 @@ export function assertUnsignedApkVerification(result) {
 
 export function validateUnsignedApkInspection({ badging, nativeLibraries, expected, aligned }) {
   const failures = [];
-  compareField(failures, "package", badging.packageName, expected.packageName ?? RELEASE_PACKAGE_NAME);
+  compareField(
+    failures,
+    "package",
+    badging.packageName,
+    expected.packageName ?? RELEASE_PACKAGE_NAME,
+  );
   compareField(failures, "versionName", badging.versionName, expected.versionName);
   compareField(failures, "versionCode", badging.versionCode, expected.versionCode);
   compareField(failures, "minSdk", badging.minSdk, expected.minSdk ?? RELEASE_SDK_LEVELS.min);
@@ -138,11 +142,15 @@ export function validateUnsignedApkInspection({ badging, nativeLibraries, expect
   const expectedAbi = validateReleaseAbi(expected.abi);
   const badgingAbis = [...badging.nativeAbis].sort(bytewiseCompare);
   if (badgingAbis.length !== 1 || badgingAbis[0] !== expectedAbi) {
-    failures.push(`badging native ABIs are [${badgingAbis.join(", ")}] instead of [${expectedAbi}]`);
+    failures.push(
+      `badging native ABIs are [${badgingAbis.join(", ")}] instead of [${expectedAbi}]`,
+    );
   }
   const archiveAbis = Object.keys(nativeLibraries).sort(bytewiseCompare);
   if (archiveAbis.length !== 1 || archiveAbis[0] !== expectedAbi) {
-    failures.push(`archive native ABIs are [${archiveAbis.join(", ")}] instead of [${expectedAbi}]`);
+    failures.push(
+      `archive native ABIs are [${archiveAbis.join(", ")}] instead of [${expectedAbi}]`,
+    );
   }
   const names = nativeLibraries[expectedAbi] ?? [];
   for (const required of REQUIRED_NATIVE_LIBRARIES) {
