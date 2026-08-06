@@ -9,7 +9,7 @@ import {
   type NativeNotificationRegistryEntry,
   type NativeNotificationReconciliationResult,
 } from "@pocket-tools/notifications-runtime";
-import * as SQLite from "expo-sqlite";
+import type * as SQLite from "expo-sqlite";
 import { PermissionsAndroid, Platform } from "react-native";
 
 import {
@@ -17,6 +17,7 @@ import {
   normalizeNotificationOpenTarget,
   type NotificationRouteTarget,
 } from "./notification-routing.ts";
+import { getDatabase } from "../storage/database-connection.ts";
 import {
   completeNotificationCancellation,
   listNotificationRegistryEntries,
@@ -28,8 +29,6 @@ import {
 
 export { describeNotificationTrigger } from "./notification-routing.ts";
 export type { NotificationRouteTarget } from "./notification-routing.ts";
-
-const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 
 export type HostNotificationPermission = "granted" | "denied";
 
@@ -80,7 +79,7 @@ export function reconcileHostNotifications(): Promise<void> {
     .catch(() => undefined)
     .then(async () => {
       await ensureHostNotificationInfrastructure();
-      const database = await databasePromise;
+      const database = await getDatabase();
       const entries = await listNotificationRegistryEntries(database);
       const nativeEntries = entries.map(toNativeEntry);
       const results = await reconcileNativeNotifications(nativeEntries);
@@ -105,7 +104,7 @@ export async function listToolNotificationEntries(
 }
 
 export async function cancelAllToolNotifications(storageId: string): Promise<void> {
-  const database = await databasePromise;
+  const database = await getDatabase();
   const updatedAt = new Date().toISOString();
   await database.withTransactionAsync(async () => {
     await replaceDesiredNotificationsInTransaction(database, storageId, [], updatedAt);
@@ -132,7 +131,7 @@ function requiresRuntimeNotificationPermission(): boolean {
 }
 
 async function listRegistryEntries(): Promise<readonly NotificationRegistryEntry[]> {
-  const database = await databasePromise;
+  const database = await getDatabase();
   return listNotificationRegistryEntries(database);
 }
 
