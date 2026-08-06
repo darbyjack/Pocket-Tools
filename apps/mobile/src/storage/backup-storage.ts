@@ -1,4 +1,4 @@
-import * as SQLite from "expo-sqlite";
+import type * as SQLite from "expo-sqlite";
 
 import type { MiniAppInspection, SerializableValue } from "../model";
 import { inspectMiniApp } from "../runtime/quickjs";
@@ -9,14 +9,13 @@ import {
   validateMiniAppBackupForRestore,
   type MiniAppBackupV2,
 } from "./backup";
+import { readPortableMiniAppBackup } from "./backup-version-dispatch";
+import { getDatabase } from "./database-connection";
 import { getInstalledMiniApp, type InstalledMiniApp } from "./database";
 import {
-  ensureNotificationRegistrySchema,
   readDesiredNotificationRequests,
   replaceDesiredNotificationsInTransaction,
 } from "./notification-registry";
-
-const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
 
 interface BackupSettingRow {
   readonly name: string;
@@ -57,8 +56,7 @@ export async function createMiniAppBackup(appId: string): Promise<MiniAppBackupV
     inspectMiniApp(app.lastKnownGoodSource),
   ]);
 
-  const database = await databasePromise;
-  await ensureNotificationRegistrySchema(database);
+  const database = await getDatabase();
   const settingRows = await database.getAllAsync<BackupSettingRow>(
     `SELECT name, value_json
      FROM settings
@@ -123,22 +121,20 @@ export async function getMiniAppRestoreConflict(
   const installed = await getInstalledMiniApp(appId);
   if (installed !== null) return { kind: "installed", app: installed };
 
-  const database = await databasePromise;
-  await ensureNotificationRegistrySchema(database);
+  const database = await getDatabase();
   return (await hasStoredState(database, appId)) ? { kind: "retained-data", appId } : null;
 }
 
 export async function restoreMiniAppBackup(
-  backup: MiniAppBackupV2,
+  backup: unknown,
   activeInspection: MiniAppInspection,
   lastKnownGoodInspection: MiniAppInspection,
   options: RestoreMiniAppBackupOptions = {},
 ): Promise<InstalledMiniApp> {
-  const parsed = parseMiniAppBackup(backup);
+  const parsed = readPortableMiniAppBackup(backup);
   validateMiniAppBackupForRestore(parsed, activeInspection, lastKnownGoodInspection);
 
-  const database = await databasePromise;
-  await ensureNotificationRegistrySchema(database);
+  const database = await getDatabase();
   try {
     await database.withTransactionAsync(async () => {
       const existing = await database.getFirstAsync<{ readonly app_id: string }>(
@@ -209,7 +205,9 @@ export async function restoreMiniAppBackup(
       }
     });
   } catch (cause) {
-    if (cause instanceof Error && /^BACKUP_(?:CONFLICT|INVALID):/.test(cause.message)) throw cause;
+    if (cause instanceof Error && /^BACKUP_(?:CONFLICT|INVALID|VERSION_)/.test(cause.message)) {
+      throw cause;
+    }
     throw new Error("BACKUP_RESTORE_FAILED: SQLite could not restore the mini app atomically.", {
       cause,
     });
