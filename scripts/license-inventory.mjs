@@ -99,7 +99,9 @@ async function createAndroidInventory() {
   }
 
   try {
-    return normalizeAndroidLicenseReport(await readJson(androidRawPath), policy, overrides);
+    const raw = await readJson(androidRawPath);
+    assertAndroidReviewQueueEmpty(raw);
+    return normalizeAndroidLicenseReport(raw, policy, overrides);
   } finally {
     await unlink(androidRawPath).catch(() => undefined);
   }
@@ -121,6 +123,29 @@ async function checkInventory(path, actual, writeCommand) {
     );
   }
   console.log(`${path} is current and valid.`);
+}
+
+function assertAndroidReviewQueueEmpty(raw) {
+  if (!Array.isArray(raw)) return;
+  const failures = [];
+  for (const entry of raw) {
+    try {
+      normalizeAndroidLicenseReport([entry], policy, overrides);
+    } catch (cause) {
+      const group = String(entry?.group ?? "unknown-group");
+      const module = String(entry?.module ?? "unknown-module");
+      const version = String(entry?.version ?? "unknown-version");
+      const message = cause instanceof Error ? cause.message : String(cause);
+      const resolutionDetail =
+        typeof entry?.failure === "string" && entry.failure.trim().length > 0
+          ? ` Resolution detail: ${entry.failure.trim()}`
+          : "";
+      failures.push(`${group}:${module}@${version}: ${message}${resolutionDetail}`);
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(`LICENSE_ANDROID_REVIEW_QUEUE:\n- ${failures.sort().join("\n- ")}`);
+  }
 }
 
 function omitHostSpecificOptionalPackages(raw) {
