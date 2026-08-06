@@ -79,7 +79,7 @@ async function buildOne({ tag, abi, directory, identity, tools }) {
   );
   let completed = false;
   try {
-    const probuild = buildExpoPrebuildCommand({ repositoryRoot });
+    const prebuild = buildExpoPrebuildCommand({ repositoryRoot });
     run(prebuild.executable, prebuild.args, {
       cwd: prebuild.cwd,
       env: { ...process.env, CI: "1", EXPO_NO_GIT_STATUS: "1" },
@@ -151,13 +151,10 @@ async function buildOne({ tag, abi, directory, identity, tools }) {
 
 async function validateSource(tag) {
   run(process.execPath, ["scripts/release-engineering.mjs", "validate-inputs", "--tag", tag]);
-  runPnpm(["sync:mini-apps:check"]);
-  runPnpm(["sdk:declarations:check"]);
-}
-
-function runPnpm(args) {
-  const command = buildPnpmCommand(args, { repositoryRoot });
-  return run(command.executable, command.args, { cwd: command.cwd });
+  for (const script of ["sync:mini-apps:check", "sdk:declarations:check"]) {
+    const pnpm = buildPnpmCommand([script], { repositoryRoot });
+    run(pnpm.executable, pnpm.args, { cwd: pnpm.cwd });
+  }
 }
 
 async function loadIdentity(tag) {
@@ -178,7 +175,11 @@ async function loadIdentity(tag) {
 function run(
   executable,
   args,
-  { allowFailure = false, cwd = repositoryRoot, env = process.env } = {},
+  {
+    allowFailure = false,
+    cwd = repositoryRoot,
+    env = process.env,
+  } = {},
 ) {
   const result = spawnSync(executable, args, {
     cwd,
