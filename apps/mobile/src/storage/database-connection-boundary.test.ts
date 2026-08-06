@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const sourceRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 test("only the migrated connection module opens the application database", async () => {
-  const sourceFiles = await listSourceFiles(sourceRoot);
+  const sourceFiles = await listProductionSourceFiles(sourceRoot);
   const directOpeners: string[] = [];
 
   for (const path of sourceFiles) {
@@ -27,13 +27,19 @@ test("the legacy initializer no longer creates schema objects", async () => {
   assert.match(source, /getDatabase/);
 });
 
-async function listSourceFiles(directory: string): Promise<readonly string[]> {
+async function listProductionSourceFiles(directory: string): Promise<readonly string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = await Promise.all(
     entries.map(async (entry) => {
       const path = join(directory, entry.name);
-      if (entry.isDirectory()) return listSourceFiles(path);
-      if (entry.isFile() && /\.(?:ts|tsx)$/.test(entry.name)) return [path];
+      if (entry.isDirectory()) return listProductionSourceFiles(path);
+      if (
+        entry.isFile() &&
+        /\.(?:ts|tsx)$/.test(entry.name) &&
+        !/\.test\.(?:ts|tsx)$/.test(entry.name)
+      ) {
+        return [path];
+      }
       return [];
     }),
   );
