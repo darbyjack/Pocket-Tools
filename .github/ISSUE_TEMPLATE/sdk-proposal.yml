@@ -1,0 +1,58 @@
+name: SDK proposal
+description: Propose a versioned change to the public mini-app SDK contract.
+title: "[SDK]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        SDK proposals must describe the complete public contract, host authority boundary, compatibility story, and executable acceptance evidence. Partial or speculative APIs are not accepted.
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Authoring use case
+      description: Describe the ordinary mini-app behavior that cannot be expressed today.
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Proposed public contract
+      description: Include declarations, inputs, outputs, validation rules, and failure behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: authority
+    attributes:
+      label: Host authority and security boundary
+      description: Explain what remains host-owned and what authority, if any, scripts receive.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Versioning and compatibility
+      description: Explain effects on SDK 1.0, 1.1, 1.2, stored tools, backups, and older hosts.
+    validations:
+      required: true
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Required implementation layers
+      description: Cover declarations, validator, protocol, runtime, renderer, storage/native services, documentation, fixtures, and tests.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and rejected approaches
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: This proposal solves a demonstrated authoring need rather than a hypothetical future use.
+          required: true
+        - label: The proposal does not expose native objects, ambient authority, arbitrary networking, or unpublished host internals.
+          required: true
