@@ -1,7 +1,4 @@
-import {
-  validateGeneratedLinks,
-  withGeneratedTemp,
-} from "./docs-lib.mjs";
+import { validateGeneratedLinks, withGeneratedTemp } from "./docs-lib.mjs";
 
 await withGeneratedTemp(async (destination) => {
   await validateGeneratedLinks(destination);

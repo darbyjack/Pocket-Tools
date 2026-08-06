@@ -74,8 +74,7 @@ export const pages = [
     source: "docs/AUTHORING_ERRORS.md",
     slug: "authoring/errors",
     title: "Validation and error reference",
-    description:
-      "Understand stable authoring, validation, QuickJS, and Android error names.",
+    description: "Understand stable authoring, validation, QuickJS, and Android error names.",
     group: "authoring",
     order: 30,
   },
@@ -112,8 +111,7 @@ export const pages = [
     source: "docs/SDK_1_2_CONTRACT.md",
     slug: "sdk/1.2/contract",
     title: "SDK 1.2 contract",
-    description:
-      "The complete normative Pocket Tools SDK 1.2 contract and compatibility boundary.",
+    description: "The complete normative Pocket Tools SDK 1.2 contract and compatibility boundary.",
     group: "sdk",
     order: 30,
   },
@@ -186,8 +184,7 @@ export const pages = [
     generator: "backups-landing",
     slug: "backups",
     title: "Backups and restore",
-    description:
-      "Choose between portable one-tool backups and complete-host backups.",
+    description: "Choose between portable one-tool backups and complete-host backups.",
     group: "host",
     order: 30,
   },
@@ -204,8 +201,7 @@ export const pages = [
     source: "docs/HOST_BACKUPS.md",
     slug: "backups/complete-host",
     title: "Complete-host backups",
-    description:
-      "Back up and atomically restore all user-owned Pocket Tools state.",
+    description: "Back up and atomically restore all user-owned Pocket Tools state.",
     group: "host",
     order: 50,
   },
@@ -275,8 +271,7 @@ export const pages = [
     source: "SECURITY.md",
     slug: "project/security",
     title: "Security",
-    description:
-      "Review supported security reporting channels and disclosure expectations.",
+    description: "Review supported security reporting channels and disclosure expectations.",
     group: "project",
     order: 30,
   },
@@ -284,8 +279,7 @@ export const pages = [
     source: "SUPPORT.md",
     slug: "project/support",
     title: "Support",
-    description:
-      "Find the supported release boundary and the right place to ask for help.",
+    description: "Find the supported release boundary and the right place to ask for help.",
     group: "project",
     order: 40,
   },

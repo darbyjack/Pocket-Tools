@@ -128,9 +128,7 @@
   justify-content: space-between;
   border: 1px solid var(--pt-border);
   border-radius: 1.1rem;
-  background:
-    linear-gradient(145deg, rgb(23 59 120 / 6%), transparent 62%),
-    var(--pt-surface);
+  background: linear-gradient(145deg, rgb(23 59 120 / 6%), transparent 62%), var(--pt-surface);
   box-shadow: 0 0.75rem 2rem rgb(16 24 40 / 6%);
   color: var(--pt-text);
   padding: 1.35rem;

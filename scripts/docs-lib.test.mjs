@@ -51,6 +51,17 @@ test("keeps intentionally non-site contributor guidance on GitHub", () => {
   );
 });
 
+test("preserves dotted SDK route segments in generated frontmatter", () => {
+  const page = pages.find((candidate) => candidate.slug === "sdk/1.2");
+  const frontmatter = renderFrontmatter(
+    page,
+    page.title,
+    "https://github.com/darbyjack/Pocket-Tools/edit/main/apps/docs/docs-map.mjs",
+  );
+
+  assert.match(frontmatter, /slug: "sdk\/1\.2"/);
+});
+
 test("uses stable heading slugs and hashes", () => {
   assert.equal(slugifyHeading("SDK 1.2 — Data & Settings"), "sdk-12-data-settings");
   assert.equal(

@@ -15,12 +15,12 @@ Pocket Tools keeps installed tools, settings, records, timers, backups, and noti
 
 Pocket Tools release builds support four Android ABIs:
 
-| ABI | Typical target |
-| --- | --- |
-| `arm64-v8a` | Most current Android phones and tablets |
-| `armeabi-v7a` | Older 32-bit ARM devices |
-| `x86_64` | Most current Android emulators and uncommon Intel devices |
-| `x86` | Legacy 32-bit Android emulators |
+| ABI           | Typical target                                            |
+| ------------- | --------------------------------------------------------- |
+| `arm64-v8a`   | Most current Android phones and tablets                   |
+| `armeabi-v7a` | Older 32-bit ARM devices                                  |
+| `x86_64`      | Most current Android emulators and uncommon Intel devices |
+| `x86`         | Legacy 32-bit Android emulators                           |
 
 On a connected device, list the supported ABIs with:
 
