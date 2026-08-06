@@ -1,0 +1,100 @@
+import groovy.json.JsonOutput
+import groovy.xml.XmlSlurper
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.maven.MavenModule
+import org.gradle.maven.MavenPomArtifact
+
+gradle.beforeProject { project ->
+  project.afterEvaluate {
+    if (project.path != ":app") return
+
+    project.tasks.register("pocketToolsLicenseInventory") {
+      group = "verification"
+      description = "Writes the resolved releaseRuntimeClasspath Maven license metadata as JSON."
+
+      doLast {
+        def outputValue = System.getProperty("pocketToolsLicenseOutput")
+        if (outputValue == null || outputValue.trim().isEmpty()) {
+          throw new GradleException(
+            "Set -DpocketToolsLicenseOutput=<absolute JSON path> for pocketToolsLicenseInventory."
+          )
+        }
+
+        def configuration = project.configurations.getByName("releaseRuntimeClasspath")
+        def componentIds = configuration.incoming.resolutionResult.allComponents
+          .collect { it.id }
+          .findAll { it instanceof ModuleComponentIdentifier }
+          .unique { id -> "${id.group}:${id.module}:${id.version}" }
+          .sort { left, right ->
+            "${left.group}:${left.module}:${left.version}" <=>
+              "${right.group}:${right.module}:${right.version}"
+          }
+
+        def entries = componentIds.collect { id ->
+          [
+            group: id.group,
+            module: id.module,
+            version: id.version,
+            licenseNames: [],
+            licenseUrls: [],
+            pomResolved: false,
+          ]
+        }
+        def entriesByKey = entries.collectEntries { entry ->
+          [("${entry.group}:${entry.module}:${entry.version}"): entry]
+        }
+
+        if (!componentIds.isEmpty()) {
+          def result = project.dependencies.createArtifactResolutionQuery()
+            .forComponents(componentIds)
+            .withArtifacts(MavenModule, MavenPomArtifact)
+            .execute()
+
+          result.resolvedComponents.each { component ->
+            def id = component.id
+            def key = "${id.group}:${id.module}:${id.version}"
+            def entry = entriesByKey[key]
+            if (entry == null) return
+
+            def artifact = component.getArtifacts(MavenPomArtifact)
+              .find { candidate -> candidate instanceof ResolvedArtifactResult }
+            if (artifact == null) {
+              entry.failure = "Maven POM artifact was not resolved."
+              return
+            }
+
+            try {
+              def pom = new XmlSlurper(false, false).parse(artifact.file)
+              entry.licenseNames = pom.licenses.license.name
+                .collect { value -> value.text().trim() }
+                .findAll { value -> !value.isEmpty() }
+                .unique()
+                .sort()
+              entry.licenseUrls = pom.licenses.license.url
+                .collect { value -> value.text().trim() }
+                .findAll { value -> !value.isEmpty() }
+                .unique()
+                .sort()
+              entry.pomResolved = true
+            } catch (Exception cause) {
+              entry.failure = "Unable to parse Maven POM: ${cause.message}"
+            }
+          }
+
+          result.unresolvedComponents.each { component ->
+            def id = component.id
+            def key = "${id.group}:${id.module}:${id.version}"
+            def entry = entriesByKey[key]
+            if (entry != null) entry.failure = component.failure?.message ?: "Maven POM resolution failed."
+          }
+        }
+
+        def outputFile = new File(outputValue)
+        outputFile.parentFile.mkdirs()
+        outputFile.setText(JsonOutput.prettyPrint(JsonOutput.toJson(entries)) + "\n", "UTF-8")
+        println "Wrote ${entries.size()} Android dependency records to ${outputFile}."
+      }
+    }
+  }
+}
