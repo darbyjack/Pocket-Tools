@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { validateStagingInspectionProvenance } from "./android-release-provenance-tools.mjs";
 import { stableJson, validateReleaseIdentity } from "./release-contract.mjs";
 import { stageReleaseArtifacts } from "./release-staging-tools.mjs";
 
@@ -15,9 +16,11 @@ switch (command) {
     const identity = await loadAndValidateIdentity(requiredArgument(argumentsMap, "tag"));
     const rootPackage = await readJson("package.json");
     const mobilePackage = await readJson("apps/mobile/package.json");
+    const inputDirectory = repositoryPath(requiredArgument(argumentsMap, "input"));
+    await validateStagingInspectionProvenance({ identity, inputDirectory });
     const result = await stageReleaseArtifacts({
       identity,
-      inputDirectory: repositoryPath(requiredArgument(argumentsMap, "input")),
+      inputDirectory,
       outputDirectory: repositoryPath(requiredArgument(argumentsMap, "output")),
       publicationDirectory: repositoryPath(requiredArgument(argumentsMap, "publication")),
       spdxPath: repositoryPath("licenses/pocket-tools.spdx.json"),
