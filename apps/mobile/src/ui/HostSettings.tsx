@@ -9,6 +9,7 @@ export interface HostSettingsProps {
   readonly onBackupAll: () => void;
   readonly onDiagnostics: () => void;
   readonly onNotifications: () => void;
+  readonly onOpenSourceLicenses: () => void;
   readonly onRestoreAll: () => void;
   readonly onRestoreOne: () => void;
 }
@@ -18,6 +19,7 @@ export function HostSettings({
   onBackupAll,
   onDiagnostics,
   onNotifications,
+  onOpenSourceLicenses,
   onRestoreAll,
   onRestoreOne,
 }: HostSettingsProps) {
@@ -42,6 +44,10 @@ export function HostSettings({
 
       <SettingsSection title="Advanced">
         <SettingsRow label="Diagnostics" onPress={onDiagnostics} />
+      </SettingsSection>
+
+      <SettingsSection title="About">
+        <SettingsRow label="Open-source licenses" onPress={onOpenSourceLicenses} />
       </SettingsSection>
     </ScreenScrollView>
   );
