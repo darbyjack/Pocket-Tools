@@ -1,14 +1,6 @@
 import { X509Certificate } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
-import {
-  copyFile,
-  lstat,
-  mkdir,
-  readFile,
-  readdir,
-  stat,
-  writeFile,
-} from "node:fs/promises";
+import { copyFile, lstat, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
@@ -101,7 +93,9 @@ export function buildFinalReleaseMetadata({
     throw new Error("RELEASE_METADATA_INVALID: every APK must use the same signing identity.");
   }
   if (buildToolsVersions.size !== 1) {
-    throw new Error("RELEASE_METADATA_INVALID: every APK must use the same Android Build Tools version.");
+    throw new Error(
+      "RELEASE_METADATA_INVALID: every APK must use the same Android Build Tools version.",
+    );
   }
 
   const signerFingerprint = [...signerFingerprints][0];
@@ -267,11 +261,10 @@ export async function stageReleaseArtifacts({
     encoding: "utf8",
     flag: "wx",
   });
-  await writeFile(
-    join(output, "SHA256SUMS"),
-    await buildSha256Sums(output, identity.tag),
-    { encoding: "utf8", flag: "wx" },
-  );
+  await writeFile(join(output, "SHA256SUMS"), await buildSha256Sums(output, identity.tag), {
+    encoding: "utf8",
+    flag: "wx",
+  });
   const verification = await verifyReleaseDirectory(output, identity.tag);
 
   await mkdir(publication, { recursive: true });
@@ -340,13 +333,19 @@ function validateSignedInspection(inspection, identity, abi) {
       `RELEASE_INSPECTION_INVALID: ${abi} signer SHA-256 must be normalized lowercase hexadecimal.`,
     );
   }
-  if (typeof inspection.signer.subject !== "string" || inspection.signer.subject.trim().length === 0) {
+  if (
+    typeof inspection.signer.subject !== "string" ||
+    inspection.signer.subject.trim().length === 0
+  ) {
     throw new Error(`RELEASE_INSPECTION_INVALID: ${abi} signer subject is missing.`);
   }
   if (/CN=Android Debug(?:,|$)/i.test(inspection.signer.subject)) {
     throw new Error(`RELEASE_INSPECTION_INVALID: ${abi} uses the Android debug certificate.`);
   }
-  if (typeof inspection.buildToolsVersion !== "string" || inspection.buildToolsVersion.length === 0) {
+  if (
+    typeof inspection.buildToolsVersion !== "string" ||
+    inspection.buildToolsVersion.length === 0
+  ) {
     throw new Error(`RELEASE_INSPECTION_INVALID: ${abi} Build Tools version is missing.`);
   }
 }
