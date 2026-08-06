@@ -10,6 +10,10 @@ apps/docs/.astro/
 apps/docs/src/content/docs/*
 !apps/docs/src/content/docs/.gitkeep
 
+# Local release engineering output
+release-work/
+release-staging/
+
 # Generated native projects and build output
 apps/mobile/android/
 apps/mobile/ios/
