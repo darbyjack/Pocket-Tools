@@ -34,6 +34,7 @@
     "release:android:tools": "node scripts/android-release.mjs tools",
     "release:checksums": "node scripts/release-engineering.mjs checksums",
     "release:plan": "node scripts/release-engineering.mjs plan",
+    "release:stage": "node scripts/release-stage.mjs stage",
     "release:validate": "node scripts/release-engineering.mjs validate-inputs",
     "release:verify": "node scripts/release-engineering.mjs verify-directory",
     "sbom:check": "node scripts/spdx-sbom.mjs check",
