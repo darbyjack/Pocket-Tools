@@ -1,5 +1,5 @@
 import { registerRootComponent } from "expo";
 
-import App from "./App";
+import { DatabaseBootstrap } from "./src/ui/DatabaseBootstrap";
 
-registerRootComponent(App);
+registerRootComponent(DatabaseBootstrap);
