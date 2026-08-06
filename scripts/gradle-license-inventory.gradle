@@ -1,10 +1,49 @@
 import groovy.json.JsonOutput
-import groovy.xml.XmlSlurper
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.artifacts.result.UnresolvedComponentResult
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
+
+import javax.xml.XMLConstants
+import javax.xml.parsers.DocumentBuilderFactory
+
+def parsePomLicenseMetadata = { File pomFile ->
+  def factory = DocumentBuilderFactory.newInstance()
+  factory.setNamespaceAware(true)
+  factory.setXIncludeAware(false)
+  factory.setExpandEntityReferences(false)
+  factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+  factory.setFeature("http://xml.org/sax/features/external-general-entities", false)
+  factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+  factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
+  factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
+
+  def document = factory.newDocumentBuilder().parse(pomFile)
+  def licenseNames = []
+  def licenseUrls = []
+  def licenseNodes = document.getElementsByTagNameNS("*", "license")
+
+  for (int index = 0; index < licenseNodes.length; index += 1) {
+    def license = licenseNodes.item(index)
+    def nameNodes = license.getElementsByTagNameNS("*", "name")
+    if (nameNodes.length > 0) {
+      def value = nameNodes.item(0).textContent?.trim()
+      if (value) licenseNames.add(value)
+    }
+
+    def urlNodes = license.getElementsByTagNameNS("*", "url")
+    if (urlNodes.length > 0) {
+      def value = urlNodes.item(0).textContent?.trim()
+      if (value) licenseUrls.add(value)
+    }
+  }
+
+  [
+    licenseNames: licenseNames.unique().sort(),
+    licenseUrls: licenseUrls.unique().sort(),
+  ]
+}
 
 gradle.beforeProject { project ->
   project.afterEvaluate {
@@ -66,17 +105,9 @@ gradle.beforeProject { project ->
             }
 
             try {
-              def pom = new XmlSlurper(false, false).parse(artifact.file)
-              entry.licenseNames = pom.licenses.license.name
-                .collect { value -> value.text().trim() }
-                .findAll { value -> !value.isEmpty() }
-                .unique()
-                .sort()
-              entry.licenseUrls = pom.licenses.license.url
-                .collect { value -> value.text().trim() }
-                .findAll { value -> !value.isEmpty() }
-                .unique()
-                .sort()
+              def metadata = parsePomLicenseMetadata(artifact.file)
+              entry.licenseNames = metadata.licenseNames
+              entry.licenseUrls = metadata.licenseUrls
               entry.pomResolved = true
             } catch (Exception cause) {
               entry.failure = "Unable to parse Maven POM: ${cause.message}"
