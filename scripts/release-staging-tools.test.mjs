@@ -182,7 +182,7 @@ async function createFixture() {
         filename,
         nativeLibraries: ["libc++_shared.so", "libpocketquickjs.so"],
         packageName: identity.packageName,
-        sdk: RELEASE_SDK_LEVELS,
+        sdk: { compile: 36, min: 24, target: 36 },
         sha256: sha256(bytes),
         signer: {
           index: 1,
