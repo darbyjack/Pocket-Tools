@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions, help, and unaccepted ideas
+    url: https://github.com/darbyjack/Pocket-Tools/discussions
+    about: Use GitHub Discussions for support questions, authoring help, ideas, and community conversation.
+  - name: Report a security vulnerability privately
+    url: https://github.com/darbyjack/Pocket-Tools/security/advisories/new
+    about: Do not disclose suspected vulnerabilities in a public issue.

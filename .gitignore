@@ -1,8 +1,67 @@
+# Dependencies and generated JavaScript output
 node_modules/
 dist/
 coverage/
 .expo/
+**/.expo/
+
+# Generated native projects and build output
+apps/mobile/android/
+apps/mobile/ios/
 android/
 ios/
+**/build/
+**/.gradle/
+**/.cxx/
+**/.externalNativeBuild/
+cmake-build-*/
+
+# Android packages and signing material
+*.apk
+*.aab
+*.apks
+*.idsig
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.csr
+keystore.properties
+signing.properties
+local.properties
+
+# Environment and local configuration
+.env
+.env.*
+!.env.example
+*.local
+
+# Application data, databases, and backups
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.backup
+*.bak
+*.ptbackup
+
+# Diagnostics and logs
 *.log
+logcat*.txt
+diagnostics/
+diagnostic-exports/
+*.hprof
+
+# IDE and operating-system files
+.idea/
+.vscode/
+.vs/
+*.iml
 .DS_Store
+Thumbs.db

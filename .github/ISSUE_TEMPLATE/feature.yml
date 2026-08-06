@@ -1,0 +1,56 @@
+name: Accepted feature work
+description: Propose scoped product work after discussion has established that it is actionable.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Unaccepted ideas belong in GitHub Discussions. Use this form when the request is concrete enough to evaluate as project work.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the user problem without prescribing unnecessary implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe observable success and affected users.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Proposed scope
+      description: State what is included and explicitly excluded.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility impact
+      description: Address SDK, database, backup, Android support, and release behavior where relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: security
+    attributes:
+      label: Security, privacy, and permission impact
+      description: State new authority, data flow, dependency, permission, or network behavior. Write None when not applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched Issues and Discussions for related work.
+          required: true
+        - label: This request does not assume a guaranteed implementation or timeline.
+          required: true

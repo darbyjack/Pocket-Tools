@@ -1,0 +1,78 @@
+name: Bug report
+description: Report reproducible incorrect behavior in an official Pocket Tools build.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for reproducible bugs. Ask usage questions in Discussions and report vulnerabilities privately through Security → Report a vulnerability.
+  - type: input
+    id: version
+    attributes:
+      label: Pocket Tools version
+      description: Include the release tag or application version.
+      placeholder: v0.1.0-alpha.1
+    validations:
+      required: true
+  - type: input
+    id: abi
+    attributes:
+      label: APK ABI
+      description: State the downloaded ABI, such as arm64-v8a or x86_64.
+      placeholder: arm64-v8a
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: Samsung SM-S928U, Android 16
+    validations:
+      required: true
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation source
+      options:
+        - Official unmodified GitHub Release APK
+        - Locally built from an unmodified repository checkout
+        - Modified, re-signed, or unofficial build
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest reliable sequence.
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or additional context
+      description: Remove secrets and personal data. Attach screenshots only when useful.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: This report does not disclose a security vulnerability.
+          required: true

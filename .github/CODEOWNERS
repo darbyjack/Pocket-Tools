@@ -1,0 +1,19 @@
+# CODEOWNERS records responsibility. Repository rules must not require
+# code-owner approval until at least one additional active maintainer exists.
+
+* @darbyjack
+
+/.github/ @darbyjack
+/apps/mobile/app.json @darbyjack
+/apps/mobile/plugins/ @darbyjack
+/apps/mobile/src/storage/ @darbyjack
+/modules/pocket-quickjs/ @darbyjack
+/modules/pocket-notifications/ @darbyjack
+/packages/sdk-contract/ @darbyjack
+/docs/SECURITY_MODEL.md @darbyjack
+/docs/SDK_1_2_CONTRACT.md @darbyjack
+/SECURITY.md @darbyjack
+/GOVERNANCE.md @darbyjack
+/PRIVACY.md @darbyjack
+/THIRD_PARTY_NOTICES.md @darbyjack
+/licenses/ @darbyjack

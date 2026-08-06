@@ -1,0 +1,48 @@
+name: Documentation defect
+description: Report missing, incorrect, stale, or confusing canonical documentation.
+title: "[Docs]: "
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Documentation area
+      options:
+        - Installation and releases
+        - Mini-app authoring
+        - SDK contract or declarations
+        - Android development
+        - Architecture or security
+        - Privacy, governance, support, or contribution
+        - Licensing and notices
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Page or file
+      description: Link the page or provide the repository path.
+      placeholder: docs/AGENT_AUTHORING.md
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Quote the relevant heading or summarize what is missing or incorrect.
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: Suggested correction
+      description: Provide the expected wording or outcome when known.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked the canonical repository Markdown, not only a copied or cached page.
+          required: true
+        - label: I searched existing documentation issues.
+          required: true
