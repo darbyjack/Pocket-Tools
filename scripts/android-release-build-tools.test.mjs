@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import test from "node:test";
 
 import {
   assertUnsignedApkVerification,
   buildExpoPrebuildCommand,
   buildGradleCommand,
+  buildPnpmCommand,
   findSingleReleaseApk,
   intermediateApkFilename,
   validateGeneratedGradleProperties,
@@ -79,35 +80,67 @@ test("builds deterministic intermediate names and validates ABIs", () => {
   assert.throws(() => validateReleaseAbi("universal"), /ANDROID_BUILD_ARGUMENT_INVALID/);
 });
 
-test("constructs clean prebuild and isolated Gradle commands", () => {
-  assert.deepEqual(buildExpoPrebuildCommand("win32"), {
-    executable: "pnpm.cmd",
-    args: [
-      "--dir",
-      "apps/mobile",
-      "exec",
-      "expo",
-      "prebuild",
-      "--platform",
-      "android",
-      "--clean",
-      "--no-install",
-    ],
+test("constructs shell-free pnpm and Gradle commands", () => {
+  const repositoryRoot = resolve("fixture-repository");
+  const pnpmEntry = resolve("fixture-tools", "pnpm.cjs");
+  const prebuild = buildExpoPrebuildCommand({
+    nodeExecutable: "node-executable",
+    pnpmEntry,
+    repositoryRoot,
   });
+  assert.equal(prebuild.executable, "node-executable");
+  assert.deepEqual(prebuild.args, [
+    pnpmEntry,
+    "--dir",
+    "apps/mobile",
+    "exec",
+    "expo",
+    "prebuild",
+    "--platform",
+    "android",
+    "--clean",
+    "--no-install",
+  ]);
+  assert.equal(prebuild.cwd, repositoryRoot);
+  assert.doesNotMatch(prebuild.executable, /\.(?:cmd|bat)$/i);
+
+  const androidDirectory = resolve("fixture-repository", "apps", "mobile", "android");
+  const projectCacheDirectory = resolve("fixture-repository", "release-work", "cache", "x86");
   const gradle = buildGradleCommand({
-    androidDirectory: "C:/repo/apps/mobile/android",
+    androidDirectory,
     abi: "x86",
-    projectCacheDirectory: "C:/repo/release-work/cache/x86",
-    platform: "win32",
+    projectCacheDirectory,
+    javaExecutable: "java-executable",
   });
-  assert.match(gradle.executable.replaceAll("\\", "/"), /apps\/mobile\/android\/gradlew\.bat$/);
-  assert.deepEqual(gradle.args.slice(0, 4), [
+  assert.equal(gradle.executable, "java-executable");
+  assert.equal(gradle.cwd, androidDirectory);
+  assert.deepEqual(gradle.args.slice(0, 5), [
+    "-classpath",
+    resolve(androidDirectory, "gradle", "wrapper", "gradle-wrapper.jar"),
+    "org.gradle.wrapper.GradleWrapperMain",
     ":app:assembleRelease",
     "-PreactNativeArchitectures=x86",
-    "--no-daemon",
-    "--stacktrace",
   ]);
-  assert.equal(gradle.args[4], "--project-cache-dir");
+  assert.equal(gradle.args.at(-2), "--project-cache-dir");
+  assert.equal(gradle.args.at(-1), projectCacheDirectory);
+  assert.doesNotMatch(gradle.executable, /\.(?:cmd|bat)$/i);
+});
+
+test("requires the pnpm JavaScript entrypoint and discovered Java executable", () => {
+  assert.throws(
+    () => buildPnpmCommand(["check"], { pnpmEntry: "", nodeExecutable: "node" }),
+    /ANDROID_BUILD_PNPM_MISSING/,
+  );
+  assert.throws(
+    () =>
+      buildGradleCommand({
+        androidDirectory: "android",
+        abi: "arm64-v8a",
+        projectCacheDirectory: "cache",
+        javaExecutable: "",
+      }),
+    /ANDROID_BUILD_JAVA_MISSING/,
+  );
 });
 
 test("validates generated ABI and release optimization properties", () => {

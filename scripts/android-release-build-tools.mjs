@@ -28,10 +28,29 @@ export function intermediateInspectionFilename(tag, abi) {
   return `${intermediateApkFilename(tag, abi)}.inspection.json`;
 }
 
-export function buildExpoPrebuildCommand(platform = process.platform) {
+export function buildPnpmCommand(
+  args,
+  {
+    nodeExecutable = process.execPath,
+    pnpmEntry = process.env.npm_execpath,
+    repositoryRoot = process.cwd(),
+  } = {},
+) {
+  if (typeof pnpmEntry !== "string" || pnpmEntry.trim().length === 0) {
+    throw new Error(
+      "ANDROID_BUILD_PNPM_MISSING: invoke the release build through pnpm so npm_execpath identifies the pinned pnpm CLI.",
+    );
+  }
   return {
-    executable: platform === "win32" ? "pnpm.cmd" : "pnpm",
-    args: [
+    executable: nodeExecutable,
+    args: [resolve(pnpmEntry), ...args],
+    cwd: resolve(repositoryRoot),
+  };
+}
+
+export function buildExpoPrebuildCommand(options = {}) {
+  return buildPnpmCommand(
+    [
       "--dir",
       "apps/mobile",
       "exec",
@@ -42,15 +61,27 @@ export function buildExpoPrebuildCommand(platform = process.platform) {
       "--clean",
       "--no-install",
     ],
-  };
+    options,
+  );
 }
 
-export function buildGradleCommand({ androidDirectory, abi, projectCacheDirectory, platform }) {
+export function buildGradleCommand({
+  androidDirectory,
+  abi,
+  projectCacheDirectory,
+  javaExecutable,
+}) {
   validateReleaseAbi(abi);
-  const executable = resolve(androidDirectory, platform === "win32" ? "gradlew.bat" : "gradlew");
+  if (typeof javaExecutable !== "string" || javaExecutable.trim().length === 0) {
+    throw new Error("ANDROID_BUILD_JAVA_MISSING: a discovered Java executable is required.");
+  }
+  const resolvedAndroidDirectory = resolve(androidDirectory);
   return {
-    executable,
+    executable: javaExecutable,
     args: [
+      "-classpath",
+      resolve(resolvedAndroidDirectory, "gradle", "wrapper", "gradle-wrapper.jar"),
+      "org.gradle.wrapper.GradleWrapperMain",
       ":app:assembleRelease",
       `-PreactNativeArchitectures=${abi}`,
       "--no-daemon",
@@ -58,6 +89,7 @@ export function buildGradleCommand({ androidDirectory, abi, projectCacheDirector
       "--project-cache-dir",
       resolve(projectCacheDirectory),
     ],
+    cwd: resolvedAndroidDirectory,
   };
 }
 
@@ -147,61 +179,4 @@ export function validateUnsignedApkInspection({ badging, nativeLibraries, expect
     );
   }
   const archiveAbis = Object.keys(nativeLibraries).sort(bytewiseCompare);
-  if (archiveAbis.length !== 1 || archiveAbis[0] !== expectedAbi) {
-    failures.push(
-      `archive native ABIs are [${archiveAbis.join(", ")}] instead of [${expectedAbi}]`,
-    );
-  }
-  const names = nativeLibraries[expectedAbi] ?? [];
-  for (const required of REQUIRED_NATIVE_LIBRARIES) {
-    if (!names.includes(required)) failures.push(`${required} is missing for ${expectedAbi}`);
-  }
-  if (failures.length !== 0) {
-    throw new Error(`ANDROID_BUILD_INSPECTION_FAILED: ${failures.join("; ")}.`);
-  }
-  return {
-    packageName: badging.packageName,
-    versionName: badging.versionName,
-    versionCode: badging.versionCode,
-    sdk: {
-      min: badging.minSdk,
-      compile: badging.compileSdk,
-      target: badging.targetSdk,
-    },
-    abi: expectedAbi,
-    nativeLibraries: names,
-    aligned: true,
-    signed: false,
-  };
-}
-
-function parseProperties(text) {
-  const result = new Map();
-  for (const rawLine of String(text).replace(/\r\n?/g, "\n").split("\n")) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#") || line.startsWith("!")) continue;
-    const separator = line.search(/[:=]/);
-    const key = (separator === -1 ? line : line.slice(0, separator)).trim();
-    const value = (separator === -1 ? "" : line.slice(separator + 1)).trim();
-    result.set(key, value);
-  }
-  return result;
-}
-
-async function collectApks(directory, matches) {
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) await collectApks(path, matches);
-    else if (entry.isFile() && entry.name.endsWith(".apk")) matches.push(path);
-  }
-}
-
-function compareField(failures, label, actual, expected) {
-  if (actual !== expected) {
-    failures.push(`${label} ${JSON.stringify(actual)} does not match ${JSON.stringify(expected)}`);
-  }
-}
-
-function bytewiseCompare(left, right) {
-  return Buffer.from(left).compare(Buffer.from(right));
-}
+  if (archiveAbis.length !== 1 ||…É¡¥Ù•‰¥ÍlÁt€„ôô•áÁ•Ñ•‘‰¤¤ì(€€€™…¥±ÕÉ•Ì¹ÁÕÍ  (€€€€€…É¡¥Ù”¹…Ñ¥Ù”	%Ì…É”l‘í…É¡¥Ù•‰¥Ì¹©½¥¸ ˆ°€ˆ¥õt¥¹ÍÑ•…½˜l‘í•áÁ•Ñ•‘‰¥õu€°(€€€€¤ì(€ô(€½¹ÍĞ¹…µ•Ì€ô¹…Ñ¥Ù•1¥‰É…É¥•Ím•áÁ•Ñ•‘‰¥t€üümtì(€™½È€¡½¹ÍĞÉ•ÅÕ¥É•½˜IEU%I}9Q%Y}1%	II%L¤ì(€€€¥˜€ …¹…µ•Ì¹¥¹±Õ‘•Ì¡É•ÅÕ¥É•¤¤™…¥±ÕÉ•Ì¹ÁÕÍ ¡€‘íÉ•ÅÕ¥É•‘ô¥Ìµ¥ÍÍ¥¹œ™½È€‘í•áÁ•Ñ•‘‰¥õ€¤ì(€ô(€¥˜€¡™…¥±ÕÉ•Ì¹±•¹Ñ €„ôô€À¤ì(€€€Ñ¡É½Ü¹•ÜÉÉ½È¡9I=%}	U%1}%9MAQ%=9}%1è€‘í™…¥±ÕÉ•Ì¹©½¥¸ ˆì€ˆ¥ô¹€¤ì(€ô(€É•ÑÕÉ¸ì(€€€Á…­…•9…µ”è‰…‘¥¹œ¹Á…­…•9…µ”°(€€€Ù•ÉÍ¥½¹9…µ”è‰…‘¥¹œ¹Ù•ÉÍ¥½¹9…µ”°(€€€Ù•ÉÍ¥½¹½‘”è‰…‘¥¹œ¹Ù•ÉÍ¥½¹½‘”°(€€€Í‘¬èì(€€€€€µ¥¸è‰…‘¥¹œ¹µ¥¹M‘¬°(€€€€€½µÁ¥±”è‰…‘¥¹œ¹½µÁ¥±•M‘¬°(€€€€€Ñ…É•Ğè‰…‘¥¹œ¹Ñ…É•ÑM‘¬°(€€€ô°(€€€…‰¤è•áÁ•Ñ•‘‰¤°(€€€¹…Ñ¥Ù•1¥‰É…É¥•Ìè¹…µ•Ì°(€€€…±¥¹•èÑÉÕ”°(€€€Í¥¹•è™…±Í”°(€ôì)ô()™Õ¹Ñ¥½¸Á…ÉÍ•AÉ½Á•ÉÑ¥•Ì¡Ñ•áĞ¤ì(€½¹ÍĞÉ•ÍÕ±Ğ€ô¹•Ü5…À ¤ì(€™½È€¡½¹ÍĞÉ…İ1¥¹”½˜MÑÉ¥¹œ¡Ñ•áĞ¤¹É•Á±…” ½qÉq¸ü½œ°€‰q¸ˆ¤¹ÍÁ±¥Ğ ‰q¸ˆ¤¤ì(€€€½¹ÍĞ±¥¹”€ôÉ…İ1¥¹”¹ÑÉ¥´ ¤ì(€€€¥˜€ …±¥¹”ñğ±¥¹”¹ÍÑ…ÉÑÍ]¥Ñ  ˆŒˆ¤ñğ±¥¹”¹ÍÑ…ÉÑÍ]¥Ñ  ˆ„ˆ¤¤½¹Ñ¥¹Õ”ì(€€€½¹ÍĞÍ•Á…É…Ñ½È€ô±¥¹”¹Í•…É  ½lèõt¼¤ì(€€€½¹ÍĞ­•ä€ô€¡Í•Á…É…Ñ½È€ôôô€´Ä€ü±¥¹”€è±¥¹”¹Í±¥” À°Í•Á…É…Ñ½È¤¤¹ÑÉ¥´ ¤ì(€€€½¹ÍĞÙ…±Õ”€ô€¡Í•Á…É…Ñ½È€ôôô€´Ä€ü€ˆˆ€è±¥¹”¹Í±¥”¡Í•Á…É…Ñ½È€¬€Ä¤¤¹ÑÉ¥´ ¤ì(€€€É•ÍÕ±Ğ¹Í•Ğ¡­•ä°Ù…±Õ”¤ì(€ô(€É•ÑÕÉ¸É•ÍÕ±Ğì)ô()…Íå¹Œ™Õ¹Ñ¥½¸½±±•ÑÁ­Ì¡‘¥É•Ñ½Éä°µ…Ñ¡•Ì¤ì(€™½È€¡½¹ÍĞ•¹ÑÉä½˜…İ…¥ĞÉ•…‘‘¥È¡‘¥É•Ñ½Éä°ìİ¥Ñ¡¥±•QåÁ•ÌèÑÉÕ”ô¤¤ì(€€€½¹ÍĞÁ…Ñ €ô©½¥¸¡‘¥É•Ñ½Éä°•¹ÑÉä¹¹…µ”¤ì(€€€¥˜€¡•¹ÑÉä¹¥Í¥É•Ñ½Éä ¤¤…İ…¥Ğ½±±•ÑÁ­Ì¡Á…Ñ °µ…Ñ¡•Ì¤ì(€€€•±Í”¥˜€¡•¹ÑÉä¹¥Í¥±” ¤€˜˜•¹ÑÉä¹¹…µ”¹•¹‘Í]¥Ñ  ˆ¹…Á¬ˆ¤¤µ…Ñ¡•Ì¹ÁÕÍ ¡Á…Ñ ¤ì(€ô)ô()™Õ¹Ñ¥½¸½µÁ…É•¥•±¡™…¥±ÕÉ•Ì°±…‰•°°…ÑÕ…°°•áÁ•Ñ•¤ì(€¥˜€¡…ÑÕ…°€„ôô•áÁ•Ñ•¤ì(€€€™…¥±ÕÉ•Ì¹ÁÕÍ ¡€‘í±…‰•±ô€‘í)M=8¹ÍÑÉ¥¹¥™ä¡…ÑÕ…°¥ô‘½•Ì¹½Ğµ…Ñ €‘í)M=8¹ÍÑÉ¥¹¥™ä¡•áÁ•Ñ•¥õ€¤ì(€ô)ô()™Õ¹Ñ¥½¸‰åÑ•İ¥Í•½µÁ…É”¡±•™Ğ°É¥¡Ğ¤ì(€É•ÑÕÉ¸	Õ™™•È¹™É½´¡±•™Ğ¤¹½µÁ…É”¡	Õ™™•È¹™É½´¡É¥¡Ğ¤¤ì)ô(

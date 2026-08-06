@@ -8,6 +8,7 @@ import {
   assertUnsignedApkVerification,
   buildExpoPrebuildCommand,
   buildGradleCommand,
+  buildPnpmCommand,
   findSingleReleaseApk,
   intermediateApkFilename,
   intermediateInspectionFilename,
@@ -78,8 +79,9 @@ async function buildOne({ tag, abi, directory, identity, tools }) {
   );
   let completed = false;
   try {
-    const prebuild = buildExpoPrebuildCommand();
+    const probuild = buildExpoPrebuildCommand({ repositoryRoot });
     run(prebuild.executable, prebuild.args, {
+      cwd: prebuild.cwd,
       env: { ...process.env, CI: "1", EXPO_NO_GIT_STATUS: "1" },
     });
 
@@ -91,9 +93,9 @@ async function buildOne({ tag, abi, directory, identity, tools }) {
       androidDirectory,
       abi,
       projectCacheDirectory,
-      platform: process.platform,
+      javaExecutable: tools.java,
     });
-    run(gradle.executable, gradle.args);
+    run(gradle.executable, gradle.args, { cwd: gradle.cwd });
 
     const sourceApk = await findSingleReleaseApk(
       join(androidDirectory, "app", "build", "outputs", "apk", "release"),
@@ -149,8 +151,13 @@ async function buildOne({ tag, abi, directory, identity, tools }) {
 
 async function validateSource(tag) {
   run(process.execPath, ["scripts/release-engineering.mjs", "validate-inputs", "--tag", tag]);
-  run(pnpmExecutable(), ["sync:mini-apps:check"]);
-  run(pnpmExecutable(), ["sdk:declarations:check"]);
+  runPnpm(["sync:mini-apps:check"]);
+  runPnpm(["sdk:declarations:check"]);
+}
+
+function runPnpm(args) {
+  const command = buildPnpmCommand(args, { repositoryRoot });
+  return run(command.executable, command.args, { cwd: command.cwd });
 }
 
 async function loadIdentity(tag) {
@@ -168,9 +175,13 @@ async function loadIdentity(tag) {
   });
 }
 
-function run(executable, args, { allowFailure = false, env = process.env } = {}) {
+function run(
+  executable,
+  args,
+  { allowFailure = false, cwd = repositoryRoot, env = process.env } = {},
+) {
   const result = spawnSync(executable, args, {
-    cwd: repositoryRoot,
+    cwd,
     encoding: "utf8",
     shell: false,
     env,
@@ -226,10 +237,6 @@ async function assertDirectoryMissingOrEmpty(path, label) {
     if (cause?.code === "ENOENT") return;
     throw cause;
   }
-}
-
-function pnpmExecutable() {
-  return process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 }
 
 function parseArguments(values) {
