@@ -1,18 +1,11 @@
-import * as SQLite from "expo-sqlite";
-
-import {
-  cancelNotificationsForRemovedToolInTransaction,
-  ensureNotificationRegistrySchema,
-} from "./notification-registry.ts";
-
-const databasePromise = SQLite.openDatabaseAsync("pocket-tools.db");
+import { getDatabase } from "./database-connection.ts";
+import { cancelNotificationsForRemovedToolInTransaction } from "./notification-registry.ts";
 
 export async function deleteInstalledMiniAppWithNotifications(
   appId: string,
   deleteData: boolean,
 ): Promise<void> {
-  const database = await databasePromise;
-  await ensureNotificationRegistrySchema(database);
+  const database = await getDatabase();
   await database.withTransactionAsync(async () => {
     const removedAt = new Date().toISOString();
     await cancelNotificationsForRemovedToolInTransaction(database, appId, removedAt);
