@@ -41,6 +41,18 @@ export function normalizeAndroidLicenseReport(raw, policy, overrides) {
     const licenseNames = Array.isArray(entry.licenseNames)
       ? entry.licenseNames.map((value, index) => requireText(value, `android.licenseNames[${index}]`))
       : [];
+    const licenseUrls = Array.isArray(entry.licenseUrls)
+      ? entry.licenseUrls.map(String).filter(Boolean).sort()
+      : [];
+    const licenseSource =
+      entry.licenseSource === undefined || entry.licenseSource === null
+        ? undefined
+        : requireText(String(entry.licenseSource), "android.licenseSource");
+    const licenseInheritanceChain = Array.isArray(entry.licenseInheritanceChain)
+      ? entry.licenseInheritanceChain.map((value, index) =>
+          requireText(String(value), `android.licenseInheritanceChain[${index}]`),
+        )
+      : [];
     const declaredLicense =
       licenseNames.length === 1 ? licenseNames[0] : licenseNames.length === 0 ? "UNKNOWN" : "LicenseRef-MULTIPLE";
 
@@ -53,9 +65,9 @@ export function normalizeAndroidLicenseReport(raw, policy, overrides) {
         group,
         module,
         licenseNames: [...licenseNames].sort(),
-        licenseUrls: Array.isArray(entry.licenseUrls)
-          ? entry.licenseUrls.map(String).filter(Boolean).sort()
-          : [],
+        licenseUrls,
+        ...(licenseSource === undefined ? {} : { licenseSource }),
+        ...(licenseInheritanceChain.length === 0 ? {} : { licenseInheritanceChain }),
       },
     };
   });
