@@ -1,8 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
 
 import {
   normalizeAndroidLicenseReport,
@@ -52,11 +52,11 @@ switch (command) {
 }
 
 function createPnpmInventory() {
-  const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  const result = spawnSync(executable, ["licenses", "list", "--prod", "--json"], {
+  const args = ["licenses", "list", "--prod", "--json"];
+  const invocation = resolvePnpmInvocation(args);
+  const result = spawnSync(invocation.executable, invocation.args, {
     cwd: repositoryRoot,
     encoding: "utf8",
-    shell: process.platform === "win32",
   });
   if (result.status !== 0) {
     throw new Error(
@@ -77,21 +77,18 @@ async function createAndroidInventory() {
   }
 
   const initScript = join(repositoryRoot, "scripts", "gradle-license-inventory.gradle");
-  const result = spawnSync(
-    gradleWrapper,
-    [
-      "-I",
-      initScript,
-      ":app:pocketToolsLicenseInventory",
-      `-DpocketToolsLicenseOutput=${androidRawPath}`,
-      "--no-daemon",
-    ],
-    {
-      cwd: androidRoot,
-      encoding: "utf8",
-      shell: process.platform === "win32",
-    },
-  );
+  const gradleArgs = [
+    "-I",
+    initScript,
+    ":app:pocketToolsLicenseInventory",
+    `-DpocketToolsLicenseOutput=${androidRawPath}`,
+    "--no-daemon",
+  ];
+  const invocation = resolveGradleInvocation(androidRoot, gradleWrapper, gradleArgs);
+  const result = spawnSync(invocation.executable, invocation.args, {
+    cwd: androidRoot,
+    encoding: "utf8",
+  });
   if (result.status !== 0) {
     throw new Error(
       `LICENSE_ANDROID_FAILED: Gradle license inventory failed.\n${result.stderr || result.stdout}`,
@@ -105,6 +102,40 @@ async function createAndroidInventory() {
   } finally {
     await unlink(androidRawPath).catch(() => undefined);
   }
+}
+
+function resolvePnpmInvocation(args) {
+  if (process.platform !== "win32") {
+    return { executable: "pnpm", args };
+  }
+
+  const pnpmCli = process.env.npm_execpath;
+  if (typeof pnpmCli !== "string" || !/\.(?:c?js|mjs)$/i.test(pnpmCli)) {
+    throw new Error(
+      "LICENSE_PNPM_FAILED: on Windows, run this inventory through its pnpm script so npm_execpath identifies the pnpm JavaScript entry point.",
+    );
+  }
+  return { executable: process.execPath, args: [pnpmCli, ...args] };
+}
+
+function resolveGradleInvocation(androidRoot, gradleWrapper, args) {
+  if (process.platform !== "win32") {
+    return { executable: gradleWrapper, args };
+  }
+
+  const wrapperJar = join(androidRoot, "gradle", "wrapper", "gradle-wrapper.jar");
+  if (!existsSync(wrapperJar)) {
+    throw new Error(
+      "LICENSE_ANDROID_MISSING: Gradle wrapper JAR is missing from the generated Android project.",
+    );
+  }
+  const javaExecutable = process.env.JAVA_HOME
+    ? join(process.env.JAVA_HOME, "bin", "java.exe")
+    : "java.exe";
+  return {
+    executable: javaExecutable,
+    args: ["-classpath", wrapperJar, "org.gradle.wrapper.GradleWrapperMain", ...args],
+  };
 }
 
 async function writeInventory(path, inventory) {
