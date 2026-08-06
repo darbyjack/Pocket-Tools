@@ -19,7 +19,8 @@
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
-      ]
+      ],
+      "./plugins/with-unsigned-release-build.cjs"
     ],
     "android": {
       "package": "com.darbyjack.pockettools",
