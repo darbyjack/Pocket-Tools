@@ -1,6 +1,36 @@
 {
   "schemaVersion": 1,
   "packages": {
+    "maven:com.facebook.fbjni:fbjni@0.7.0": {
+      "declaredLicense": "Apache-2.0",
+      "concludedLicense": "Apache-2.0",
+      "reason": "Reviewed the Maven Central 0.7.0 publication and the upstream fbjni Apache 2.0 license. The published POM label APACHE-2 is a non-SPDX spelling of Apache-2.0.",
+      "notice": "fbjni 0.7.0 is licensed under Apache-2.0. Copyright Meta Platforms, Inc. and affiliates."
+    },
+    "maven:com.facebook.infer.annotation:infer-annotation@0.18.0": {
+      "declaredLicense": "MIT",
+      "concludedLicense": "MIT",
+      "reason": "Reviewed the Maven Central 0.18.0 publication and the upstream Infer MIT license. The published POM label MIT license is normalized to MIT for this exact artifact version.",
+      "notice": "Infer Annotations 0.18.0 is licensed under the MIT License. Copyright Meta Platforms, Inc. and affiliates."
+    },
+    "maven:com.facebook.soloader:annotation@0.12.1": {
+      "declaredLicense": "Apache-2.0",
+      "concludedLicense": "Apache-2.0",
+      "reason": "Reviewed the Maven Central 0.12.1 publication and the upstream SoLoader Apache 2.0 license. The published POM label Apache-2 is a non-SPDX spelling of Apache-2.0.",
+      "notice": "SoLoader annotation 0.12.1 is licensed under Apache-2.0. Copyright Meta Platforms, Inc. and affiliates."
+    },
+    "maven:com.facebook.soloader:nativeloader@0.12.1": {
+      "declaredLicense": "Apache-2.0",
+      "concludedLicense": "Apache-2.0",
+      "reason": "Reviewed the Maven Central 0.12.1 publication and the upstream SoLoader Apache 2.0 license. The published POM label Apache-2 is a non-SPDX spelling of Apache-2.0.",
+      "notice": "SoLoader NativeLoader 0.12.1 is licensed under Apache-2.0. Copyright Meta Platforms, Inc. and affiliates."
+    },
+    "maven:com.facebook.soloader:soloader@0.12.1": {
+      "declaredLicense": "Apache-2.0",
+      "concludedLicense": "Apache-2.0",
+      "reason": "Reviewed the Maven Central 0.12.1 publication and the upstream SoLoader Apache 2.0 license. The published POM label Apache-2 is a non-SPDX spelling of Apache-2.0.",
+      "notice": "SoLoader 0.12.1 is licensed under Apache-2.0. Copyright Meta Platforms, Inc. and affiliates."
+    },
     "maven:com.parse.bolts:bolts-tasks@1.4.0": {
       "declaredLicense": "BSD-3-Clause",
       "concludedLicense": "BSD-3-Clause",
