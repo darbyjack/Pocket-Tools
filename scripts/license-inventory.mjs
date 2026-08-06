@@ -37,12 +37,18 @@ switch (command) {
     await writeInventory(androidInventoryPath, await createAndroidInventory());
     break;
   case "android:check":
-    validateInventory(await readRequiredJson(androidInventoryPath, "pnpm licenses:android:write"), policy);
+    validateInventory(
+      await readRequiredJson(androidInventoryPath, "pnpm licenses:android:write"),
+      policy,
+    );
     console.log("Android production license inventory is valid.");
     break;
   case "check":
     await checkInventory(pnpmInventoryPath, createPnpmInventory(), "pnpm licenses:pnpm:write");
-    validateInventory(await readRequiredJson(androidInventoryPath, "pnpm licenses:android:write"), policy);
+    validateInventory(
+      await readRequiredJson(androidInventoryPath, "pnpm licenses:android:write"),
+      policy,
+    );
     console.log("All production license inventories are valid and current.");
     break;
   default:

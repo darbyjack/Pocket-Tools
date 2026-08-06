@@ -6,14 +6,7 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const licensePath = join(repositoryRoot, "LICENSE");
 const noticesPath = join(repositoryRoot, "THIRD_PARTY_NOTICES.md");
-const outputPath = join(
-  repositoryRoot,
-  "apps",
-  "mobile",
-  "src",
-  "generated",
-  "legal-notices.json",
-);
+const outputPath = join(repositoryRoot, "apps", "mobile", "src", "generated", "legal-notices.json");
 const legacyOutputPath = join(
   repositoryRoot,
   "apps",

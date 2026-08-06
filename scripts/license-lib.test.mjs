@@ -63,15 +63,9 @@ test("fails closed on forbidden, unknown, and review-required licenses", () => {
   assert.throws(() => validateLicenseExpression("CC-BY-3.0", policy), /LICENSE_UNKNOWN/);
   assert.equal(validateLicenseExpression("CC-BY-4.0", policy), "CC-BY-4.0");
   assert.equal(validateLicenseExpression("BlueOak-1.0.0", policy), "BlueOak-1.0.0");
-  assert.equal(
-    validateLicenseExpression("Blue Oak Model License 1.0.0", policy),
-    "BlueOak-1.0.0",
-  );
+  assert.equal(validateLicenseExpression("Blue Oak Model License 1.0.0", policy), "BlueOak-1.0.0");
   assert.equal(validateLicenseExpression("MPL-2.0", policy), "MPL-2.0");
-  assert.equal(
-    validateLicenseExpression("Mozilla Public License Version 2.0", policy),
-    "MPL-2.0",
-  );
+  assert.equal(validateLicenseExpression("Mozilla Public License Version 2.0", policy), "MPL-2.0");
   assert.equal(
     validateLicenseExpression("The Apache Software License, Version 2.0", policy),
     "Apache-2.0",

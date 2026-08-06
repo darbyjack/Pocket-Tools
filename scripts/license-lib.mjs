@@ -18,7 +18,9 @@ export function normalizePnpmLicenseReport(raw, policy, overrides) {
   } else if (raw !== null && typeof raw === "object") {
     for (const [declared, packages] of Object.entries(raw)) {
       if (!Array.isArray(packages)) {
-        throw new Error(`LICENSE_INVENTORY_INVALID: pnpm license group ${declared} is not an array.`);
+        throw new Error(
+          `LICENSE_INVENTORY_INVALID: pnpm license group ${declared} is not an array.`,
+        );
       }
       for (const entry of packages) addPnpmCandidate(candidates, declared, entry);
     }
@@ -39,7 +41,9 @@ export function normalizeAndroidLicenseReport(raw, policy, overrides) {
     const module = requireText(entry.module, "android.module");
     const version = requireText(entry.version, "android.version");
     const licenseNames = Array.isArray(entry.licenseNames)
-      ? entry.licenseNames.map((value, index) => requireText(value, `android.licenseNames[${index}]`))
+      ? entry.licenseNames.map((value, index) =>
+          requireText(value, `android.licenseNames[${index}]`),
+        )
       : [];
     const licenseUrls = Array.isArray(entry.licenseUrls)
       ? entry.licenseUrls.map(String).filter(Boolean).sort()
@@ -54,7 +58,11 @@ export function normalizeAndroidLicenseReport(raw, policy, overrides) {
         )
       : [];
     const declaredLicense =
-      licenseNames.length === 1 ? licenseNames[0] : licenseNames.length === 0 ? "UNKNOWN" : "LicenseRef-MULTIPLE";
+      licenseNames.length === 1
+        ? licenseNames[0]
+        : licenseNames.length === 0
+          ? "UNKNOWN"
+          : "LicenseRef-MULTIPLE";
 
     return {
       name: `${group}:${module}`,
@@ -91,8 +99,16 @@ export function validateInventory(inventory, policy) {
     if (keys.has(key)) throw new Error(`LICENSE_INVENTORY_INVALID: duplicate package ${key}.`);
     keys.add(key);
 
-    validateLicenseExpression(requireText(entry.declaredLicense, `${key}.declaredLicense`), policy, key);
-    validateLicenseExpression(requireText(entry.concludedLicense, `${key}.concludedLicense`), policy, key);
+    validateLicenseExpression(
+      requireText(entry.declaredLicense, `${key}.declaredLicense`),
+      policy,
+      key,
+    );
+    validateLicenseExpression(
+      requireText(entry.concludedLicense, `${key}.concludedLicense`),
+      policy,
+      key,
+    );
     requireText(entry.purl, `${key}.purl`);
   }
 
@@ -106,10 +122,11 @@ export function validateInventory(inventory, policy) {
 export function buildSpdxDocument({ rootVersion, npmInventory, androidInventory, created }) {
   const version = requireText(rootVersion, "rootVersion");
   const createdAt = normalizeCreated(created);
-  const dependencies = [...npmInventory.packages, ...androidInventory.packages].sort((left, right) =>
-    `${left.ecosystem}:${left.name}@${left.version}`.localeCompare(
-      `${right.ecosystem}:${right.name}@${right.version}`,
-    ),
+  const dependencies = [...npmInventory.packages, ...androidInventory.packages].sort(
+    (left, right) =>
+      `${left.ecosystem}:${left.name}@${left.version}`.localeCompare(
+        `${right.ecosystem}:${right.name}@${right.version}`,
+      ),
   );
   const contentHash = createHash("sha256")
     .update(stableJson({ version, npmInventory, androidInventory }))
@@ -176,7 +193,10 @@ export function validateSpdxDocument(document) {
   requireText(document.name, "sbom.name");
   requireText(document.documentNamespace, "sbom.documentNamespace");
   normalizeCreated(document.creationInfo?.created);
-  if (!Array.isArray(document.creationInfo?.creators) || document.creationInfo.creators.length === 0) {
+  if (
+    !Array.isArray(document.creationInfo?.creators) ||
+    document.creationInfo.creators.length === 0
+  ) {
     throw new Error("SBOM_INVALID: at least one creator is required.");
   }
   if (!Array.isArray(document.packages) || document.packages.length === 0) {
@@ -293,7 +313,9 @@ function buildInventory(ecosystem, source, candidates, policy, overrides) {
         : {
             review: {
               reason: override.reason,
-              ...(override.notice === undefined ? {} : { notice: requireText(override.notice, `${key}.notice`) }),
+              ...(override.notice === undefined
+                ? {}
+                : { notice: requireText(override.notice, `${key}.notice`) }),
             },
           }),
       ...(Object.keys(candidate.metadata).length === 0 ? {} : { metadata: candidate.metadata }),
@@ -382,7 +404,8 @@ function findForbiddenPattern(expression, policy) {
 function npmPurl(name, version) {
   if (name.startsWith("@")) {
     const [scope, packageName] = name.split("/");
-    if (!scope || !packageName) throw new Error(`LICENSE_INVENTORY_INVALID: invalid npm package ${name}.`);
+    if (!scope || !packageName)
+      throw new Error(`LICENSE_INVENTORY_INVALID: invalid npm package ${name}.`);
     return `pkg:npm/${encodeURIComponent(scope)}/${encodeURIComponent(packageName)}@${encodeURIComponent(version)}`;
   }
   return `pkg:npm/${encodeURIComponent(name)}@${encodeURIComponent(version)}`;
@@ -393,7 +416,10 @@ function packageSpdxId(entry) {
     .update(`${entry.ecosystem}:${entry.name}@${entry.version}`)
     .digest("hex")
     .slice(0, 12);
-  const label = `${entry.ecosystem}-${entry.name}-${entry.version}`.replace(/[^A-Za-z0-9.-]+/g, "-");
+  const label = `${entry.ecosystem}-${entry.name}-${entry.version}`.replace(
+    /[^A-Za-z0-9.-]+/g,
+    "-",
+  );
   return `SPDXRef-${label}-${digest}`;
 }
 

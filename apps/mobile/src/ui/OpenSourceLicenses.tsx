@@ -20,8 +20,8 @@ export function OpenSourceLicenses({ onBack }: OpenSourceLicensesProps) {
 
       <Text style={styles.introduction}>
         Pocket Tools is licensed under Apache License 2.0 and includes third-party software and
-        visual assets under their respective licenses. This page is bundled with the application
-        and does not require a network connection.
+        visual assets under their respective licenses. This page is bundled with the application and
+        does not require a network connection.
       </Text>
 
       <LicenseSection title="Pocket Tools — Apache License 2.0">
@@ -35,7 +35,13 @@ export function OpenSourceLicenses({ onBack }: OpenSourceLicensesProps) {
   );
 }
 
-function LicenseSection({ children, title }: { readonly children: string; readonly title: string }) {
+function LicenseSection({
+  children,
+  title,
+}: {
+  readonly children: string;
+  readonly title: string;
+}) {
   return (
     <View style={styles.section}>
       <Text accessibilityRole="header" style={styles.sectionTitle}>

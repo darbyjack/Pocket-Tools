@@ -40,13 +40,7 @@
     "Mozilla Public License Version 2.0": "MPL-2.0",
     "SIL Open Font License 1.1": "OFL-1.1"
   },
-  "forbiddenPatterns": [
-    "AGPL",
-    "BUSL",
-    "Commons Clause",
-    "GPL",
-    "SSPL"
-  ],
+  "forbiddenPatterns": ["AGPL", "BUSL", "Commons Clause", "GPL", "SSPL"],
   "reviewRequiredPatterns": [
     "CDDL",
     "EPL",

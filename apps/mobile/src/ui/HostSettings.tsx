@@ -52,10 +52,7 @@ export function HostSettings({
       </SettingsSection>
 
       <SettingsSection title="About">
-        <SettingsRow
-          label="Open-source licenses"
-          onPress={() => setShowOpenSourceLicenses(true)}
-        />
+        <SettingsRow label="Open-source licenses" onPress={() => setShowOpenSourceLicenses(true)} />
       </SettingsSection>
     </ScreenScrollView>
   );

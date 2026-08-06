@@ -4,17 +4,17 @@ Pocket Tools is licensed under the Apache License 2.0. Publication and release p
 
 ## Canonical files
 
-| File | Purpose |
-| --- | --- |
-| `LICENSE` | Complete Apache License 2.0 text for first-party project work. |
-| `ASSET_PROVENANCE.md` | Origin and redistribution basis for project-owned images, fonts, sounds, sample data, and other non-code assets. |
-| `THIRD_PARTY_NOTICES.md` | Maintained full notices for embedded or bundled components whose notices must accompany source or APK distribution. |
-| `licenses/policy.json` | Approved SPDX identifiers, aliases, forbidden patterns, and review-required patterns. |
-| `licenses/overrides.json` | Package-specific conclusions recorded after manual review. |
-| `licenses/pnpm-production.json` | Deterministic inventory of the locked production JavaScript dependency graph. |
-| `licenses/android-production.json` | Deterministic inventory of the resolved Android `releaseRuntimeClasspath` Maven graph. |
-| `licenses/pocket-tools.spdx.json` | Deterministic SPDX 2.3 JSON document generated from the reviewed inventories. |
-| `apps/mobile/src/generated/legal-notices.ts` | Generated mobile bundle content derived from `LICENSE` and `THIRD_PARTY_NOTICES.md`. |
+| File                                         | Purpose                                                                                                             |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `LICENSE`                                    | Complete Apache License 2.0 text for first-party project work.                                                      |
+| `ASSET_PROVENANCE.md`                        | Origin and redistribution basis for project-owned images, fonts, sounds, sample data, and other non-code assets.    |
+| `THIRD_PARTY_NOTICES.md`                     | Maintained full notices for embedded or bundled components whose notices must accompany source or APK distribution. |
+| `licenses/policy.json`                       | Approved SPDX identifiers, aliases, forbidden patterns, and review-required patterns.                               |
+| `licenses/overrides.json`                    | Package-specific conclusions recorded after manual review.                                                          |
+| `licenses/pnpm-production.json`              | Deterministic inventory of the locked production JavaScript dependency graph.                                       |
+| `licenses/android-production.json`           | Deterministic inventory of the resolved Android `releaseRuntimeClasspath` Maven graph.                              |
+| `licenses/pocket-tools.spdx.json`            | Deterministic SPDX 2.3 JSON document generated from the reviewed inventories.                                       |
+| `apps/mobile/src/generated/legal-notices.ts` | Generated mobile bundle content derived from `LICENSE` and `THIRD_PARTY_NOTICES.md`.                                |
 
 Generated inventories are evidence. They do not replace full license or notice text when an upstream license requires preservation.
 

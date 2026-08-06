@@ -6,15 +6,15 @@ SDK 1.2 is the current public contract. SDK 1.0 and 1.1 remain supported for exi
 
 ## Start here
 
-| Audience                          | Entry point                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------------------- |
-| Project contributors              | [CONTRIBUTING.md](CONTRIBUTING.md)                                                  |
-| Mini-app and agent authors        | [SDK 1.2 Authoring Guide](docs/AGENT_AUTHORING.md)                                  |
-| Delegating mini-app creation      | [Canonical Agent Prompt](docs/AGENT_PROMPT.md)                                      |
-| Complete documentation map        | [Documentation Index](docs/README.md)                                               |
-| Android development and builds    | [Pocket Tools Mobile](apps/mobile/README.md)                                        |
-| Runtime architecture and security | [Architecture](docs/ARCHITECTURE.md) · [Security Model](docs/SECURITY_MODEL.md)     |
-| Released SDK contract             | [SDK Overview](docs/SDK_OVERVIEW.md) · [SDK 1.2 Contract](docs/SDK_1_2_CONTRACT.md) |
+| Audience                          | Entry point                                                                              |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| Project contributors              | [CONTRIBUTING.md](CONTRIBUTING.md)                                                       |
+| Mini-app and agent authors        | [SDK 1.2 Authoring Guide](docs/AGENT_AUTHORING.md)                                       |
+| Delegating mini-app creation      | [Canonical Agent Prompt](docs/AGENT_PROMPT.md)                                           |
+| Complete documentation map        | [Documentation Index](docs/README.md)                                                    |
+| Android development and builds    | [Pocket Tools Mobile](apps/mobile/README.md)                                             |
+| Runtime architecture and security | [Architecture](docs/ARCHITECTURE.md) · [Security Model](docs/SECURITY_MODEL.md)          |
+| Released SDK contract             | [SDK Overview](docs/SDK_OVERVIEW.md) · [SDK 1.2 Contract](docs/SDK_1_2_CONTRACT.md)      |
 | Licensing and asset provenance    | [License](LICENSE) · [Notices](THIRD_PARTY_NOTICES.md) · [Operations](docs/LICENSING.md) |
 
 ## How it works
