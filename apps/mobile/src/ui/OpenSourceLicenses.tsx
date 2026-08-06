@@ -1,9 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import {
-  PROJECT_LICENSE_TEXT,
-  THIRD_PARTY_NOTICES_TEXT,
-} from "../generated/legal-notices";
+import legalNotices from "../generated/legal-notices.json";
 import { ScreenScrollView } from "./ScreenScrollView";
 import { colors, radii, spacing } from "./theme";
 
@@ -28,10 +25,12 @@ export function OpenSourceLicenses({ onBack }: OpenSourceLicensesProps) {
       </Text>
 
       <LicenseSection title="Pocket Tools — Apache License 2.0">
-        {PROJECT_LICENSE_TEXT}
+        {legalNotices.projectLicenseText}
       </LicenseSection>
 
-      <LicenseSection title="Third-party notices">{THIRD_PARTY_NOTICES_TEXT}</LicenseSection>
+      <LicenseSection title="Third-party notices">
+        {legalNotices.thirdPartyNoticesText}
+      </LicenseSection>
     </ScreenScrollView>
   );
 }
