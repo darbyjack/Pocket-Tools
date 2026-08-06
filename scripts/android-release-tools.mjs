@@ -34,9 +34,7 @@ export async function discoverAndroidTools({
     .sort(compareBuildToolsVersions);
   const selected = buildToolsVersion ?? DEFAULT_BUILD_TOOLS_VERSION;
   if (!selected || !versions.includes(selected)) {
-    throw new Error(
-      `ANDROID_TOOLS_MISSING: Android SDK Build Tools ${selected} is not installed.`,
-    );
+    throw new Error(`ANDROID_TOOLS_MISSING: Android SDK Build Tools ${selected} is not installed.`);
   }
 
   const directory = join(buildToolsRoot, selected);
@@ -74,7 +72,9 @@ export function parseAapt2Badging(text) {
   const minSdkText = requireLineValue(normalized, "sdkVersion", "minimum SDK");
   const targetSdkText = requireLineValue(normalized, "targetSdkVersion", "target SDK");
   const nativeLine = normalized.split("\n").find((line) => line.startsWith("native-code:"));
-  const nativeAbis = nativeLine ? [...nativeLine.matchAll(/'([^']+)'/g)].map((match) => match[1]) : [];
+  const nativeAbis = nativeLine
+    ? [...nativeLine.matchAll(/'([^']+)'/g)].map((match) => match[1])
+    : [];
   const lines = normalized.split("\n");
 
   return {
@@ -162,13 +162,7 @@ export function extractCertificatePem(text) {
   return `${matches[0]}\n`;
 }
 
-export function validateApkInspection({
-  badging,
-  nativeLibraries,
-  signature,
-  expected,
-  aligned,
-}) {
+export function validateApkInspection({ badging, nativeLibraries, signature, expected, aligned }) {
   const failures = [];
   compareField(failures, "package", badging.packageName, expected.packageName);
   compareField(failures, "versionName", badging.versionName, expected.versionName);
@@ -183,12 +177,16 @@ export function validateApkInspection({
 
   const badgingAbis = [...badging.nativeAbis].sort(bytewiseCompare);
   if (badgingAbis.length !== 1 || badgingAbis[0] !== expected.abi) {
-    failures.push(`badging native ABIs are [${badgingAbis.join(", ")}] instead of [${expected.abi}]`);
+    failures.push(
+      `badging native ABIs are [${badgingAbis.join(", ")}] instead of [${expected.abi}]`,
+    );
   }
 
   const archiveAbis = Object.keys(nativeLibraries).sort(bytewiseCompare);
   if (archiveAbis.length !== 1 || archiveAbis[0] !== expected.abi) {
-    failures.push(`archive native ABIs are [${archiveAbis.join(", ")}] instead of [${expected.abi}]`);
+    failures.push(
+      `archive native ABIs are [${archiveAbis.join(", ")}] instead of [${expected.abi}]`,
+    );
   }
   const names = nativeLibraries[expected.abi] ?? [];
   for (const required of REQUIRED_NATIVE_LIBRARIES) {
@@ -286,7 +284,9 @@ export function buildApksignerArguments({ input, output, keystore, alias }) {
 export function normalizeFingerprint(value) {
   const normalized = String(value).replaceAll(":", "").trim().toLowerCase();
   if (!SHA256_FINGERPRINT_PATTERN.test(normalized)) {
-    throw new Error("APK_CERTIFICATE_INVALID: SHA-256 fingerprint must contain 64 hexadecimal digits.");
+    throw new Error(
+      "APK_CERTIFICATE_INVALID: SHA-256 fingerprint must contain 64 hexadecimal digits.",
+    );
   }
   return normalized;
 }
@@ -315,7 +315,8 @@ function resolveJavaTool(name, env, platform) {
 }
 
 function requireFile(path, label) {
-  if (!existsSync(path)) throw new Error(`ANDROID_TOOLS_MISSING: ${label} was not found at ${path}.`);
+  if (!existsSync(path))
+    throw new Error(`ANDROID_TOOLS_MISSING: ${label} was not found at ${path}.`);
   return resolve(path);
 }
 
@@ -343,7 +344,8 @@ function parsePositiveInteger(value, label) {
 }
 
 function compareField(failures, label, actual, expected) {
-  if (actual !== expected) failures.push(`${label} ${JSON.stringify(actual)} does not match ${JSON.stringify(expected)}`);
+  if (actual !== expected)
+    failures.push(`${label} ${JSON.stringify(actual)} does not match ${JSON.stringify(expected)}`);
 }
 
 function normalizeOutput(value) {

@@ -121,14 +121,14 @@ test("rejects debug, multi-ABI, missing-library, and fingerprint drift", () => {
 
 test("uses environment-backed passwords for test-key and APK signing commands", () => {
   const keyArgs = buildTestKeyArguments({ keystore: "test.p12" });
-  assert.deepEqual(keyArgs.slice(keyArgs.indexOf("-storepass:env"), keyArgs.indexOf("-storepass:env") + 2), [
-    "-storepass:env",
-    KEYSTORE_PASSWORD_ENV,
-  ]);
-  assert.deepEqual(keyArgs.slice(keyArgs.indexOf("-keypass:env"), keyArgs.indexOf("-keypass:env") + 2), [
-    "-keypass:env",
-    KEY_PASSWORD_ENV,
-  ]);
+  assert.deepEqual(
+    keyArgs.slice(keyArgs.indexOf("-storepass:env"), keyArgs.indexOf("-storepass:env") + 2),
+    ["-storepass:env", KEYSTORE_PASSWORD_ENV],
+  );
+  assert.deepEqual(
+    keyArgs.slice(keyArgs.indexOf("-keypass:env"), keyArgs.indexOf("-keypass:env") + 2),
+    ["-keypass:env", KEY_PASSWORD_ENV],
+  );
 
   const signArgs = buildApksignerArguments({
     input: "aligned.apk",

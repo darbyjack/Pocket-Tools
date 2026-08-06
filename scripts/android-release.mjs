@@ -182,13 +182,12 @@ function run(executable, arguments_) {
 function requirePasswordEnvironment({ requireSame = false } = {}) {
   for (const name of [KEYSTORE_PASSWORD_ENV, KEY_PASSWORD_ENV]) {
     if (!process.env[name]) {
-      throw new Error(`ANDROID_SIGNING_INPUT_MISSING: set ${name} without printing or committing it.`);
+      throw new Error(
+        `ANDROID_SIGNING_INPUT_MISSING: set ${name} without printing or committing it.`,
+      );
     }
   }
-  if (
-    requireSame &&
-    process.env[KEYSTORE_PASSWORD_ENV] !== process.env[KEY_PASSWORD_ENV]
-  ) {
+  if (requireSame && process.env[KEYSTORE_PASSWORD_ENV] !== process.env[KEY_PASSWORD_ENV]) {
     throw new Error(
       "ANDROID_SIGNING_INPUT_INVALID: disposable PKCS#12 test-key generation requires matching keystore and key password values.",
     );
@@ -200,7 +199,9 @@ async function assertRegularFile(path, label) {
   try {
     information = await stat(path);
   } catch (cause) {
-    throw new Error(`ANDROID_RELEASE_INPUT_MISSING: ${label} does not exist at ${path}.`, { cause });
+    throw new Error(`ANDROID_RELEASE_INPUT_MISSING: ${label} does not exist at ${path}.`, {
+      cause,
+    });
   }
   if (!information.isFile()) {
     throw new Error(`ANDROID_RELEASE_INPUT_INVALID: ${label} is not a regular file at ${path}.`);
