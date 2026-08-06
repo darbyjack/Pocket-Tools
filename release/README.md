@@ -79,6 +79,8 @@ Generate the disposable test identity. The default alias is `pocket-tools-test-r
 pnpm release:android:test-key --keystore release-work\test-signing.p12
 ```
 
+Keep the current shell open while using this disposable key. If the password environment values are lost, delete the test keystore and generate a new disposable identity rather than persisting the passwords in a plaintext file.
+
 Align and sign one unsigned/intermediate APK without modifying the input. The command uses 16 KiB native-library alignment, disables the separate v4 `.idsig` output, and verifies the resulting Android signature:
 
 ```powershell
