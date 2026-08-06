@@ -79,9 +79,7 @@ test("generates and verifies the exact staged asset set", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pocket-tools-release-contract-"));
   const tag = "v0.1.0";
   try {
-    for (const filename of expectedReleaseAssetNames(tag).filter(
-      (name) => name !== "SHA256SUMS",
-    )) {
+    for (const filename of expectedReleaseAssetNames(tag).filter((name) => name !== "SHA256SUMS")) {
       await writeFile(join(directory, filename), `fixture:${filename}\n`);
     }
     await writeFile(join(directory, "SHA256SUMS"), await buildSha256Sums(directory, tag));
@@ -89,10 +87,7 @@ test("generates and verifies the exact staged asset set", async () => {
     assert.equal(result.verifiedDigests, 8);
 
     await writeFile(join(directory, "pocket-tools-v0.1.0-x86.apk"), "mutated");
-    await assert.rejects(
-      () => verifyReleaseDirectory(directory, tag),
-      /RELEASE_CHECKSUM_MISMATCH/,
-    );
+    await assert.rejects(() => verifyReleaseDirectory(directory, tag), /RELEASE_CHECKSUM_MISMATCH/);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -102,10 +97,7 @@ test("rejects missing and extra staged assets", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pocket-tools-release-contract-"));
   try {
     await writeFile(join(directory, "unexpected.txt"), "nope");
-    await assert.rejects(
-      () => buildSha256Sums(directory, "v0.1.0"),
-      /RELEASE_ASSET_SET_INVALID/,
-    );
+    await assert.rejects(() => buildSha256Sums(directory, "v0.1.0"), /RELEASE_ASSET_SET_INVALID/);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

@@ -8,8 +8,7 @@ export const RELEASE_PACKAGE_NAME = "com.darbyjack.pockettools";
 export const RELEASE_ABIS = ["armeabi-v7a", "arm64-v8a", "x86", "x86_64"];
 export const RELEASE_SDK_LEVELS = Object.freeze({ min: 24, compile: 36, target: 36 });
 
-const TAG_PATTERN =
-  /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(alpha|beta|rc)\.([1-9]\d*))?$/;
+const TAG_PATTERN = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(alpha|beta|rc)\.([1-9]\d*))?$/;
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 
 export function parseReleaseTag(tag) {
@@ -66,7 +65,9 @@ export function validateReleaseIdentity(input) {
     );
   }
   if (!Number.isSafeInteger(input.versionCode) || input.versionCode <= 0) {
-    throw new Error("RELEASE_VERSION_CODE_INVALID: android.versionCode must be a positive integer.");
+    throw new Error(
+      "RELEASE_VERSION_CODE_INVALID: android.versionCode must be a positive integer.",
+    );
   }
 
   return {
@@ -111,7 +112,9 @@ export async function verifyReleaseDirectory(directory, tag) {
   const checksummed = bytewiseSort(expected.filter((name) => name !== "SHA256SUMS"));
   const recordedNames = bytewiseSort([...parsed.keys()]);
   if (JSON.stringify(recordedNames) !== JSON.stringify(checksummed)) {
-    throw new Error("RELEASE_CHECKSUM_SET_INVALID: SHA256SUMS does not list the exact release asset set.");
+    throw new Error(
+      "RELEASE_CHECKSUM_SET_INVALID: SHA256SUMS does not list the exact release asset set.",
+    );
   }
   for (const filename of checksummed) {
     const actual = sha256(await readFile(join(directory, filename)));
@@ -138,7 +141,9 @@ export function parseSha256Sums(text) {
     }
     const [, digest, filename] = match;
     if (basename(filename) !== filename || filename === "SHA256SUMS") {
-      throw new Error(`RELEASE_CHECKSUM_FILE_INVALID: unsupported entry ${JSON.stringify(filename)}.`);
+      throw new Error(
+        `RELEASE_CHECKSUM_FILE_INVALID: unsupported entry ${JSON.stringify(filename)}.`,
+      );
     }
     if (result.has(filename)) {
       throw new Error(`RELEASE_CHECKSUM_FILE_INVALID: duplicate entry ${filename}.`);

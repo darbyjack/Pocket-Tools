@@ -17,9 +17,7 @@ const argumentsMap = parseArguments(rawArguments);
 switch (command) {
   case "validate-inputs": {
     const identity = await loadAndValidateIdentity(argumentsMap);
-    console.log(
-      `Release inputs are consistent for ${identity.tag} at ${identity.sourceCommit}.`,
-    );
+    console.log(`Release inputs are consistent for ${identity.tag} at ${identity.sourceCommit}.`);
     break;
   }
   case "plan": {
@@ -71,7 +69,9 @@ async function loadAndValidateIdentity(argumentsMap) {
   }
   const status = runGit(["status", "--porcelain=v1", "--untracked-files=all"]);
   if (status.length !== 0) {
-    throw new Error("RELEASE_WORKTREE_DIRTY: commit or remove local changes before release staging.");
+    throw new Error(
+      "RELEASE_WORKTREE_DIRTY: commit or remove local changes before release staging.",
+    );
   }
 
   return validateReleaseIdentity({
@@ -112,7 +112,9 @@ function parseArguments(values) {
   for (let index = 0; index < values.length; index += 1) {
     const key = values[index];
     if (!key.startsWith("--") || key.length === 2) {
-      throw new Error(`RELEASE_ARGUMENT_INVALID: expected --name, received ${JSON.stringify(key)}.`);
+      throw new Error(
+        `RELEASE_ARGUMENT_INVALID: expected --name, received ${JSON.stringify(key)}.`,
+      );
     }
     const name = key.slice(2);
     const value = values[index + 1];
