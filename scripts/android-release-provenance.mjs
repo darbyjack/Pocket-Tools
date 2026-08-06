@@ -20,7 +20,8 @@ switch (command) {
     const head = assertCleanHead();
     const input = repositoryPath(requiredArgument(argumentsMap, "input"));
     const sourceInspection = repositoryPath(
-      optionalArgument(argumentsMap, "source-inspection") ?? `${requiredArgument(argumentsMap, "input")}.inspection.json`,
+      optionalArgument(argumentsMap, "source-inspection") ??
+        `${requiredArgument(argumentsMap, "input")}.inspection.json`,
     );
     await loadUnsignedSigningProvenance({
       apkPath: input,
@@ -75,11 +76,9 @@ switch (command) {
 
 function assertCleanHead() {
   const head = run("git", ["rev-parse", "HEAD"], { capture: true }).trim();
-  const status = run(
-    "git",
-    ["status", "--porcelain=v1", "--untracked-files=all"],
-    { capture: true },
-  ).trim();
+  const status = run("git", ["status", "--porcelain=v1", "--untracked-files=all"], {
+    capture: true,
+  }).trim();
   if (status.length !== 0) {
     throw new Error(
       "ANDROID_PROVENANCE_WORKTREE_DIRTY: commit or remove local changes before signing or inspection.",
@@ -101,9 +100,7 @@ function run(executable, arguments_, { capture = false } = {}) {
     stdio: capture ? "pipe" : "inherit",
   });
   if (result.error || result.status !== 0) {
-    const detail = capture
-      ? [result.stderr, result.stdout].filter(Boolean).join("\n").trim()
-      : "";
+    const detail = capture ? [result.stderr, result.stdout].filter(Boolean).join("\n").trim() : "";
     throw new Error(
       `ANDROID_PROVENANCE_TOOL_FAILED: ${executable} ${arguments_.join(" ")} failed${detail ? `: ${detail}` : "."}`,
       { cause: result.error },
