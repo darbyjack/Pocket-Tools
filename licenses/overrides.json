@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "packages": {
+    "maven:com.facebook.fbjni:fbjni@0.7.0": {
+      "declaredLicense": "Apache-2.0",
+      "concludedLicense": "Apache-2.0",
+      "reason": "Reviewed the Maven Central 0.7.0 publication and the upstream fbjni Apache 2.0 license. The published POM label APACHE-2 is a non-SPDX spelling of Apache-2.0.",
+      "notice": "fbjni 0.7.0 is licensed under Apache-2.0. Copyright Meta Platforms, Inc. and affiliates."
+    },
+    "maven:com.facebook.infer.annotation:infer-annotation@0.18.0": {
+      "declaredLicense": "MIT",
+      "concludedLicense": "MIT",
+      "reason": "Reviewed the Maven Central 0.18.0 publication and the upstream Infer MIT license. The published POM label MIT license is normalized to MIT for this exact artifact version.",
+      "notice": "Infer Annotations 0.18.0 is licensed under the MIT License. Copyright Meta Platforms, Inc. and affiliates."
+    },
+    "maven:com.facebook.soloader:annotation@0.12.1": {
+      "declaredLicense": "Apache-2.0",
+      "concludedLicense": "Apache-2.0",
+      "reason": "Reviewed the Maven Central 0.12.1 publication and the upstream SoLoader Apache 2.0 license. The published POM label Apache-2 is a non-SPDX spelling of Apache-2.0.",
+      "notice": "SoLoader annotation 0.12.1 is licensed under Apache-2.0. Copyright Meta Platforms, Inc. and affiliates."
+    },
+    "maven:com.facebook.soloader:nativeloader@0.12.1": {
+      "declaredLicense": "Apache-2.0",
+      "concludedLicense": "Apache-2.0",
+      "reason": "Reviewed the Maven Central 0.12.1 publication and the upstream SoLoader Apache 2.0 license. The published POM label Apache-2 is a non-SPDX spelling of Apache-2.0.",
+      "notice": "SoLoader NativeLoader 0.12.1 is licensed under Apache-2.0. Copyright Meta Platforms, Inc. and affiliates."
+    },
+    "maven:com.facebook.soloader:soloader@0.12.1": {
+      "declaredLicense": "Apache-2.0",
+      "concludedLicense": "Apache-2.0",
+      "reason": "Reviewed the Maven Central 0.12.1 publication and the upstream SoLoader Apache 2.0 license. The published POM label Apache-2 is a non-SPDX spelling of Apache-2.0.",
+      "notice": "SoLoader 0.12.1 is licensed under Apache-2.0. Copyright Meta Platforms, Inc. and affiliates."
+    },
+    "maven:com.parse.bolts:bolts-tasks@1.4.0": {
+      "declaredLicense": "BSD-3-Clause",
+      "concludedLicense": "BSD-3-Clause",
+      "reason": "Reviewed the Maven Central publication and the Bolts-Android 1.4.0 source tag at commit 3def0de57eb06ea09056251be93e397ea28e34c1. The POM's generic BSD label resolves to the three-clause BSD license in that exact release.",
+      "notice": "Bolts Tasks 1.4.0 is licensed under BSD-3-Clause. Copyright (c) 2013-present, Facebook, Inc. All rights reserved."
+    },
+    "npm:caniuse-lite@1.0.30001806": {
+      "declaredLicense": "CC-BY-4.0",
+      "concludedLicense": "CC-BY-4.0",
+      "reason": "Reviewed caniuse-lite 1.0.30001806 package metadata and the upstream caniuse data licensing statement. The package is distributed under CC BY 4.0 and requires attribution to caniuse.com.",
+      "notice": "Browser compatibility data is sourced from caniuse.com, created and maintained by Alexis Deveria with project contributors, and licensed under CC BY 4.0. Pocket Tools does not modify the packaged data."
+    },
+    "npm:lightningcss@1.33.0": {
+      "declaredLicense": "MPL-2.0",
+      "concludedLicense": "MPL-2.0",
+      "reason": "Reviewed the Lightning CSS v1.33.0 package manifest and upstream MPL 2.0 license. Source is available from the parcel-bundler/lightningcss v1.33.0 tag.",
+      "notice": "Lightning CSS 1.33.0 is licensed under MPL 2.0. Its corresponding source and license are available from the parcel-bundler/lightningcss v1.33.0 source tag."
+    },
+    "npm:lightningcss-win32-x64-msvc@1.33.0": {
+      "declaredLicense": "MPL-2.0",
+      "concludedLicense": "MPL-2.0",
+      "reason": "Reviewed the Windows x64 native package as the platform binary produced for Lightning CSS v1.33.0 under the same MPL 2.0 terms and source tree.",
+      "notice": "The Lightning CSS Windows x64 native binary is licensed under MPL 2.0 and corresponds to the parcel-bundler/lightningcss v1.33.0 source tag."
+    },
+    "npm:node-forge@1.4.0": {
+      "declaredLicense": "BSD-3-Clause",
+      "concludedLicense": "BSD-3-Clause",
+      "reason": "Reviewed node-forge v1.4.0. Upstream offers the package under either BSD-3-Clause or GPL-2.0 and explicitly permits choosing either without notification. Pocket Tools selects BSD-3-Clause.",
+      "notice": "node-forge 1.4.0 is used under the BSD-3-Clause option. Copyright (c) 2010, Digital Bazaar, Inc. All rights reserved."
+    }
+  }
+}

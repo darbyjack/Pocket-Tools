@@ -6,15 +6,16 @@ SDK 1.2 is the current public contract. SDK 1.0 and 1.1 remain supported for exi
 
 ## Start here
 
-| Audience                          | Entry point                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------------------- |
-| Project contributors              | [CONTRIBUTING.md](CONTRIBUTING.md)                                                  |
-| Mini-app and agent authors        | [SDK 1.2 Authoring Guide](docs/AGENT_AUTHORING.md)                                  |
-| Delegating mini-app creation      | [Canonical Agent Prompt](docs/AGENT_PROMPT.md)                                      |
-| Complete documentation map        | [Documentation Index](docs/README.md)                                               |
-| Android development and builds    | [Pocket Tools Mobile](apps/mobile/README.md)                                        |
-| Runtime architecture and security | [Architecture](docs/ARCHITECTURE.md) · [Security Model](docs/SECURITY_MODEL.md)     |
-| Released SDK contract             | [SDK Overview](docs/SDK_OVERVIEW.md) · [SDK 1.2 Contract](docs/SDK_1_2_CONTRACT.md) |
+| Audience                          | Entry point                                                                              |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| Project contributors              | [CONTRIBUTING.md](CONTRIBUTING.md)                                                       |
+| Mini-app and agent authors        | [SDK 1.2 Authoring Guide](docs/AGENT_AUTHORING.md)                                       |
+| Delegating mini-app creation      | [Canonical Agent Prompt](docs/AGENT_PROMPT.md)                                           |
+| Complete documentation map        | [Documentation Index](docs/README.md)                                                    |
+| Android development and builds    | [Pocket Tools Mobile](apps/mobile/README.md)                                             |
+| Runtime architecture and security | [Architecture](docs/ARCHITECTURE.md) · [Security Model](docs/SECURITY_MODEL.md)          |
+| Released SDK contract             | [SDK Overview](docs/SDK_OVERVIEW.md) · [SDK 1.2 Contract](docs/SDK_1_2_CONTRACT.md)      |
+| Licensing and asset provenance    | [License](LICENSE) · [Notices](THIRD_PARTY_NOTICES.md) · [Operations](docs/LICENSING.md) |
 
 ## How it works
 
@@ -91,3 +92,9 @@ Expo Go cannot run Pocket Tools because the app includes custom QuickJS and noti
 SDK 1.2 provides isolated local settings and collections, transactional actions, durable timers, host-owned native UI, feedback, copy/share output, and tool-scoped local notifications.
 
 It does not provide arbitrary network or filesystem access, location, secrets, external packages, custom native modules or components, raw platform APIs, remote push, or arbitrary background JavaScript. See the [Security Model](docs/SECURITY_MODEL.md) for the complete boundary.
+
+## License and notices
+
+Pocket Tools first-party source, documentation, examples, generated declarations, and project-owned assets are distributed under the [Apache License 2.0](LICENSE) to the extent protectable rights exist. Third-party components remain under their respective licenses; required texts and attributions are maintained in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Asset origins and redistribution authorization are recorded in [ASSET_PROVENANCE.md](ASSET_PROVENANCE.md). Deterministic JavaScript and Android dependency inventories and the SPDX 2.3 SBOM are governed by the procedures in [docs/LICENSING.md](docs/LICENSING.md).

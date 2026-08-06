@@ -1,0 +1,278 @@
+import groovy.json.JsonOutput
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.artifacts.result.UnresolvedComponentResult
+import org.gradle.maven.MavenModule
+import org.gradle.maven.MavenPomArtifact
+
+import javax.xml.XMLConstants
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.xpath.XPathConstants
+import javax.xml.xpath.XPathFactory
+
+def coordinateKey = { group, module, version ->
+  "${group}:${module}:${version}".toString()
+}
+
+def parsePomLicenseMetadata = { File pomFile ->
+  def factory = DocumentBuilderFactory.newInstance()
+  factory.setNamespaceAware(true)
+  factory.setXIncludeAware(false)
+  factory.setExpandEntityReferences(false)
+  factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+  factory.setFeature("http://xml.org/sax/features/external-general-entities", false)
+  factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+  factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
+  factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
+
+  def document = factory.newDocumentBuilder().parse(pomFile)
+  def xpath = XPathFactory.newInstance().newXPath()
+  def licenseNodes = xpath.evaluate(
+    "/*[local-name()='project']/*[local-name()='licenses']/*[local-name()='license']",
+    document,
+    XPathConstants.NODESET
+  )
+  def licenseNames = []
+  def licenseUrls = []
+
+  for (int index = 0; index < licenseNodes.length; index += 1) {
+    def license = licenseNodes.item(index)
+    def name = xpath.evaluate("./*[local-name()='name'][1]", license)?.trim()
+    if (name) licenseNames.add(name)
+
+    def url = xpath.evaluate("./*[local-name()='url'][1]", license)?.trim()
+    if (url) licenseUrls.add(url)
+  }
+
+  def parentGroup = xpath.evaluate(
+    "/*[local-name()='project']/*[local-name()='parent'][1]/*[local-name()='groupId'][1]",
+    document
+  )?.trim()
+  def parentModule = xpath.evaluate(
+    "/*[local-name()='project']/*[local-name()='parent'][1]/*[local-name()='artifactId'][1]",
+    document
+  )?.trim()
+  def parentVersion = xpath.evaluate(
+    "/*[local-name()='project']/*[local-name()='parent'][1]/*[local-name()='version'][1]",
+    document
+  )?.trim()
+  def parent = parentGroup && parentModule && parentVersion
+    ? [group: parentGroup, module: parentModule, version: parentVersion]
+    : null
+
+  [
+    licenseNames: licenseNames.unique().sort(),
+    licenseUrls: licenseUrls.unique().sort(),
+    parent: parent,
+  ]
+}
+
+gradle.beforeProject { project ->
+  project.afterEvaluate {
+    if (project.path != ":app") return
+
+    project.tasks.register("pocketToolsLicenseInventory") {
+      group = "verification"
+      description = "Writes the resolved releaseRuntimeClasspath Maven license metadata as JSON."
+
+      doLast {
+        def outputValue = System.getProperty("pocketToolsLicenseOutput")
+        if (outputValue == null || outputValue.trim().isEmpty()) {
+          throw new GradleException(
+            "Set -DpocketToolsLicenseOutput=<absolute JSON path> for pocketToolsLicenseInventory."
+          )
+        }
+
+        def configuration = project.configurations.getByName("releaseRuntimeClasspath")
+        def componentIds = configuration.incoming.resolutionResult.allComponents
+          .collect { it.id }
+          .findAll { it instanceof ModuleComponentIdentifier }
+          .unique { id -> coordinateKey(id.group, id.module, id.version) }
+          .sort { left, right ->
+            coordinateKey(left.group, left.module, left.version) <=>
+              coordinateKey(right.group, right.module, right.version)
+          }
+
+        def entries = componentIds.collect { id ->
+          [
+            group: id.group,
+            module: id.module,
+            version: id.version,
+            licenseNames: [],
+            licenseUrls: [],
+            pomResolved: false,
+          ]
+        }
+        def entriesByKey = entries.collectEntries { entry ->
+          [(coordinateKey(entry.group, entry.module, entry.version)): entry]
+        }
+        def pomRecordsByKey = [:]
+
+        def recordResolvedComponent = { component ->
+          def id = component.id
+          def key = coordinateKey(id.group, id.module, id.version)
+          def artifact = component.getArtifacts(MavenPomArtifact)
+            .find { candidate -> candidate instanceof ResolvedArtifactResult }
+          if (artifact == null) {
+            pomRecordsByKey[key] = [failure: "Maven POM artifact was not resolved."]
+            return
+          }
+
+          try {
+            pomRecordsByKey[key] = [metadata: parsePomLicenseMetadata(artifact.file)]
+          } catch (Exception cause) {
+            pomRecordsByKey[key] = [failure: "Unable to parse Maven POM: ${cause.message}"]
+          }
+        }
+
+        if (!componentIds.isEmpty()) {
+          def result = project.dependencies.createArtifactResolutionQuery()
+            .forComponents(componentIds)
+            .withArtifacts(MavenModule, MavenPomArtifact)
+            .execute()
+
+          result.resolvedComponents.each(recordResolvedComponent)
+          result.components
+            .findAll { component -> component instanceof UnresolvedComponentResult }
+            .each { component ->
+              def id = component.id
+              def key = coordinateKey(id.group, id.module, id.version)
+              pomRecordsByKey[key] = [
+                failure: component.failure?.message ?: "Maven POM resolution failed.",
+              ]
+            }
+        }
+
+        def resolvePomRecord
+        resolvePomRecord = { String group, String module, String version ->
+          def key = coordinateKey(group, module, version)
+          if (pomRecordsByKey.containsKey(key)) return pomRecordsByKey[key]
+
+          def result = project.dependencies.createArtifactResolutionQuery()
+            .forModule(group, module, version)
+            .withArtifacts(MavenModule, MavenPomArtifact)
+            .execute()
+          def resolved = result.resolvedComponents.find { component ->
+            def id = component.id
+            id instanceof ModuleComponentIdentifier &&
+              coordinateKey(id.group, id.module, id.version) == key
+          }
+          if (resolved != null) {
+            recordResolvedComponent(resolved)
+            return pomRecordsByKey[key]
+          }
+
+          def unresolved = result.components.find { component ->
+            def id = component.id
+            id instanceof ModuleComponentIdentifier &&
+              coordinateKey(id.group, id.module, id.version) == key
+          }
+          pomRecordsByKey[key] = [
+            failure: unresolved instanceof UnresolvedComponentResult
+              ? unresolved.failure?.message ?: "Maven parent POM resolution failed."
+              : "Maven parent POM artifact query returned no matching component.",
+          ]
+          pomRecordsByKey[key]
+        }
+
+        def effectiveLicenseCache = [:]
+        def resolveEffectiveLicenses
+        resolveEffectiveLicenses = { String key, Set ancestry ->
+          if (effectiveLicenseCache.containsKey(key)) return effectiveLicenseCache[key]
+          if (ancestry.contains(key)) {
+            return [failure: "Maven POM parent cycle detected at ${key}."]
+          }
+
+          def nextAncestry = new LinkedHashSet(ancestry)
+          nextAncestry.add(key)
+          def record = pomRecordsByKey[key]
+          if (record == null) {
+            return [failure: "Maven POM artifact query returned no matching component for ${key}."]
+          }
+          if (record.failure != null) return [failure: record.failure]
+
+          def metadata = record.metadata
+          if (!metadata.licenseNames.isEmpty()) {
+            def result = [
+              licenseNames: metadata.licenseNames,
+              licenseUrls: metadata.licenseUrls,
+              licenseSource: key,
+              licenseInheritanceChain: [key],
+            ]
+            effectiveLicenseCache[key] = result
+            return result
+          }
+
+          def parent = metadata.parent
+          if (parent == null) {
+            def result = [
+              licenseNames: [],
+              licenseUrls: [],
+              licenseSource: null,
+              licenseInheritanceChain: [key],
+            ]
+            effectiveLicenseCache[key] = result
+            return result
+          }
+
+          def parentValues = [parent.group, parent.module, parent.version]
+          if (parentValues.any { value -> value.contains("\${") }) {
+            return [
+              failure: "Maven parent coordinates contain an unresolved property for ${key}: " +
+                "${parent.group}:${parent.module}:${parent.version}",
+            ]
+          }
+
+          def parentKey = coordinateKey(parent.group, parent.module, parent.version)
+          resolvePomRecord(parent.group, parent.module, parent.version)
+          def inherited = resolveEffectiveLicenses(parentKey, nextAncestry)
+          if (inherited.failure != null) return inherited
+
+          def result = [
+            licenseNames: inherited.licenseNames,
+            licenseUrls: inherited.licenseUrls,
+            licenseSource: inherited.licenseSource,
+            licenseInheritanceChain: [key] + inherited.licenseInheritanceChain,
+          ]
+          effectiveLicenseCache[key] = result
+          result
+        }
+
+        entries.each { entry ->
+          def key = coordinateKey(entry.group, entry.module, entry.version)
+          def record = pomRecordsByKey[key]
+          if (record == null) {
+            entry.failure = "Maven POM artifact query returned no matching component."
+            return
+          }
+          if (record.failure != null) {
+            entry.failure = record.failure
+            return
+          }
+
+          entry.pomResolved = true
+          def effective = resolveEffectiveLicenses(key, [] as Set)
+          if (effective.failure != null) {
+            entry.failure = effective.failure
+            return
+          }
+
+          entry.licenseNames = effective.licenseNames
+          entry.licenseUrls = effective.licenseUrls
+          entry.licenseSource = effective.licenseSource
+          entry.licenseInheritanceChain = effective.licenseInheritanceChain
+          if (entry.licenseNames.isEmpty()) {
+            entry.failure =
+              "No license metadata found in Maven POM inheritance chain: " +
+              effective.licenseInheritanceChain.join(" -> ")
+          }
+        }
+
+        def outputFile = new File(outputValue)
+        outputFile.parentFile.mkdirs()
+        outputFile.setText(JsonOutput.prettyPrint(JsonOutput.toJson(entries)) + "\n", "UTF-8")
+        println "Wrote ${entries.size()} Android dependency records to ${outputFile}."
+      }
+    }
+  }
+}

@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { OpenSourceLicenses } from "./OpenSourceLicenses";
 import { ScreenScrollView } from "./ScreenScrollView";
 import { colors, radii, spacing } from "./theme";
 
@@ -21,6 +22,12 @@ export function HostSettings({
   onRestoreAll,
   onRestoreOne,
 }: HostSettingsProps) {
+  const [showOpenSourceLicenses, setShowOpenSourceLicenses] = useState(false);
+
+  if (showOpenSourceLicenses) {
+    return <OpenSourceLicenses onBack={() => setShowOpenSourceLicenses(false)} />;
+  }
+
   return (
     <ScreenScrollView contentContainerStyle={styles.content}>
       <View style={styles.toolbar}>
@@ -42,6 +49,10 @@ export function HostSettings({
 
       <SettingsSection title="Advanced">
         <SettingsRow label="Diagnostics" onPress={onDiagnostics} />
+      </SettingsSection>
+
+      <SettingsSection title="About">
+        <SettingsRow label="Open-source licenses" onPress={() => setShowOpenSourceLicenses(true)} />
       </SettingsSection>
     </ScreenScrollView>
   );
