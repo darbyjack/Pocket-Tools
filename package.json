@@ -6,10 +6,12 @@
   "type": "module",
   "scripts": {
     "android": "pnpm sync:mini-apps && pnpm --dir apps/mobile android",
-    "check": "pnpm sync:mini-apps:check && pnpm sdk:declarations:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "check": "pnpm sync:mini-apps:check && pnpm sdk:declarations:check && pnpm legal:notices:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "inspect:mini-app": "pnpm --dir packages/authoring-tools mini-app inspect",
+    "legal:notices:check": "node scripts/sync-legal-notices.mjs check",
+    "legal:notices:write": "node scripts/sync-legal-notices.mjs write",
     "licenses:android:check": "node scripts/license-inventory.mjs android:check",
     "licenses:android:write": "node scripts/license-inventory.mjs android:write",
     "licenses:check": "node scripts/license-inventory.mjs check",
