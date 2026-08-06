@@ -96,7 +96,8 @@ test("extracts stable certificate metadata", () => {
 
 test("rejects malformed certificate PEM", () => {
   assert.throws(
-    () => certificateMetadata("-----BEGIN CERTIFICATE-----\nnot-base64\n-----END CERTIFICATE-----\n"),
+    () =>
+      certificateMetadata("-----BEGIN CERTIFICATE-----\nnot-base64\n-----END CERTIFICATE-----\n"),
     /RELEASE_CERTIFICATE_INVALID: unable to parse the public certificate PEM/,
   );
 });
