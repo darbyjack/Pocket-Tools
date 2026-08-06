@@ -104,6 +104,16 @@ test("constructs shell-free pnpm and Gradle commands", () => {
   assert.equal(prebuild.cwd, repositoryRoot);
   assert.doesNotMatch(prebuild.executable, /\.(?:cmd|bat)$/i);
 
+  const nativePnpm = resolve("fixture-tools", "pnpm.exe");
+  const nativeCommand = buildPnpmCommand(["sync:mini-apps:check"], {
+    nodeExecutable: "node-executable",
+    pnpmEntry: nativePnpm,
+    repositoryRoot,
+  });
+  assert.equal(nativeCommand.executable, nativePnpm);
+  assert.deepEqual(nativeCommand.args, ["sync:mini-apps:check"]);
+  assert.equal(nativeCommand.cwd, repositoryRoot);
+
   const androidDirectory = resolve("fixture-repository", "apps", "mobile", "android");
   const projectCacheDirectory = resolve("fixture-repository", "release-work", "cache", "x86");
   const gradle = buildGradleCommand({
@@ -126,10 +136,14 @@ test("constructs shell-free pnpm and Gradle commands", () => {
   assert.doesNotMatch(gradle.executable, /\.(?:cmd|bat)$/i);
 });
 
-test("requires the pnpm JavaScript entrypoint and discovered Java executable", () => {
+test("rejects missing pnpm paths, shell wrappers, and missing Java", () => {
   assert.throws(
     () => buildPnpmCommand(["check"], { pnpmEntry: "", nodeExecutable: "node" }),
     /ANDROID_BUILD_PNPM_MISSING/,
+  );
+  assert.throws(
+    () => buildPnpmCommand(["check"], { pnpmEntry: "pnpm.cmd", nodeExecutable: "node" }),
+    /ANDROID_BUILD_PNPM_UNSUPPORTED/,
   );
   assert.throws(
     () =>
