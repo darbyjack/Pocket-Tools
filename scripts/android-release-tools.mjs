@@ -69,7 +69,11 @@ export function parseAapt2Badging(text) {
   const versionName = requireAttribute(packageLine, "versionName", "versionName");
   const versionCodeText = requireAttribute(packageLine, "versionCode", "versionCode");
   const compileSdkText = requireAttribute(packageLine, "compileSdkVersion", "compileSdkVersion");
-  const minSdkText = requireLineValue(normalized, "sdkVersion", "minimum SDK");
+  const minSdkText = requireFirstLineValue(
+    normalized,
+    ["minSdkVersion", "sdkVersion"],
+    "minimum SDK",
+  );
   const targetSdkText = requireLineValue(normalized, "targetSdkVersion", "target SDK");
   const nativeLine = normalized.split("\n").find((line) => line.startsWith("native-code:"));
   const nativeAbis = nativeLine
@@ -326,6 +330,14 @@ function requireAttribute(line, name, label) {
     throw new Error(`APK_BADGING_INVALID: ${label} is missing.`);
   }
   return match[1];
+}
+
+function requireFirstLineValue(text, names, label) {
+  for (const name of names) {
+    const match = new RegExp(`^${name}:'([^']+)'$`, "m").exec(text);
+    if (match) return match[1];
+  }
+  throw new Error(`APK_BADGING_INVALID: ${label} is missing.`);
 }
 
 function requireLineValue(text, name, label) {
