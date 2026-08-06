@@ -10,6 +10,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
 import { REQUIRED_NATIVE_LIBRARIES, normalizeFingerprint } from "./android-release-tools.mjs";
 import {
@@ -384,7 +385,7 @@ async function assertExactRegularFileSet(directory, expected) {
   }
   const actual = bytewiseSort(names);
   const wanted = bytewiseSort(expected);
-  if (JSON.stringify(actual) !== JSON.stringify(wanted)) {
+  if (!isDeepStrictEqual(actual, wanted)) {
     const missing = wanted.filter((name) => !actual.includes(name));
     const extra = actual.filter((name) => !wanted.includes(name));
     throw new Error(
@@ -438,7 +439,7 @@ function parseJson(bytes, label) {
 }
 
 function compareField(label, actual, expected) {
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+  if (!isDeepStrictEqual(actual, expected)) {
     throw new Error(
       `RELEASE_INSPECTION_INVALID: ${label} ${JSON.stringify(actual)} does not match ${JSON.stringify(expected)}.`,
     );
