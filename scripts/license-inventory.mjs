@@ -109,13 +109,10 @@ function resolvePnpmInvocation(args) {
     return { executable: "pnpm", args };
   }
 
-  const pnpmCli = process.env.npm_execpath;
-  if (typeof pnpmCli !== "string" || !/\.(?:c?js|mjs)$/i.test(pnpmCli)) {
-    throw new Error(
-      "LICENSE_PNPM_FAILED: on Windows, run this inventory through its pnpm script so npm_execpath identifies the pnpm JavaScript entry point.",
-    );
-  }
-  return { executable: process.execPath, args: [pnpmCli, ...args] };
+  return {
+    executable: process.env.ComSpec ?? "cmd.exe",
+    args: ["/d", "/s", "/c", "pnpm", ...args],
+  };
 }
 
 function resolveGradleInvocation(androidRoot, gradleWrapper, args) {
