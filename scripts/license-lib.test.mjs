@@ -23,8 +23,10 @@ const policy = {
   ],
   aliases: {
     "Apache License 2.0": "Apache-2.0",
+    "The Apache Software License, Version 2.0": "Apache-2.0",
     "Blue Oak Model License 1.0.0": "BlueOak-1.0.0",
     "MIT License": "MIT",
+    "The MIT License": "MIT",
     "Mozilla Public License Version 2.0": "MPL-2.0",
   },
   forbiddenPatterns: ["AGPL", "GPL"],
@@ -67,6 +69,11 @@ test("fails closed on forbidden, unknown, and review-required licenses", () => {
     validateLicenseExpression("Mozilla Public License Version 2.0", policy),
     "MPL-2.0",
   );
+  assert.equal(
+    validateLicenseExpression("The Apache Software License, Version 2.0", policy),
+    "Apache-2.0",
+  );
+  assert.equal(validateLicenseExpression("The MIT License", policy), "MIT");
   assert.equal(validateLicenseExpression("MIT OR Apache-2.0", policy), "MIT OR Apache-2.0");
 });
 
