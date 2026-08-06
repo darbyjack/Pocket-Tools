@@ -10,11 +10,28 @@
     "plugins": [
       "expo-dev-client",
       "./plugins/with-short-cmake-staging.cjs",
-      "./plugins/with-arm64-release-optimization.cjs"
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "buildArchs": [
+              "armeabi-v7a",
+              "arm64-v8a",
+              "x86",
+              "x86_64"
+            ],
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ]
     ],
     "android": {
       "package": "com.darbyjack.pockettools",
-      "permissions": ["android.permission.SCHEDULE_EXACT_ALARM"],
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#EEF1F5"

@@ -8,9 +8,14 @@ The host is mini-app agnostic. Bundled reference scripts are seeded into SQLite 
 
 - Node.js 24.16 or newer
 - pnpm 11.17.0 through Corepack
-- Android Studio and an Expo SDK 57-compatible Android SDK
-- Android NDK 26 or newer
-- a connected `arm64-v8a` Android device for the configured build target
+- Android Studio with Android SDK Platform 36 and Build Tools 36.0.0
+- Android NDK 27.1.12297006
+- CMake 3.22.1
+- JDK 17
+- Android 7.0 / API 24 or newer for installation
+- an ABI-compatible connected device or emulator for runtime validation
+
+Pocket Tools release builds support `armeabi-v7a`, `arm64-v8a`, `x86`, and `x86_64`. Expo SDK 57 currently resolves `minSdk` 24, `compileSdk` 36, and `targetSdk` 36.
 
 ## Run the development build
 
@@ -48,8 +53,6 @@ pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-instal
 On Windows PowerShell:
 
 ```powershell
-Set-Location C:\Users\Glare\Documents\Projects\Pocket-Tools
-pnpm --dir apps/mobile exec expo prebuild --platform android --clean --no-install
 Set-Location .\apps\mobile\android
 ```
 
@@ -57,49 +60,37 @@ Close Android Studio, Gradle daemons, Explorer windows, terminals, or other proc
 
 ## Build APKs
 
-From `apps/mobile/android`:
+From `apps/mobile/android`, build one ABI at a time:
 
 ```powershell
-.\gradlew.bat assembleDebug
-.\gradlew.bat assembleRelease
+.\gradlew.bat :app:assembleRelease `
+  "-PreactNativeArchitectures=arm64-v8a" `
+  --no-daemon
 ```
 
-Outputs:
+Replace `arm64-v8a` with `armeabi-v7a`, `x86`, or `x86_64` as needed. Use a fresh generated/native output directory for each ABI. Do not use global `gradlew clean` as the ABI-isolation mechanism; Lucide codegen output can be removed before CMake finishes its external-native clean.
+
+The release APK is written under:
 
 ```text
-apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
-apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+apps/mobile/android/app/build/outputs/apk/release/
 ```
 
-Install an APK on the connected device:
+Install an ABI-compatible APK on a connected target:
 
 ```powershell
 adb install -r .\app\build\outputs\apk\release\app-release.apk
 ```
 
-Use the debug path instead when installing the debug artifact.
-
 The release APK is not a distribution-ready artifact until the intended private signing configuration is applied.
 
-## ARM64 target
+## ABI verification
 
-The Expo config plugin writes:
-
-```properties
-reactNativeArchitectures=arm64-v8a
-android.enableMinifyInReleaseBuilds=true
-android.enableShrinkResourcesInReleaseBuilds=true
-```
-
-Debug and release builds omit ARMv7 and x86/x86_64 native binaries. Release builds additionally use R8 and resource shrinking.
-
-Confirm device support:
+Confirm target support:
 
 ```powershell
 adb shell getprop ro.product.cpu.abilist
 ```
-
-The result must include `arm64-v8a`.
 
 Confirm packaged native libraries:
 
@@ -108,7 +99,7 @@ jar tf .\app\build\outputs\apk\release\app-release.apk |
   Select-String '^lib/'
 ```
 
-Every native library path should begin with `lib/arm64-v8a/`.
+Every native library path must begin with the selected ABI directory, such as `lib/arm64-v8a/`. Each ABI-specific APK must include both `libpocketquickjs.so` and `libc++_shared.so`.
 
 ## Connected Android tests
 
