@@ -19,8 +19,8 @@ import {
 } from "./android-release-tools.mjs";
 
 const fingerprint = "ab".repeat(32);
-const badgingText = `package: name='com.darbyjack.pockettools' versionCode='1' versionName='0.1.0' compileSdkVersion='36' compileSdkVersionCodename='16'
-sdkVersion:'24'
+const badgingText = `package: name='com.darbyjack.pockettools' versionCode='1' versionName='0.1.0' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+minSdkVersion:'24'
 targetSdkVersion:'36'
 application-label:'Pocket Tools'
 native-code: 'arm64-v8a'`;
@@ -43,6 +43,11 @@ test("parses package, SDK, ABI, and manifest flags from AAPT2 badging", () => {
     debuggable: false,
     testOnly: false,
   });
+});
+
+test("accepts legacy sdkVersion output for older AAPT2 variants", () => {
+  const legacy = badgingText.replace("minSdkVersion:'24'", "sdkVersion:'24'");
+  assert.equal(parseAapt2Badging(legacy).minSdk, 24);
 });
 
 test("finds native libraries without allowing a second ABI", () => {
