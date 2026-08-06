@@ -202,11 +202,7 @@ export function normalizeLicenseName(value, policy) {
 
 export function validateLicenseExpression(expression, policy, packageKey = "package") {
   const normalized = normalizeLicenseName(expression, policy);
-  for (const pattern of policy.forbiddenPatterns ?? []) {
-    if (normalized.toUpperCase().includes(String(pattern).toUpperCase())) {
-      throw new Error(`LICENSE_FORBIDDEN: ${packageKey} declares ${normalized}.`);
-    }
-  }
+  assertNoForbiddenLicense(normalized, policy, packageKey);
   for (const pattern of policy.reviewRequiredPatterns ?? []) {
     if (normalized.toUpperCase().includes(String(pattern).toUpperCase())) {
       throw new Error(`LICENSE_REVIEW_REQUIRED: ${packageKey} declares ${normalized}.`);
@@ -274,6 +270,14 @@ function buildInventory(ecosystem, source, candidates, policy, overrides) {
       override?.concludedLicense ?? declaredLicense,
       policy,
     );
+    assertOverrideDoesNotBypassForbiddenLicense(
+      candidate.declaredLicense,
+      declaredLicense,
+      concludedLicense,
+      override,
+      policy,
+      key,
+    );
     validateLicenseExpression(declaredLicense, policy, key);
     validateLicenseExpression(concludedLicense, policy, key);
 
@@ -303,6 +307,76 @@ function buildInventory(ecosystem, source, candidates, policy, overrides) {
     packages: packages.sort(comparePackages),
   };
   return validateInventory(inventory, policy);
+}
+
+function assertOverrideDoesNotBypassForbiddenLicense(
+  candidateDeclaredLicense,
+  declaredLicense,
+  concludedLicense,
+  override,
+  policy,
+  packageKey,
+) {
+  const candidate = normalizeLicenseName(candidateDeclaredLicense, policy);
+  if (findForbiddenPattern(candidate, policy) === undefined) return;
+
+  const alternatives = splitOrAlternatives(candidate, policy);
+  const selected = [declaredLicense, concludedLicense];
+  if (
+    override !== undefined &&
+    alternatives.length > 1 &&
+    selected.every(
+      (license) =>
+        alternatives.includes(license) && findForbiddenPattern(license, policy) === undefined,
+    )
+  ) {
+    return;
+  }
+
+  assertNoForbiddenLicense(candidate, policy, packageKey);
+}
+
+function splitOrAlternatives(expression, policy) {
+  const unwrapped = stripWrappingParentheses(expression.trim());
+  if (/\b(?:AND|WITH)\b/.test(unwrapped) || /[()]/.test(unwrapped)) return [];
+
+  const alternatives = unwrapped.split(/\s+OR\s+/);
+  if (alternatives.length < 2) return [];
+  return alternatives.map((alternative) => normalizeLicenseName(alternative, policy));
+}
+
+function stripWrappingParentheses(expression) {
+  let unwrapped = expression;
+  while (isWrappedByParentheses(unwrapped)) {
+    unwrapped = unwrapped.slice(1, -1).trim();
+  }
+  return unwrapped;
+}
+
+function isWrappedByParentheses(expression) {
+  if (!expression.startsWith("(") || !expression.endsWith(")")) return false;
+
+  let depth = 0;
+  for (let index = 0; index < expression.length; index += 1) {
+    if (expression[index] === "(") depth += 1;
+    if (expression[index] === ")") depth -= 1;
+    if (depth < 0 || (depth === 0 && index < expression.length - 1)) return false;
+  }
+  return depth === 0;
+}
+
+function assertNoForbiddenLicense(expression, policy, packageKey) {
+  const pattern = findForbiddenPattern(expression, policy);
+  if (pattern !== undefined) {
+    throw new Error(`LICENSE_FORBIDDEN: ${packageKey} declares ${expression}.`);
+  }
+}
+
+function findForbiddenPattern(expression, policy) {
+  const upper = expression.toUpperCase();
+  return (policy.forbiddenPatterns ?? []).find((pattern) =>
+    upper.includes(String(pattern).toUpperCase()),
+  );
 }
 
 function npmPurl(name, version) {

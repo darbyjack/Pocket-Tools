@@ -1,6 +1,12 @@
 {
   "schemaVersion": 1,
   "packages": {
+    "maven:com.parse.bolts:bolts-tasks@1.4.0": {
+      "declaredLicense": "BSD-3-Clause",
+      "concludedLicense": "BSD-3-Clause",
+      "reason": "Reviewed the Maven Central publication and the Bolts-Android 1.4.0 source tag at commit 3def0de57eb06ea09056251be93e397ea28e34c1. The POM's generic BSD label resolves to the three-clause BSD license in that exact release.",
+      "notice": "Bolts Tasks 1.4.0 is licensed under BSD-3-Clause. Copyright (c) 2013-present, Facebook, Inc. All rights reserved."
+    },
     "npm:caniuse-lite@1.0.30001806": {
       "declaredLicense": "CC-BY-4.0",
       "concludedLicense": "CC-BY-4.0",
