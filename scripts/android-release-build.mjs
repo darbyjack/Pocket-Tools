@@ -143,8 +143,14 @@ async function buildOne({ tag, abi, directory, identity, tools }) {
     return report;
   } finally {
     if (completed) {
-      await rm(androidDirectory, { recursive: true, force: true });
-      await rm(projectCacheDirectory, { recursive: true, force: true });
+      const cleanupOptions = {
+        recursive: true,
+        force: true,
+        maxRetries: 12,
+        retryDelay: 250,
+      };
+      await rm(androidDirectory, cleanupOptions);
+      await rm(projectCacheDirectory, cleanupOptions);
     }
   }
 }
