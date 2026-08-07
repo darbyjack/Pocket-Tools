@@ -153,10 +153,44 @@ async function checkInventory(path, actual, writeCommand) {
   validateInventory(expected, policy);
   if (stableJson(actual) !== stableJson(expected)) {
     throw new Error(
-      `LICENSE_INVENTORY_STALE: ${path} does not match the resolved dependency graph. Run \`${writeCommand}\` and review the diff.`,
+      `LICENSE_INVENTORY_STALE: ${path} does not match the resolved dependency graph. Run \`${writeCommand}\` and review the diff.\n${describeInventoryDrift(expected, actual)}`,
     );
   }
   console.log(`${path} is current and valid.`);
+}
+
+function describeInventoryDrift(expected, actual) {
+  const expectedPackages = packageMap(expected.packages);
+  const actualPackages = packageMap(actual.packages);
+  const committedOnly = [...expectedPackages.keys()].filter((key) => !actualPackages.has(key));
+  const resolvedOnly = [...actualPackages.keys()].filter((key) => !expectedPackages.has(key));
+  const changed = [...expectedPackages.keys()].filter(
+    (key) =>
+      actualPackages.has(key) &&
+      stableJson(expectedPackages.get(key)) !== stableJson(actualPackages.get(key)),
+  );
+
+  return [
+    formatInventoryDrift("Committed only", committedOnly),
+    formatInventoryDrift("Resolved only", resolvedOnly),
+    formatInventoryDrift("Metadata changed", changed),
+  ].join("\n");
+}
+
+function packageMap(packages) {
+  return new Map(
+    packages.map((entry) => [
+      `${entry.ecosystem}:${entry.name}@${entry.version}`,
+      entry,
+    ]),
+  );
+}
+
+function formatInventoryDrift(label, entries) {
+  if (entries.length === 0) return `${label}: none`;
+  const visible = entries.sort().slice(0, 20);
+  const remainder = entries.length - visible.length;
+  return `${label}: ${visible.join(", ")}${remainder > 0 ? `, ... (${remainder} more)` : ""}`;
 }
 
 function assertAndroidReviewQueueEmpty(raw) {
