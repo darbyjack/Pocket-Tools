@@ -19,6 +19,7 @@ const androidInventoryPath = join(repositoryRoot, "licenses", "android-productio
 const androidRawPath = join(repositoryRoot, "licenses", ".android-production.raw.json");
 const HOST_SPECIFIC_OPTIONAL_PACKAGE_PATTERNS = [
   /^lightningcss(?:-cli)?-(?:android|darwin|freebsd|linux|win32)-/,
+  /^@typescript\/typescript-(?:aix|darwin|freebsd|linux|netbsd|openbsd|sunos|win32)-/,
 ];
 
 const command = process.argv[2];
