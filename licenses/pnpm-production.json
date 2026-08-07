@@ -1173,14 +1173,6 @@
     },
     {
       "ecosystem": "npm",
-      "name": "@typescript/typescript-win32-x64",
-      "version": "7.0.2",
-      "declaredLicense": "Apache-2.0",
-      "concludedLicense": "Apache-2.0",
-      "purl": "pkg:npm/%40typescript/typescript-win32-x64@7.0.2"
-    },
-    {
-      "ecosystem": "npm",
       "name": "@typescript/typescript6",
       "version": "6.0.2",
       "declaredLicense": "Apache-2.0",

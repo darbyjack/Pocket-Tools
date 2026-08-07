@@ -26,6 +26,20 @@ test("keeps untrusted pull-request code off persistent runners and secrets", asy
   assert.match(ci, /^permissions:\n  contents: read$/mu);
 });
 
+test("keeps the dependency-free classifier from requiring pnpm", async () => {
+  const { ci } = await workflows();
+  const classifyStart = ci.indexOf("\n  classify:\n");
+  const fastStart = ci.indexOf("\n  fast:\n");
+  assert.ok(classifyStart > 0 && fastStart > classifyStart);
+  const classify = ci.slice(classifyStart, fastStart);
+
+  assert.match(
+    classify,
+    /uses: actions\/setup-node@[0-9a-f]{40} # v5\n        with:\n          node-version: 24\.18\.0\n          package-manager-cache: false/u,
+  );
+  assert.doesNotMatch(classify, /uses: pnpm\/action-setup/u);
+});
+
 test("exposes one stable required CI aggregation job", async () => {
   const { ci } = await workflows();
 
