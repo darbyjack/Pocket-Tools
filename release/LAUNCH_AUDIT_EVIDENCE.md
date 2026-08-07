@@ -109,8 +109,10 @@ The reviewed first pass found:
 
 The five Dependabot branches are intentionally retained as deferred workflow-maintenance work. Android smoke and Actions dependency remediation remain deferred until public cutover to avoid private-repository Actions usage.
 
-## Final rerun requirement
+## Final rerun protocol
 
-This evidence file changes the Phase 10 branch after the first audit snapshot. Therefore the complete local audit must be rerun from the final Phase 10 branch head before the phase can merge.
+The complete local audit must be rerun after this evidence file is committed. That rerun audits the exact Phase 10 branch head intended for review and merge.
 
-The final rerun must confirm that no new blocking finding was introduced and record its final head, timestamp, tool versions, ref/object/blob counts, and finding counts here before Phase 10 is marked complete.
+To preserve that audited head, the final rerun result is recorded on tracking issue #114 rather than by making another repository commit afterward. The final issue record must include the audited Phase 10 head, audited `main`, timestamp, tool versions, ref/object/blob counts, finding counts, and confirmation that all remaining findings match the classifications above.
+
+No repository file should change after the successful final rerun unless the complete audit is run again.
