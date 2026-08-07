@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Pocket Tools 0.1.0",
-  "documentNamespace": "https://github.com/darbyjack/Pocket-Tools/sbom/0.1.0/795cbae615143d42e7d512d85e3c01bddc1ea55e75e053f8b0bbb5db2fa3a1f8",
+  "documentNamespace": "https://github.com/darbyjack/Pocket-Tools/sbom/0.1.0/30d8c5d96df479ff533273a877cda2f6d1b70a868e869f9ed94c62c1ccba756c",
   "creationInfo": {
     "created": "1970-01-01T00:00:00.000Z",
     "creators": ["Tool: Pocket Tools deterministic license tooling"]
@@ -5627,23 +5627,6 @@
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
           "referenceLocator": "pkg:npm/%40types/yargs@17.0.35"
-        }
-      ]
-    },
-    {
-      "SPDXID": "SPDXRef-npm--typescript-typescript-win32-x64-7.0.2-ee8228e1e7eb",
-      "name": "@typescript/typescript-win32-x64",
-      "versionInfo": "7.0.2",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "licenseConcluded": "Apache-2.0",
-      "licenseDeclared": "Apache-2.0",
-      "copyrightText": "NOASSERTION",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40typescript/typescript-win32-x64@7.0.2"
         }
       ]
     },
@@ -13248,11 +13231,6 @@
       "spdxElementId": "SPDXRef-Pocket-Tools",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-npm--types-yargs-17.0.35-d846dcb8d0e4"
-    },
-    {
-      "spdxElementId": "SPDXRef-Pocket-Tools",
-      "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-npm--typescript-typescript-win32-x64-7.0.2-ee8228e1e7eb"
     },
     {
       "spdxElementId": "SPDXRef-Pocket-Tools",
