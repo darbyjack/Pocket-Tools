@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -51,11 +52,29 @@ function parseArguments(argv) {
   return options;
 }
 
+async function sha256File(path) {
+  const data = await readFile(path);
+  return createHash("sha256").update(data).digest("hex");
+}
+
+async function addReviewChecksum(outputPath) {
+  const checksumPath = join(dirname(outputPath), "SHA256SUMS");
+  const outputName = outputPath.slice(dirname(outputPath).length + 1).replaceAll("\\", "/");
+  const existing = (await readFile(checksumPath, "utf8"))
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .filter((line) => !line.endsWith(`  ${outputName}`));
+  existing.push(`${await sha256File(outputPath)}  ${outputName}`);
+  existing.sort((a, b) => a.slice(66).localeCompare(b.slice(66)));
+  await writeFile(checksumPath, `${existing.join("\n")}\n`, "utf8");
+}
+
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   const raw = JSON.parse(await readFile(options.input, "utf8"));
   const sanitized = sanitizeGitleaksFindings(raw);
   await writeFile(options.output, `${JSON.stringify(sanitized, null, 2)}\n`, "utf8");
+  await addReviewChecksum(options.output);
   console.log(`Wrote ${sanitized.length} sanitized Gitleaks finding(s) to ${options.output}.`);
 }
 
