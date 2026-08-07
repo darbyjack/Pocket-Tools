@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +12,7 @@ const DEFAULT_CONTENT_SCAN_BYTES = 5 * 1024 * 1024;
 const GITLEAKS_SELF_TEST_INPUT = `token = "${[
   "gh",
   "p_",
-  "aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789",
+  "9Qm2Zx7Lp4Vr8Kd1Hs6Tn3Wc5Yf0BjUaE2Rg",
 ].join("")}"\n`;
 
 const SUSPICIOUS_PATH_RULES = [
@@ -46,28 +47,23 @@ const CONTENT_REVIEW_RULES = [
   ],
 ];
 
-function runGit(args, options = {}) {
-  const result = spawnSync("git", args, {
-    cwd: repositoryRoot,
-    encoding: options.encoding ?? "utf8",
+function runCommand(executable, args, options = {}) {
+  return spawnSync(executable, args, {
+    cwd: options.cwd ?? repositoryRoot,
+    encoding: Object.hasOwn(options, "encoding") ? options.encoding : "utf8",
     input: options.input,
     maxBuffer: options.maxBuffer ?? 128 * 1024 * 1024,
   });
+}
+
+function runGit(args, options = {}) {
+  const result = runCommand("git", args, options);
   if (result.status !== 0) {
     throw new Error(
       `HISTORY_AUDIT_GIT_FAILED: git ${args.join(" ")} failed.\n${result.stderr || result.stdout}`,
     );
   }
-  return result.stdout;
-}
-
-function runCommand(executable, args, options = {}) {
-  return spawnSync(executable, args, {
-    cwd: repositoryRoot,
-    encoding: Object.hasOwn(options, "encoding") ? options.encoding : "utf8",
-    input: options.input,
-    maxBuffer: options.maxBuffer ?? 128 * 1024 * 1024,
-  });
+  return String(result.stdout);
 }
 
 function assertRepositoryReady() {
@@ -120,11 +116,10 @@ function collectObjectPaths(refs) {
 }
 
 function collectBlobMetadata(pathsByObject) {
-  const objectLines = [...pathsByObject.keys()].map((object) => `${object}\n`).join("");
-  const raw = runGit(
-    ["cat-file", "--batch-check=%(objectname) %(objecttype) %(objectsize)"],
-    { input: objectLines },
-  );
+  const input = [...pathsByObject.keys()].map((object) => `${object}\n`).join("");
+  const raw = runGit(["cat-file", "--batch-check=%(objectname) %(objecttype) %(objectsize)"], {
+    input,
+  });
   const blobs = [];
   for (const line of raw.split(/\r?\n/)) {
     if (!line) continue;
@@ -146,13 +141,9 @@ function classifySuspiciousPaths(blobs) {
       const categories = SUSPICIOUS_PATH_RULES.filter(([, pattern]) => pattern.test(path)).map(
         ([category]) => category,
       );
-      if (categories.length === 0) continue;
-      findings.push({
-        object: blob.object,
-        size: blob.size,
-        path,
-        categories,
-      });
+      if (categories.length > 0) {
+        findings.push({ object: blob.object, size: blob.size, path, categories });
+      }
     }
   }
   return findings.sort((a, b) => a.path.localeCompare(b.path) || a.object.localeCompare(b.object));
@@ -166,8 +157,7 @@ function collectLargeBlobs(blobs, thresholdBytes) {
 }
 
 function isProbablyBinary(buffer) {
-  const sample = buffer.subarray(0, Math.min(buffer.length, 8192));
-  return sample.includes(0);
+  return buffer.subarray(0, Math.min(buffer.length, 8192)).includes(0);
 }
 
 function collectContentReviewFindings(blobs, maxBytes) {
@@ -181,19 +171,14 @@ function collectContentReviewFindings(blobs, maxBytes) {
     if (result.status !== 0) {
       throw new Error(`HISTORY_AUDIT_BLOB_READ_FAILED: unable to read blob ${blob.object}.`);
     }
-    const buffer = result.stdout;
-    if (!Buffer.isBuffer(buffer) || isProbablyBinary(buffer)) continue;
-    const text = buffer.toString("utf8");
+    if (!Buffer.isBuffer(result.stdout) || isProbablyBinary(result.stdout)) continue;
+    const text = result.stdout.toString("utf8");
     const categories = CONTENT_REVIEW_RULES.filter(([, pattern]) => pattern.test(text)).map(
       ([category]) => category,
     );
-    if (categories.length === 0) continue;
-    findings.push({
-      object: blob.object,
-      size: blob.size,
-      paths: blob.paths,
-      categories,
-    });
+    if (categories.length > 0) {
+      findings.push({ object: blob.object, size: blob.size, paths: blob.paths, categories });
+    }
   }
   return findings.sort((a, b) => a.object.localeCompare(b.object));
 }
@@ -238,11 +223,9 @@ function assertGitleaksSelfTestResult(result) {
 }
 
 function selfTestGitleaks(executable) {
-  const result = runCommand(
-    executable,
-    ["stdin", "--redact=100", "--no-banner", "--no-color"],
-    { input: GITLEAKS_SELF_TEST_INPUT },
-  );
+  const result = runCommand(executable, ["stdin", "--redact=100", "--no-banner", "--no-color"], {
+    input: GITLEAKS_SELF_TEST_INPUT,
+  });
   assertGitleaksSelfTestResult(result);
 }
 
@@ -253,8 +236,8 @@ function runGitleaks(executable, reportPath, refs) {
       `HISTORY_AUDIT_GITLEAKS_VERSION: expected ${EXPECTED_GITLEAKS_VERSION}, found ${version}.`,
     );
   }
-  selfTestGitleaks(executable);
 
+  selfTestGitleaks(executable);
   const logOptions = refs.map(({ ref }) => ref).join(" ");
   const result = runCommand(executable, [
     "git",
@@ -279,8 +262,7 @@ async function writeJson(path, value) {
 }
 
 async function sha256File(path) {
-  const data = await readFile(path);
-  return createHash("sha256").update(data).digest("hex");
+  return createHash("sha256").update(await readFile(path)).digest("hex");
 }
 
 async function writeChecksums(outputDirectory, files) {
@@ -327,8 +309,9 @@ async function main() {
   const contentReviewFindings = collectContentReviewFindings(blobs, options.contentScanBytes);
   const gitleaksReportPath = join(options.output, "gitleaks.json");
   const gitleaks = runGitleaks(options.gitleaks, gitleaksReportPath, refs);
+
   try {
-    await readFile(gitleaksReportPath);
+    readFileSync(gitleaksReportPath);
   } catch {
     await writeJson(gitleaksReportPath, []);
   }
