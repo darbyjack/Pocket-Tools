@@ -18,16 +18,21 @@ Non-blocking Android smoke remediation is intentionally deferred until public cu
 
 ## Audit scope
 
-The final audit must include:
+The Windows runner refreshes an isolated local `refs/audit/*` namespace directly from GitHub before every scan:
 
-- every fetched branch under `refs/remotes/origin/*`;
-- every tag under `refs/tags/*`;
-- GitHub pull-request heads under `refs/pull/*/head`, including closed PRs;
-- every Git object reachable from those refs;
+- `refs/heads/*` is mirrored to `refs/audit/heads/*`;
+- `refs/tags/*` is mirrored to `refs/audit/tags/*`;
+- GitHub `refs/pull/*/head` is mirrored to `refs/audit/pull/*/head`, including closed PRs retained by GitHub.
+
+Only that isolated remote-derived namespace is scanned. Local-only branches, stashes, worktrees, and other workstation refs are deliberately excluded because they do not become public with the repository.
+
+The final audit includes:
+
+- every Git object reachable from the isolated remote-derived refs;
 - suspicious historical filenames;
 - unusually large historical blobs;
 - text blobs containing personal local paths, private-network URLs, database URLs, or credential-like assignments;
-- a full redacted Gitleaks Git-history scan.
+- a full redacted Gitleaks scan across the same exact ref set.
 
 The audit output is sensitive review material. It belongs under ignored `release-work/history-audit/` and must not be committed verbatim.
 
@@ -68,8 +73,6 @@ powershell `
     -File .\scripts\repository-history-audit.ps1
 ```
 
-The runner fetches all current branch heads, tags, and GitHub pull-request heads before scanning.
-
 Review these share-safe queues first:
 
 ```text
@@ -82,7 +85,7 @@ release-work/history-audit/refs.json
 release-work/history-audit/SHA256SUMS
 ```
 
-`gitleaks-review.json` intentionally omits the matched secret, match text, and source line. The raw `gitleaks.json` remains local review material even though Gitleaks is invoked with full redaction.
+`gitleaks-review.json` intentionally omits the matched secret, match text, and source line. The raw `gitleaks.json` remains local review material even though Gitleaks is invoked with full redaction. `SHA256SUMS` covers both the raw local evidence and the sanitized review queue.
 
 Do not paste an unredacted secret into an issue, PR, commit, or chat while reviewing a finding.
 
@@ -93,11 +96,11 @@ A finding is not automatically a launch blocker. Review the actual historical ob
 Useful commands:
 
 ```powershell
-# Find commits that introduced or removed a specific blob.
-git log --all --find-object=<BLOB_SHA> --oneline --decorate
+# Find commits that introduced or removed a specific blob within the audited refs.
+git log --find-object=<BLOB_SHA> $(git for-each-ref --format="%(refname)" refs/audit) --oneline --decorate
 
-# Inspect a historical path without checking it out.
-git log --all --full-history -- <PATH>
+# Inspect a historical path across the audited refs.
+git log $(git for-each-ref --format="%(refname)" refs/audit) --full-history -- <PATH>
 
 # Inspect one blob. Do not copy sensitive values into public notes.
 git cat-file blob <BLOB_SHA>
@@ -129,7 +132,7 @@ Branches present before final cleanup:
 | `dependabot/github_actions/actions/upload-artifact-7.0.1` | retain temporarily; deferred to public cutover |
 | `dependabot/github_actions/pnpm/action-setup-6.0.10` | retain temporarily; deferred to public cutover |
 
-The final audit must be rerun after any ref deletion or history rewrite.
+The final audit must be rerun after any remote ref deletion or history rewrite. The runner deletes and recreates `refs/audit/*` before every run so stale local audit refs cannot survive between snapshots.
 
 ## Evidence record
 
@@ -137,14 +140,14 @@ Commit only a reviewed summary, never raw sensitive scan output.
 
 Fill this section after review:
 
-- Audited `origin/main`:
+- Audited `main`:
 - Audit tooling commit:
 - Audit date:
 - Git version:
 - Node version:
 - Gitleaks version:
 - Scanner self-test:
-- Ref count:
+- Remote-derived ref count:
 - Pull-request ref count:
 - Reachable blob count:
 - Gitleaks findings reviewed:
@@ -169,6 +172,6 @@ Phase 10 is complete only when:
 - every real sensitive finding is remediated;
 - every required credential is rotated or revoked;
 - stale refs are deleted or explicitly retained with rationale;
-- the complete audit is rerun after ref/history changes;
+- the complete remote-derived audit is rerun after ref/history changes;
 - the reviewed evidence summary is committed;
 - public visibility and repository settings remain deferred to Phase 11.
