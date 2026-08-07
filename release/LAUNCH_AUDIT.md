@@ -47,7 +47,7 @@ gitleaks_8.30.0_windows_x64.zip
 SHA-256: 54fe94f644b832dd08e8c3a5915efb3bfa862386d59fb27ca0792cb687a83573
 ```
 
-Before the history scan, the repository audit streams a synthetic GitHub-style token into `gitleaks stdin`. The scanner must report a finding with exit code `1`. Exit code `0` is treated as a broken detector and aborts the audit.
+Before the history scan, the repository audit assembles a synthetic GitHub-style token only at runtime and streams it into `gitleaks stdin`. The scanner must report a finding with exit code `1`. Exit code `0` is treated as a broken detector and aborts the audit.
 
 No GitHub Actions job is required.
 
@@ -70,17 +70,19 @@ powershell `
 
 The runner fetches all current branch heads, tags, and GitHub pull-request heads before scanning.
 
-Review:
+Review these share-safe queues first:
 
 ```text
 release-work/history-audit/summary.json
-release-work/history-audit/gitleaks.json
+release-work/history-audit/gitleaks-review.json
 release-work/history-audit/suspicious-paths.json
 release-work/history-audit/large-blobs.json
 release-work/history-audit/content-review.json
 release-work/history-audit/refs.json
 release-work/history-audit/SHA256SUMS
 ```
+
+`gitleaks-review.json` intentionally omits the matched secret, match text, and source line. The raw `gitleaks.json` remains local review material even though Gitleaks is invoked with full redaction.
 
 Do not paste an unredacted secret into an issue, PR, commit, or chat while reviewing a finding.
 
