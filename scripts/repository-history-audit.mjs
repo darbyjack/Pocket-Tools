@@ -88,14 +88,7 @@ function assertRepositoryReady() {
 }
 
 function collectRefs() {
-  const raw = runGit([
-    "for-each-ref",
-    "--format=%(refname)%09%(objectname)",
-    "refs/heads",
-    "refs/remotes",
-    "refs/tags",
-    "refs/pull",
-  ]);
+  const raw = runGit(["for-each-ref", "--format=%(refname)%09%(objectname)", "refs/audit"]);
   return raw
     .split(/\r?\n/)
     .filter(Boolean)
@@ -103,13 +96,18 @@ function collectRefs() {
       const [ref, object] = line.split("\t");
       return { ref, object };
     })
-    .filter(({ ref }) => ref !== "refs/remotes/origin/HEAD")
     .sort((a, b) => a.ref.localeCompare(b.ref));
 }
 
-function collectObjectPaths() {
+function collectObjectPaths(refs) {
+  if (refs.length === 0) {
+    throw new Error(
+      "HISTORY_AUDIT_REFS_MISSING: refs/audit is empty. Run the Windows audit runner so remote refs are fetched first.",
+    );
+  }
+
   const pathsByObject = new Map();
-  const raw = runGit(["rev-list", "--objects", "--all"]);
+  const raw = runGit(["rev-list", "--objects", ...refs.map(({ ref }) => ref)]);
   for (const line of raw.split(/\r?\n/)) {
     if (!line) continue;
     const space = line.indexOf(" ");
@@ -248,7 +246,7 @@ function selfTestGitleaks(executable) {
   assertGitleaksSelfTestResult(result);
 }
 
-function runGitleaks(executable, reportPath) {
+function runGitleaks(executable, reportPath, refs) {
   const version = getGitleaksVersion(executable);
   if (version !== EXPECTED_GITLEAKS_VERSION) {
     throw new Error(
@@ -256,6 +254,8 @@ function runGitleaks(executable, reportPath) {
     );
   }
   selfTestGitleaks(executable);
+
+  const logOptions = refs.map(({ ref }) => ref).join(" ");
   const result = runCommand(executable, [
     "git",
     "--redact=100",
@@ -263,7 +263,7 @@ function runGitleaks(executable, reportPath) {
     "--no-color",
     "--report-format=json",
     `--report-path=${reportPath}`,
-    "--log-opts=--all",
+    `--log-opts=${logOptions}`,
     ".",
   ]);
   if (result.status !== 0 && result.status !== 1) {
@@ -320,13 +320,13 @@ async function main() {
   await mkdir(options.output, { recursive: true });
 
   const refs = collectRefs();
-  const pathsByObject = collectObjectPaths();
+  const pathsByObject = collectObjectPaths(refs);
   const blobs = collectBlobMetadata(pathsByObject);
   const suspiciousPaths = classifySuspiciousPaths(blobs);
   const largeBlobs = collectLargeBlobs(blobs, options.largeBlobBytes);
   const contentReviewFindings = collectContentReviewFindings(blobs, options.contentScanBytes);
   const gitleaksReportPath = join(options.output, "gitleaks.json");
-  const gitleaks = runGitleaks(options.gitleaks, gitleaksReportPath);
+  const gitleaks = runGitleaks(options.gitleaks, gitleaksReportPath, refs);
   try {
     await readFile(gitleaksReportPath);
   } catch {
@@ -336,7 +336,7 @@ async function main() {
   const summary = {
     schemaVersion: 1,
     auditedHead: getHead(),
-    auditedOriginMain: resolveOptionalRef("refs/remotes/origin/main"),
+    auditedOriginMain: resolveOptionalRef("refs/audit/heads/main"),
     generatedAt: new Date().toISOString(),
     toolchain: {
       git: getGitVersion(),
@@ -347,9 +347,9 @@ async function main() {
       refs: refs.length,
       objects: pathsByObject.size,
       blobs: blobs.length,
-      pullRefs: refs.filter(({ ref }) => ref.startsWith("refs/pull/")).length,
-      remoteRefs: refs.filter(({ ref }) => ref.startsWith("refs/remotes/")).length,
-      tagRefs: refs.filter(({ ref }) => ref.startsWith("refs/tags/")).length,
+      pullRefs: refs.filter(({ ref }) => ref.startsWith("refs/audit/pull/")).length,
+      remoteRefs: refs.filter(({ ref }) => ref.startsWith("refs/audit/heads/")).length,
+      tagRefs: refs.filter(({ ref }) => ref.startsWith("refs/audit/tags/")).length,
     },
     thresholds: {
       largeBlobBytes: options.largeBlobBytes,
