@@ -140,7 +140,11 @@ jobs:
       - name: Build and inspect isolated ABI
         env:
           CI: "true"
-        run: pnpm release:android:build --tag v0.1.0 --abi "${{ matrix.abi }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$(node -p "require('./package.json').version")"
+          pnpm release:android:build --tag "$tag" --abi "${{ matrix.abi }}"
 
   required:
     name: CI / required

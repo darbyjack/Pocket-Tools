@@ -178,11 +178,6 @@ jobs:
     environment: release
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    env:
-      ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
-      ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
-      ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
-      ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -214,6 +209,8 @@ jobs:
           path: release-work/intermediate/${{ needs.validate.outputs.version }}
       - name: Decode protected signing identity
         id: keystore
+        env:
+          ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
         shell: bash
         run: |
           set -euo pipefail
@@ -223,6 +220,9 @@ jobs:
           echo "path=$keystore" >> "$GITHUB_OUTPUT"
       - name: Sign, inspect, stage, and verify exact assets
         env:
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
           KEYSTORE: ${{ steps.keystore.outputs.path }}
           SOURCE: ${{ needs.validate.outputs.source }}
           TAG: ${{ needs.validate.outputs.tag }}
