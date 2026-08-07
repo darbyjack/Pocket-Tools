@@ -95,22 +95,28 @@ jobs:
           node-version: 24.18.0
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Regenerate portable legal artifacts
+      - name: Regenerate and format portable legal artifacts
         run: |
           pnpm licenses:pnpm:write
           pnpm sbom:write
+          pnpm format
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           if-no-files-found: error
-          name: portable-legal-artifacts
+          name: formatted-portable-artifacts
           path: |
             licenses/pnpm-production.json
             licenses/pocket-tools.spdx.json
+            scripts/license-inventory.mjs
           retention-days: 1
       - name: Run repository gate
         run: pnpm check
       - name: Require committed generated artifacts
-        run: git diff --exit-code -- licenses/pnpm-production.json licenses/pocket-tools.spdx.json
+        run: |
+          git diff --exit-code -- \
+            licenses/pnpm-production.json \
+            licenses/pocket-tools.spdx.json \
+            scripts/license-inventory.mjs
 
   android-smoke:
     name: Android smoke (${{ matrix.abi }})
