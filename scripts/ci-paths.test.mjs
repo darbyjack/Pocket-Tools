@@ -44,10 +44,9 @@ test("treats Android workflow changes as native smoke coverage", () => {
 });
 
 test("normalizes Windows separators and removes duplicate paths", () => {
-  assert.deepEqual(
-    classifyPaths([".\\apps\\mobile\\app.json", "apps/mobile/app.json"]).paths,
-    ["apps/mobile/app.json"],
-  );
+  assert.deepEqual(classifyPaths([".\\apps\\mobile\\app.json", "apps/mobile/app.json"]).paths, [
+    "apps/mobile/app.json",
+  ]);
 });
 
 test("serializes stable GitHub job outputs", () => {

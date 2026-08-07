@@ -5,10 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { RELEASE_ABIS, sha256, stableJson } from "./release-contract.mjs";
-import {
-  expectedUnsignedHandoffNames,
-  validateUnsignedHandoff,
-} from "./ci-release-collect.mjs";
+import { expectedUnsignedHandoffNames, validateUnsignedHandoff } from "./ci-release-collect.mjs";
 
 const TAG = "v0.1.0";
 const SOURCE = "0123456789abcdef0123456789abcdef01234567";

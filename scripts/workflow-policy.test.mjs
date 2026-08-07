@@ -60,9 +60,7 @@ test("keeps every production signing secret inside the protected signing job", a
 
 test("pins the permitted external actions to immutable commits", async () => {
   const { ci, release } = await workflows();
-  const usesLines = `${ci}\n${release}`
-    .split(/\r?\n/u)
-    .filter((line) => /^\s*- uses:/u.test(line));
+  const usesLines = `${ci}\n${release}`.split(/\r?\n/u).filter((line) => /^\s*- uses:/u.test(line));
 
   assert.ok(usesLines.length > 0);
   for (const line of usesLines) {
@@ -79,5 +77,8 @@ test("creates drafts only and preserves the human publication gate", async () =>
   assert.match(release, /gh release create[^\n]*--draft/u);
   assert.doesNotMatch(release, /--draft=false|--latest|gh release publish/u);
   assert.match(release, /^    permissions:\n      contents: write$/mu);
-  assert.match(release, /^    permissions:\n      attestations: write\n      contents: read\n      id-token: write$/mu);
+  assert.match(
+    release,
+    /^    permissions:\n      attestations: write\n      contents: read\n      id-token: write$/mu,
+  );
 });

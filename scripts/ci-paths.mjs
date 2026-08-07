@@ -18,14 +18,12 @@ const DOCUMENTATION_ROOT_FILES = new Set([
   "THIRD_PARTY_NOTICES.md",
 ]);
 
-const ANDROID_ROOT_FILES = new Set([
-  "package.json",
-  "pnpm-lock.yaml",
-  "pnpm-workspace.yaml",
-]);
+const ANDROID_ROOT_FILES = new Set(["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"]);
 
 function normalizePath(path) {
-  return String(path).replaceAll("\\", "/").replace(/^\.\/+/, "");
+  return String(path)
+    .replaceAll("\\", "/")
+    .replace(/^\.\/+/, "");
 }
 
 function isDocumentationPath(path) {
@@ -93,14 +91,10 @@ export function classifyPaths(paths) {
 }
 
 export function changedPaths({ base, head }) {
-  const result = spawnSync(
-    "git",
-    ["diff", "--name-only", "--diff-filter=ACMRD", base, head],
-    {
-      encoding: "utf8",
-      shell: false,
-    },
-  );
+  const result = spawnSync("git", ["diff", "--name-only", "--diff-filter=ACMRD", base, head], {
+    encoding: "utf8",
+    shell: false,
+  });
   if (result.error) {
     throw new Error(`CI_PATHS_GIT_FAILED: ${result.error.message}`, { cause: result.error });
   }
