@@ -180,10 +180,7 @@ function describeInventoryDrift(expected, actual) {
 
 function packageMap(packages) {
   return new Map(
-    packages.map((entry) => [
-      `${entry.ecosystem}:${entry.name}@${entry.version}`,
-      entry,
-    ]),
+    packages.map((entry) => [`${entry.ecosystem}:${entry.name}@${entry.version}`, entry]),
   );
 }
 
