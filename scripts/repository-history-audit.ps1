@@ -32,15 +32,26 @@ if ($isShallow -ne "false") {
     throw "The history audit requires a complete, non-shallow clone."
 }
 
-Write-Host "Fetching all branches, tags, and GitHub pull-request heads..."
+Write-Host "Refreshing isolated remote audit refs..."
+
+$existingAuditRefs = @(
+    git for-each-ref --format="%(refname)" refs/audit
+)
+Assert-LastExitCode "Unable to inspect existing audit refs."
+
+foreach ($auditRef in $existingAuditRefs) {
+    if ($auditRef) {
+        git update-ref -d $auditRef
+        Assert-LastExitCode "Unable to remove stale audit ref $auditRef."
+    }
+}
 
 git fetch origin `
-    --prune `
-    --tags `
-    "+refs/heads/*:refs/remotes/origin/*" `
-    "+refs/pull/*/head:refs/pull/*/head"
+    "+refs/heads/*:refs/audit/heads/*" `
+    "+refs/tags/*:refs/audit/tags/*" `
+    "+refs/pull/*/head:refs/audit/pull/*/head"
 
-Assert-LastExitCode "Unable to fetch the complete audit ref set."
+Assert-LastExitCode "Unable to fetch the complete remote audit ref set."
 
 New-Item -ItemType Directory -Force -Path $toolRoot | Out-Null
 
