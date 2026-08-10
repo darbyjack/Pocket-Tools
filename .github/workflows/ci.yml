@@ -131,7 +131,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sdkmanager --install \
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdkmanager"
+          "$sdkmanager" --install \
             "platforms;android-36" \
             "build-tools;36.0.0" \
             "cmake;3.22.1" \
