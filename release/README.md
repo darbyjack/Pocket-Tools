@@ -1,8 +1,8 @@
 # Release Engineering
 
-This directory documents the repository-owned release pipeline introduced in Phase 8. The scripts run locally before GitHub Actions or the production signing identity exists.
+This directory documents the repository-owned release pipeline used for official Pocket Tools GitHub Releases. The scripts support the same build, signing, staging, and verification contract locally and in GitHub Actions; local acceptance uses a disposable signing identity, while official releases use the protected production identity documented in [PRODUCTION_SIGNING.md](PRODUCTION_SIGNING.md).
 
-An official Pocket Tools build is not created by these commands alone. Official distribution requires an immutable GitHub Release, the production signing certificate, trusted workflow attestations, and exact-byte draft acceptance. Phase 8 proves the same build, signing, staging, and verification contract with a disposable test identity only.
+An official Pocket Tools build is not created by these commands alone. Official distribution requires an immutable GitHub Release, the production signing certificate, trusted workflow attestations, and exact-byte draft acceptance.
 
 ## Implemented pipeline
 
@@ -23,7 +23,7 @@ The current implementation provides:
 - exact asset-set validation with no extra files, missing files, directories, or symbolic links; and
 - independent checksum verification against the final staged bytes.
 
-The remaining Phase 8 merge gate is a complete local four-ABI run with the disposable identity and negative acceptance fixtures. GitHub Actions wiring belongs to Phase 9.
+The GitHub draft-release workflow builds all four unsigned ABI artifacts independently, validates their provenance, signs them only in the protected `release` environment, pins the exact production certificate fingerprint, stages the exact public asset set, creates attestations, and prepares a draft release for manual exact-byte acceptance.
 
 ## Release identity commands
 
@@ -105,7 +105,7 @@ Generate the disposable identity:
 pnpm release:android:test-key --keystore release-work\test-signing.p12
 ```
 
-The default alias is `pocket-tools-test-release` and the certificate subject is `CN=Pocket Tools Test Release`. Both are deliberately distinct from the future production identity.
+The default alias is `pocket-tools-test-release` and the certificate subject is `CN=Pocket Tools Test Release`. Both are deliberately distinct from the production identity.
 
 Align and sign an intermediate without modifying its input:
 
@@ -141,6 +141,14 @@ pnpm release:android:certificate `
 ```
 
 Commands fail rather than overwrite an existing keystore, signed APK, inspection report, or certificate.
+
+## Production signing
+
+The production certificate metadata and public SHA-256 fingerprint are maintained in [PRODUCTION_SIGNING.md](PRODUCTION_SIGNING.md). The production PKCS#12 keystore and credentials are never stored in Git.
+
+GitHub-hosted production signing is isolated to the protected `release` environment. The workflow decodes the keystore only beneath `$RUNNER_TEMP`, passes credentials through masked environment values, validates every signed APK against both the expected certificate subject and exact production SHA-256 fingerprint, and deletes temporary signing material in an unconditional cleanup step.
+
+Do not copy production secrets into repository-level secrets, workflow files, command-line literals, logs, issues, pull requests, or release assets.
 
 ## Clean-room release staging
 
@@ -208,4 +216,4 @@ SHA256SUMS
 - Use `release-work/` and `release-staging/` only for local disposable output; both are ignored.
 - Delete disposable test keystores and password environment variables after acceptance.
 - Generated Android projects and APKs remain untracked.
-- The production key and stable public certificate are created in their later approved phases, not during Phase 8.
+- Keep the public production certificate identity documented and verify it independently; keep all private signing material outside Git.
