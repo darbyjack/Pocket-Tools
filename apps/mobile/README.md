@@ -40,7 +40,7 @@ pnpm format
 pnpm check
 ```
 
-Pull requests use GitHub-hosted CI. Run these checks locally before pull-request readiness; CI repeats the repository gate and conditionally exercises Android builds based on the changed paths.
+Pull requests use GitHub-hosted CI. Run these checks locally before pull-request readiness; CI repeats the repository gate and runs an isolated Android release smoke build whenever a changed path can affect the mobile host.
 
 ## Regenerate Android
 
