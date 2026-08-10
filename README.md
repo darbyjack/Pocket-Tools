@@ -75,9 +75,13 @@ Requirements:
 
 - Node.js 24.16 or newer
 - pnpm 11.17.0 through Corepack
-- Android Studio and an Android SDK supported by Expo SDK 57
-- Android NDK 26 or newer for QuickJS-NG
-- A 64-bit ARM Android device for the configured native build target
+- Android Studio with Android SDK Platform 36 and Build Tools 36.0.0
+- Android NDK 27.1.12297006
+- CMake 3.22.1
+- JDK 17
+- an ABI-compatible Android device or emulator for runtime validation
+
+Pocket Tools release builds support `armeabi-v7a`, `arm64-v8a`, `x86`, and `x86_64`.
 
 ```bash
 corepack enable
@@ -86,7 +90,7 @@ pnpm check
 pnpm android
 ```
 
-Expo Go cannot run Pocket Tools because the app includes custom QuickJS and notification native modules. No GitHub Actions workflows are enabled; repository and Android validation are run manually.
+Expo Go cannot run Pocket Tools because the app includes custom QuickJS and notification native modules. Pull requests use GitHub-hosted CI; run the repository checks locally before opening or updating a pull request, and follow the Android/native validation procedures when a change affects those paths.
 
 ## Public capability boundary
 

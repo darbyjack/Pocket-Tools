@@ -40,7 +40,7 @@ pnpm format
 pnpm check
 ```
 
-No GitHub Actions workflows are enabled. Run these checks manually before pull-request readiness.
+Pull requests use GitHub-hosted CI. Run these checks locally before pull-request readiness; CI repeats the repository gate and conditionally exercises Android builds based on the changed paths.
 
 ## Regenerate Android
 

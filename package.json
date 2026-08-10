@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "android": "pnpm sync:mini-apps && pnpm --dir apps/mobile android",
+    "audit:history": "node scripts/repository-history-audit.mjs",
     "check": "pnpm sync:mini-apps:check && pnpm sdk:declarations:check && pnpm docs:sync:check && pnpm docs:links && pnpm legal:notices:check && pnpm licenses:check && pnpm sbom:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "docs:sync": "node scripts/sync-docs-site.mjs write",
     "docs:sync:check": "node scripts/sync-docs-site.mjs check",
