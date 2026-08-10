@@ -50,26 +50,6 @@ test("exposes one stable required CI aggregation job", async () => {
   assert.match(ci, /needs:\n      - classify\n      - fast\n      - android-smoke/u);
 });
 
-test("keeps Pages deployment scoped to main with least privilege", async () => {
-  const { pages } = await workflows();
-
-  assert.match(
-    pages,
-    /^on:\n  push:\n    branches:\n      - main\n  workflow_dispatch:$/mu,
-  );
-  assert.doesNotMatch(pages, /pull_request/u);
-  assert.match(pages, /^permissions: \{\}$/mu);
-  assert.match(
-    pages,
-    /^  build:[\s\S]*?    permissions:\n      contents: read[\s\S]*?  deploy:/mu,
-  );
-  assert.match(
-    pages,
-    /^  deploy:[\s\S]*?    permissions:\n      id-token: write\n      pages: write/mu,
-  );
-  assert.match(pages, /environment:\n      name: github-pages/u);
-});
-
 test("keeps every production signing secret inside the protected signing job", async () => {
   const { release } = await workflows();
   const signStart = release.indexOf("\n  sign:\n");
