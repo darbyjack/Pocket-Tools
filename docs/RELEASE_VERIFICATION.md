@@ -2,6 +2,12 @@
 
 Verify release assets before installing them. The APK, checksum list, release metadata, and public signing information must all come from the same GitHub Release.
 
+The stable production signing identity is recorded in [Production Signing Identity](../release/PRODUCTION_SIGNING.md). The expected SHA-256 certificate fingerprint for official Pocket Tools APKs is:
+
+```text
+09:51:4F:5A:92:13:F5:FA:C4:2F:23:B7:AB:04:67:0E:40:5A:42:51:1A:09:E6:27:3E:84:20:5B:47:CE:B3:D4
+```
+
 ## Preserve the downloaded bytes
 
 Do not rebuild, align, sign, rename, or modify an APK before verification. Acceptance and publication apply to the exact bytes attached to the release.
@@ -59,7 +65,13 @@ Locate `apksigner` in the Android SDK Build Tools directory and print the APK ce
   .\Pocket-Tools-<version>-<abi>.apk
 ```
 
-The certificate SHA-256 digest must exactly match the fingerprint published with that release. A checksum match alone does not authorize a certificate mismatch.
+The certificate SHA-256 digest must exactly equal:
+
+```text
+09:51:4F:5A:92:13:F5:FA:C4:2F:23:B7:AB:04:67:0E:40:5A:42:51:1A:09:E6:27:3E:84:20:5B:47:CE:B3:D4
+```
+
+It must also agree with the fingerprint in the release metadata and the public certificate attached to that release. A checksum match alone does not authorize a certificate mismatch.
 
 Development, debug, disposable test, and production release certificates are different identities. Do not treat an APK signed with a debug or local test certificate as an official production release.
 
@@ -87,7 +99,7 @@ The release metadata and checksum list should account for every published asset 
 - the source commit and application version agree
 - the SPDX SBOM and notices identify the same release
 - the checksum list covers the exact APK
-- the signing fingerprint agrees with the certificate printed by `apksigner`
+- the signing fingerprint agrees with the certificate printed by `apksigner` and the stable production signing record
 - known limitations are disclosed in the release notes
 
 ## Install only after every check passes

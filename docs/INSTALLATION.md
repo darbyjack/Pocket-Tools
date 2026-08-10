@@ -1,6 +1,6 @@
 # Install Pocket Tools
 
-Pocket Tools is distributed as Android APK files through GitHub Releases. It is not distributed through Google Play. During private development, release assets may not be publicly available; contributors can build and install the app by following the [Android development guide](../apps/mobile/README.md).
+Pocket Tools is distributed as Android APK files through GitHub Releases. It is not distributed through Google Play. Contributors can build and install development versions by following the [Android development guide](../apps/mobile/README.md), but only release assets signed by the documented production identity are official builds.
 
 ## Requirements
 
@@ -10,6 +10,18 @@ Pocket Tools is distributed as Android APK files through GitHub Releases. It is 
 - permission to install an app from the chosen file manager, browser, or Android Debug Bridge
 
 Pocket Tools keeps installed tools, settings, records, timers, backups, and notification intent on the device. Review the [privacy policy](../PRIVACY.md) before installation.
+
+## Official signing identity
+
+Official Pocket Tools APKs use the production certificate recorded in [Production Signing Identity](../release/PRODUCTION_SIGNING.md).
+
+The expected SHA-256 certificate fingerprint is:
+
+```text
+09:51:4F:5A:92:13:F5:FA:C4:2F:23:B7:AB:04:67:0E:40:5A:42:51:1A:09:E6:27:3E:84:20:5B:47:CE:B3:D4
+```
+
+A checksum-valid APK signed with a different certificate is not an official Pocket Tools release. Verify both the release checksum and signing certificate before installation.
 
 ## Choose the correct APK
 

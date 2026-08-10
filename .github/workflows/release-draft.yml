@@ -108,7 +108,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sdkmanager --install \
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdkmanager"
+          "$sdkmanager" --install \
             "platforms;android-36" \
             "build-tools;36.0.0" \
             "cmake;3.22.1" \
@@ -200,7 +202,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdkmanager"
+          "$sdkmanager" --install "platforms;android-36" "build-tools;36.0.0"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -214,6 +218,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test -n "$ANDROID_RELEASE_KEYSTORE_BASE64"
           keystore="$RUNNER_TEMP/pocket-tools-release.p12"
           printf '%s' "$ANDROID_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore"
           chmod 600 "$keystore"
@@ -224,6 +229,7 @@ jobs:
           ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
           ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
           KEYSTORE: ${{ steps.keystore.outputs.path }}
+          PRODUCTION_CERTIFICATE_SHA256: 09:51:4F:5A:92:13:F5:FA:C4:2F:23:B7:AB:04:67:0E:40:5A:42:51:1A:09:E6:27:3E:84:20:5B:47:CE:B3:D4
           SOURCE: ${{ needs.validate.outputs.source }}
           TAG: ${{ needs.validate.outputs.tag }}
           VERSION: ${{ needs.validate.outputs.version }}
@@ -252,6 +258,7 @@ jobs:
               --tag "$TAG" \
               --abi "$abi" \
               --apk "$signed" \
+              --certificate-fingerprint "$PRODUCTION_CERTIFICATE_SHA256" \
               --certificate-subject "CN=Pocket Tools Release" \
               --output "$signed.inspection.json"
           done
