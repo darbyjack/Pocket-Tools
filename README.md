@@ -1,5 +1,7 @@
 # Pocket Tools
 
+[![CI](https://github.com/darbyjack/Pocket-Tools/actions/workflows/ci.yml/badge.svg)](https://github.com/darbyjack/Pocket-Tools/actions/workflows/ci.yml)
+
 Pocket Tools is an Android-first Expo host for offline utilities written as single JavaScript mini-app modules. Mini-apps run in fresh bounded QuickJS-NG runtimes, return declarative native UI, and use host-owned settings, records, timers, feedback, copy/share output, and local notifications.
 
 SDK 1.2 is the current public contract. SDK 1.0 and 1.1 remain supported for existing tools.
