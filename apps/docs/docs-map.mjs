@@ -276,6 +276,15 @@ export const pages = [
     order: 30,
   },
   {
+    source: "release/PRODUCTION_SIGNING.md",
+    slug: "project/signing",
+    title: "Production signing identity",
+    description:
+      "Verify the public Android certificate identity used for official Pocket Tools releases and update continuity.",
+    group: "project",
+    order: 35,
+  },
+  {
     source: "SUPPORT.md",
     slug: "project/support",
     title: "Support",
