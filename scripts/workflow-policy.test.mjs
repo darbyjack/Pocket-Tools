@@ -74,6 +74,23 @@ test("keeps every production signing secret inside the protected signing job", a
   }
 });
 
+test("pins the production signer and GitHub-hosted Android SDK manager", async () => {
+  const { release } = await workflows();
+  const fingerprint =
+    "09:51:4F:5A:92:13:F5:FA:C4:2F:23:B7:AB:04:67:0E:40:5A:42:51:1A:09:E6:27:3E:84:20:5B:47:CE:B3:D4";
+
+  assert.match(release, new RegExp(`PRODUCTION_CERTIFICATE_SHA256: ${fingerprint}`, "u"));
+  assert.match(
+    release,
+    /--certificate-fingerprint "\$PRODUCTION_CERTIFICATE_SHA256" \\\n              --certificate-subject "CN=Pocket Tools Release"/u,
+  );
+  assert.doesNotMatch(release, /^\s*sdkmanager --install/mu);
+  assert.equal(
+    release.match(/sdkmanager="\$ANDROID_HOME\/cmdline-tools\/latest\/bin\/sdkmanager"/gu)?.length,
+    2,
+  );
+});
+
 test("pins the permitted external actions to immutable commits", async () => {
   const { ci, pages, release } = await workflows();
   const usesLines = `${ci}\n${pages}\n${release}`
