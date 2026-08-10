@@ -111,15 +111,15 @@ At Phase 10 start there were no tags.
 
 Branches present before final cleanup:
 
-| Ref | Initial disposition |
-| --- | --- |
-| `main` | retain |
-| `agent/fix-ci-pnpm-classifier` | merged; delete after audit evidence captures its history |
-| `dependabot/github_actions/actions/attest-build-provenance-4.1.1` | retain temporarily; deferred to public cutover |
-| `dependabot/github_actions/actions/checkout-7.0.1` | retain temporarily; deferred to public cutover |
-| `dependabot/github_actions/actions/download-artifact-8.0.1` | retain temporarily; deferred to public cutover |
-| `dependabot/github_actions/actions/upload-artifact-7.0.1` | retain temporarily; deferred to public cutover |
-| `dependabot/github_actions/pnpm/action-setup-6.0.10` | retain temporarily; deferred to public cutover |
+| Ref                                                               | Initial disposition                                      |
+| ----------------------------------------------------------------- | -------------------------------------------------------- |
+| `main`                                                            | retain                                                   |
+| `agent/fix-ci-pnpm-classifier`                                    | merged; delete after audit evidence captures its history |
+| `dependabot/github_actions/actions/attest-build-provenance-4.1.1` | retain temporarily; deferred to public cutover           |
+| `dependabot/github_actions/actions/checkout-7.0.1`                | retain temporarily; deferred to public cutover           |
+| `dependabot/github_actions/actions/download-artifact-8.0.1`       | retain temporarily; deferred to public cutover           |
+| `dependabot/github_actions/actions/upload-artifact-7.0.1`         | retain temporarily; deferred to public cutover           |
+| `dependabot/github_actions/pnpm/action-setup-6.0.10`              | retain temporarily; deferred to public cutover           |
 
 The final audit must be rerun after any ref deletion or history rewrite.
 

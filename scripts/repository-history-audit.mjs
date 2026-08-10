@@ -262,7 +262,9 @@ async function writeJson(path, value) {
 }
 
 async function sha256File(path) {
-  return createHash("sha256").update(await readFile(path)).digest("hex");
+  return createHash("sha256")
+    .update(await readFile(path))
+    .digest("hex");
 }
 
 async function writeChecksums(outputDirectory, files) {
