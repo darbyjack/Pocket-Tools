@@ -6,19 +6,21 @@ import { fileURLToPath } from "node:url";
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const ciPath = resolve(repositoryRoot, ".github/workflows/ci.yml");
+const pagesPath = resolve(repositoryRoot, ".github/workflows/pages.yml");
 const releasePath = resolve(repositoryRoot, ".github/workflows/release-draft.yml");
 
 async function workflows() {
-  const [ci, release] = await Promise.all([
+  const [ci, pages, release] = await Promise.all([
     readFile(ciPath, "utf8"),
+    readFile(pagesPath, "utf8"),
     readFile(releasePath, "utf8"),
   ]);
-  return { ci, release };
+  return { ci, pages, release };
 }
 
 test("keeps untrusted pull-request code off persistent runners and secrets", async () => {
-  const { ci, release } = await workflows();
-  const combined = `${ci}\n${release}`;
+  const { ci, pages, release } = await workflows();
+  const combined = `${ci}\n${pages}\n${release}`;
 
   assert.doesNotMatch(combined, /self-hosted/u);
   assert.doesNotMatch(combined, /pull_request_target/u);
@@ -48,6 +50,26 @@ test("exposes one stable required CI aggregation job", async () => {
   assert.match(ci, /needs:\n      - classify\n      - fast\n      - android-smoke/u);
 });
 
+test("keeps Pages deployment scoped to main with least privilege", async () => {
+  const { pages } = await workflows();
+
+  assert.match(
+    pages,
+    /^on:\n  push:\n    branches:\n      - main\n  workflow_dispatch:$/mu,
+  );
+  assert.doesNotMatch(pages, /pull_request/u);
+  assert.match(pages, /^permissions: \{\}$/mu);
+  assert.match(
+    pages,
+    /^  build:[\s\S]*?    permissions:\n      contents: read[\s\S]*?  deploy:/mu,
+  );
+  assert.match(
+    pages,
+    /^  deploy:[\s\S]*?    permissions:\n      id-token: write\n      pages: write/mu,
+  );
+  assert.match(pages, /environment:\n      name: github-pages/u);
+});
+
 test("keeps every production signing secret inside the protected signing job", async () => {
   const { release } = await workflows();
   const signStart = release.indexOf("\n  sign:\n");
@@ -73,8 +95,10 @@ test("keeps every production signing secret inside the protected signing job", a
 });
 
 test("pins the permitted external actions to immutable commits", async () => {
-  const { ci, release } = await workflows();
-  const usesLines = `${ci}\n${release}`.split(/\r?\n/u).filter((line) => /^\s*- uses:/u.test(line));
+  const { ci, pages, release } = await workflows();
+  const usesLines = `${ci}\n${pages}\n${release}`
+    .split(/\r?\n/u)
+    .filter((line) => /^\s*- uses:/u.test(line));
 
   assert.ok(usesLines.length > 0);
   for (const line of usesLines) {
